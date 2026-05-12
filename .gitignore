@@ -1,0 +1,10 @@
+.DS_Store
+.env
+dev-server*.log
+/node_modules/
+/.vitest/
+/.wrangler/
+
+# React Router
+/.react-router/
+/build/
