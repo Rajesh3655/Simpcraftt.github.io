@@ -428,16 +428,89 @@ export default function LandingPage() {
             <div className="relative group max-w-5xl mx-auto">
               <div className="absolute inset-0 bg-gradient-to-t from-blue-600/20 to-transparent blur-[80px] -z-10 group-hover:bg-blue-600/30 transition-all duration-700" />
               <div className="rounded-[2rem] md:rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl shadow-blue-900/20 bg-white/5 backdrop-blur-sm p-4">
-                <div className="relative min-h-[320px] md:min-h-[520px] rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.35),transparent_28%),radial-gradient(circle_at_72%_58%,rgba(16,185,129,0.22),transparent_26%),linear-gradient(135deg,#050505_0%,#111827_48%,#030712_100%)]">
-                  <div className="absolute inset-x-10 top-10 h-px bg-white/20" />
-                  <div className="absolute inset-y-10 left-10 w-px bg-white/20" />
-                  <div className="absolute bottom-10 right-10 text-right">
-                    <p className="text-xs md:text-sm uppercase tracking-[0.35em] text-blue-300 font-black">
-                      Simpcraftt
+                <div className="relative min-h-[360px] md:min-h-[560px] rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden bg-[radial-gradient(circle_at_22%_22%,rgba(59,130,246,0.38),transparent_24%),radial-gradient(circle_at_72%_68%,rgba(20,184,166,0.28),transparent_28%),linear-gradient(135deg,#050505_0%,#0f172a_48%,#020617_100%)]">
+                  <div className="absolute inset-0 opacity-25 bg-[linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[size:44px_44px]" />
+                  <div className="absolute inset-x-8 md:inset-x-12 top-8 md:top-12 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                  <div className="absolute inset-y-8 md:inset-y-12 left-8 md:left-12 w-px bg-gradient-to-b from-transparent via-white/30 to-transparent" />
+
+                  <div className="absolute left-8 top-8 md:left-14 md:top-14">
+                    <p className="text-[10px] md:text-xs uppercase tracking-[0.35em] text-blue-300 font-black">
+                      Simpcraftt / Preview
                     </p>
-                    <p className="mt-3 text-3xl md:text-6xl font-black tracking-tight">
-                      Future Ready
-                    </p>
+                    <h3 className="mt-4 max-w-[260px] md:max-w-[360px] text-3xl md:text-5xl font-black leading-tight">
+                      Precision tech, crafted for modern living.
+                    </h3>
+                  </div>
+
+                  <div className="absolute right-6 top-8 md:right-14 md:top-14 hidden sm:grid grid-cols-2 gap-3 text-left">
+                    {[
+                      ["25D", "Launch"],
+                      ["Aero", "Build"],
+                      ["AI", "Ready"],
+                      ["Global", "Drop"],
+                    ].map(([value, label]) => (
+                      <div
+                        key={label}
+                        className="w-24 rounded-2xl border border-white/10 bg-black/35 px-4 py-3 backdrop-blur-md"
+                      >
+                        <p className="text-lg font-black text-white">{value}</p>
+                        <p className="text-[10px] uppercase tracking-widest text-gray-400">
+                          {label}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="absolute left-1/2 top-[54%] h-52 w-52 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15 bg-white/[0.03] shadow-[0_0_120px_rgba(59,130,246,0.35)] md:h-80 md:w-80" />
+                  <div className="absolute left-[48%] top-[54%] h-40 w-56 -translate-x-1/2 -translate-y-1/2 rotate-[-14deg] rounded-[2rem] border border-white/15 bg-gradient-to-br from-slate-950 via-slate-900 to-black p-3 shadow-2xl shadow-black/60 md:h-64 md:w-96">
+                    <div className="h-full rounded-[1.4rem] border border-white/10 bg-[radial-gradient(circle_at_25%_25%,rgba(96,165,250,0.35),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.01))]">
+                      <div className="m-5 h-2 w-24 rounded-full bg-white/20" />
+                      <div className="absolute bottom-7 left-8 right-8 flex items-end justify-between">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.35em] text-teal-300">
+                            Aura System
+                          </p>
+                          <p className="mt-1 text-2xl font-black md:text-4xl">
+                            X-01
+                          </p>
+                        </div>
+                        <div className="h-12 w-12 rounded-full border border-white/20 bg-white/10" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="absolute left-[63%] top-[58%] h-48 w-24 -translate-x-1/2 -translate-y-1/2 rotate-[10deg] rounded-[2rem] border border-white/20 bg-gradient-to-b from-zinc-900 to-black p-2 shadow-2xl shadow-emerald-950/40 md:h-72 md:w-36">
+                    <div className="relative h-full rounded-[1.5rem] bg-[linear-gradient(160deg,#020617,#111827_48%,#0f766e)]">
+                      <div className="absolute left-1/2 top-3 h-1.5 w-10 -translate-x-1/2 rounded-full bg-white/20" />
+                      <div className="absolute inset-x-4 top-12 rounded-2xl border border-white/10 bg-white/10 p-3">
+                        <p className="text-[9px] uppercase tracking-widest text-teal-200">
+                          Battery
+                        </p>
+                        <p className="text-xl font-black">98%</p>
+                      </div>
+                      <div className="absolute bottom-5 left-1/2 h-10 w-10 -translate-x-1/2 rounded-full border border-white/20 bg-white/10" />
+                    </div>
+                  </div>
+
+                  <div className="absolute bottom-8 left-8 right-8 md:bottom-12 md:left-14 md:right-14 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                    <div className="flex flex-wrap gap-2">
+                      {["Titanium finish", "Wireless ecosystem", "Early access"].map((item) => (
+                        <span
+                          key={item}
+                          className="rounded-full border border-white/10 bg-white/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white/80 backdrop-blur-md"
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="text-left md:text-right">
+                      <p className="text-xs md:text-sm uppercase tracking-[0.35em] text-blue-300 font-black">
+                        Future Ready
+                      </p>
+                      <p className="mt-2 text-3xl md:text-5xl font-black tracking-tight">
+                        2026 Drop
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
