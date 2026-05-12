@@ -1,11 +1,41 @@
 module.exports = {
+	darkMode: 'class',
 	content: ['./src/**/*.{js,ts,jsx,tsx}'],
 	theme: {
 		fontFamily: {
 			sans: ['Inter', 'sans-serif'],
 		},
 		extend: {
+			colors: {
+				surface: {
+					DEFAULT: '#ffffff',
+					dark: '#0a0a0a',
+				},
+				'brand-primary': {
+					DEFAULT: '#3b82f6',
+					dark: '#6d28d9',
+				},
+				'text-base': {
+					DEFAULT: '#1f2937',
+					dark: '#e5e7eb',
+				},
+			},
+			fontSize: {
+				'sm': ['clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem)', { lineHeight: '1.25rem' }],
+				'base': ['clamp(0.875rem, 0.825rem + 0.25vw, 1rem)', { lineHeight: '1.5rem' }],
+				'lg': ['clamp(1rem, 0.95rem + 0.25vw, 1.125rem)', { lineHeight: '1.75rem' }],
+				'xl': ['clamp(1.125rem, 1.05rem + 0.38vw, 1.25rem)', { lineHeight: '1.75rem' }],
+				'2xl': ['clamp(1.25rem, 1.1rem + 0.75vw, 1.5rem)', { lineHeight: '2rem' }],
+				'3xl': ['clamp(1.5rem, 1.3rem + 1vw, 1.875rem)', { lineHeight: '2.25rem' }],
+				'4xl': ['clamp(1.875rem, 1.65rem + 1.13vw, 2.25rem)', { lineHeight: '2.5rem' }],
+				'5xl': ['clamp(2.25rem, 1.85rem + 2vw, 3rem)', { lineHeight: '1.1' }],
+				'6xl': ['clamp(2.5rem, 1.85rem + 3.25vw, 3.75rem)', { lineHeight: '1.1' }],
+				'7xl': ['clamp(3rem, 2.25rem + 3.75vw, 4.5rem)', { lineHeight: '1.1' }],
+				'8xl': ['clamp(3.5rem, 2.25rem + 6.25vw, 6rem)', { lineHeight: '1' }],
+				'9xl': ['clamp(4rem, 2.5rem + 7.5vw, 8rem)', { lineHeight: '1' }],
+			},
 			fontFamily: {
+				sreda: ['Sreda', 'serif'],
 				'a-bee-zee': 'A Bee Zee',
 				'ad-la-m-display': 'Ad La M Display',
 				'ar-one-sans': 'Ar One Sans',

@@ -19,7 +19,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -31,22 +31,26 @@ export default function RootLayout({ children }) {
           href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
           rel="stylesheet"
         />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Sreda&display=swap"
+          rel="stylesheet"
+        />
         <style>{`
           *, *::before, *::after { box-sizing: border-box; }
           html { scroll-behavior: smooth; }
           body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: #050505;
-            color: #ffffff;
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }
           ::selection { background-color: rgba(59,130,246,0.3); }
           ::-webkit-scrollbar { width: 8px; }
-          ::-webkit-scrollbar-track { background: #050505; }
-          ::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 4px; }
-          ::-webkit-scrollbar-thumb:hover { background: #2a2a2a; }
+          ::-webkit-scrollbar-track { background: transparent; }
+          ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+          ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+          .dark ::-webkit-scrollbar-track { background: #050505; }
+          .dark ::-webkit-scrollbar-thumb { background: #1a1a1a; }
+          .dark ::-webkit-scrollbar-thumb:hover { background: #2a2a2a; }
           @keyframes float {
             0%   { transform: translateY(0px); }
             50%  { transform: translateY(-10px); }
@@ -61,7 +65,7 @@ export default function RootLayout({ children }) {
         `}</style>
       </head>
       <body
-        className="bg-[#050505] antialiased"
+        className="bg-surface text-text-base dark:bg-surface-dark dark:text-text-base-dark antialiased transition-colors duration-500 ease-in-out"
         style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
       >
         <QueryClientProvider client={queryClient}>
