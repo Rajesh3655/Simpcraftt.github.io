@@ -2,6 +2,7 @@
 .env
 dev-server*.log
 /node_modules/
+/bun.lock
 /.vitest/
 /.wrangler/
 
