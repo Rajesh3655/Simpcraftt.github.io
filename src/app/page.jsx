@@ -113,6 +113,7 @@ const TESTIMONIALS = [
 // --- Components ---
 
 const CountdownTimer = () => {
+  const launchOffsetDays = 25;
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -122,11 +123,11 @@ const CountdownTimer = () => {
 
   useEffect(() => {
     const launchDate = new Date();
-    launchDate.setDate(launchDate.getDate() + 15); // Launch in 15 days
+    launchDate.setDate(launchDate.getDate() + launchOffsetDays);
 
     const timer = setInterval(() => {
       const now = new Date().getTime();
-      const distance = launchDate - now;
+      const distance = Math.max(launchDate - now, 0);
 
       setTimeLeft({
         days: Math.floor(distance / (1000 * 60 * 60 * 24)),
@@ -427,11 +428,18 @@ export default function LandingPage() {
             <div className="relative group max-w-5xl mx-auto">
               <div className="absolute inset-0 bg-gradient-to-t from-blue-600/20 to-transparent blur-[80px] -z-10 group-hover:bg-blue-600/30 transition-all duration-700" />
               <div className="rounded-[2rem] md:rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl shadow-blue-900/20 bg-white/5 backdrop-blur-sm p-4">
-                <img
-                  src="https://images.unsplash.com/photo-1542744094-24638eff58bb?auto=format&fit=crop&q=80&w=1600"
-                  alt="Simpcraftt Preview"
-                  className="w-full h-auto rounded-[1.5rem] md:rounded-[2.5rem] grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700"
-                />
+                <div className="relative min-h-[320px] md:min-h-[520px] rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.35),transparent_28%),radial-gradient(circle_at_72%_58%,rgba(16,185,129,0.22),transparent_26%),linear-gradient(135deg,#050505_0%,#111827_48%,#030712_100%)]">
+                  <div className="absolute inset-x-10 top-10 h-px bg-white/20" />
+                  <div className="absolute inset-y-10 left-10 w-px bg-white/20" />
+                  <div className="absolute bottom-10 right-10 text-right">
+                    <p className="text-xs md:text-sm uppercase tracking-[0.35em] text-blue-300 font-black">
+                      Simpcraftt
+                    </p>
+                    <p className="mt-3 text-3xl md:text-6xl font-black tracking-tight">
+                      Future Ready
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </motion.div>
