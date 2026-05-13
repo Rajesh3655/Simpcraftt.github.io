@@ -1,7 +1,6 @@
-import { kebabCase, startCase, toLower } from 'lodash';
-import type { HtmlTagDescriptor, PluginOption } from 'vite';
-import fs from 'node:fs';
 import fg from 'fast-glob';
+import fs from 'node:fs';
+import type { PluginOption } from 'vite';
 
 const GOOGLE_FONTS = new Map<string, string>(
   [
@@ -1653,14 +1652,20 @@ export function loadFontsFromTailwindSource(): PluginOption {
   };
   const collectFonts = async () => {
     const files = await fg('src/**/*.{js,ts,jsx,tsx}');
-    const allFonts = await Promise.all(
-      files.map(async (file) => {
-        const code = await fs.promises.readFile(file, 'utf-8');
-        return extractFonts(code);
-      })
-    );
-    for (const font of allFonts.flat()) {
-      collectedFonts.add(font);
+
+    // Process files in chunks to strictly limit concurrent memory usage
+    const CONCURRENCY_LIMIT = 50;
+    for (let i = 0; i < files.length; i += CONCURRENCY_LIMIT) {
+      const chunk = files.slice(i, i + CONCURRENCY_LIMIT);
+      await Promise.all(
+        chunk.map(async (file) => {
+          const code = await fs.promises.readFile(file, 'utf-8');
+          const fonts = extractFonts(code);
+          for (const font of fonts) {
+            collectedFonts.add(font);
+          }
+        })
+      );
     }
   };
 

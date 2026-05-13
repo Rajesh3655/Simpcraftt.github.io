@@ -33,10 +33,10 @@ if (typeof window !== 'undefined') {
     /** Inject the stub at the top of every JS/TS module compiled for the browser. */
     transform(code, id, opts) {
       if (opts?.ssr) return null;                          // server/SSR build → leave untouched
-      if (!/\.[cm]?[jt]sx?$/.test(id)) return null;  // ignore non-JS modules
+      // ignore non-JS modules, accounting for optional Vite query strings
+      if (!/\.[cm]?[jt]sx?(?:\?.*)?$/.test(id)) return null;
       if (code.includes('globalThis.process ??=')) return null; // already injected
       return { code: stub + code, map: null };
     },
   };
 }
-

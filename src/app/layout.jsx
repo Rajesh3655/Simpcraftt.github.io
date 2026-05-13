@@ -22,17 +22,18 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
           rel="preconnect"
-          href="https://fonts.gstatic.com"
+          href="https://api.fontshare.com"
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
+          href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&f[]=satoshi@400,500,700,900&display=swap"
           rel="stylesheet"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Sreda&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap"
           rel="stylesheet"
         />
         <style>{`
@@ -42,6 +43,7 @@ export default function RootLayout({ children }) {
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
           }
           ::selection { background-color: rgba(59,130,246,0.3); }
           ::-webkit-scrollbar { width: 8px; }
@@ -65,8 +67,8 @@ export default function RootLayout({ children }) {
         `}</style>
       </head>
       <body
-        className="bg-surface text-text-base dark:bg-surface-dark dark:text-text-base-dark antialiased transition-colors duration-500 ease-in-out"
-        style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+        className="bg-surface text-text-base dark:bg-surface-dark dark:text-text-base-dark antialiased transition-colors duration-200 ease-out"
+        style={{ fontFamily: "'Satoshi', 'Plus Jakarta Sans', sans-serif" }}
       >
         <QueryClientProvider client={queryClient}>
           {children}

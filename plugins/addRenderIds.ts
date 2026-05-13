@@ -1,8 +1,8 @@
-import * as babel from '@babel/core';
-import type { PluginOption } from 'vite';
 import type { NodePath, PluginObj } from '@babel/core';
-import type { JSXElement } from '@babel/types';
+import * as babel from '@babel/core';
 import type * as t from '@babel/types';
+import type { JSXElement } from '@babel/types';
+import type { PluginOption } from 'vite';
 
 import { createHash } from 'node:crypto';
 function genId(file: string, loc: { line: number; col: number }) {
@@ -16,6 +16,33 @@ export interface BabelAPI {
   types: typeof t;
 }
 const idToJsx = { current: {} as Record<string, { code: string }> };
+
+const IGNORED_TAGS = new Set([
+  'html',
+  'head',
+  'body',
+  'title',
+  'meta',
+  'link',
+  'script',
+  'style',
+  'noscript',
+  'base',
+  'template',
+  'iframe',
+  'svg',
+  'math',
+  'slot',
+  'picture',
+  'source',
+  'canvas',
+  'video',
+  'audio',
+  'object',
+  'embed',
+  'param',
+  'track',
+]);
 
 const getRenderIdVisitor =
   ({ filename }: { filename: string }) =>
@@ -31,35 +58,7 @@ const getRenderIdVisitor =
           if (!t.isJSXIdentifier(opening.name)) return;
           const tagName = opening.name.name;
           if (tagName !== tagName.toLowerCase()) return; // skip components
-          if (
-            [
-              'html',
-              'head',
-              'body',
-              'title',
-              'meta',
-              'link',
-              'script',
-              'style',
-              'noscript',
-              'base',
-              'template',
-              'iframe',
-              'svg',
-              'math',
-              'slot',
-              'picture',
-              'source',
-              'canvas',
-              'video',
-              'audio',
-              'object',
-              'embed',
-              'param',
-              'track',
-            ].includes(tagName)
-          )
-            return; // skip html elements that do not render to the DOM
+          if (IGNORED_TAGS.has(tagName)) return; // skip non-renderable html elements
 
           // If it already has a renderId prop, leave it alone
           const hasRenderId = opening.attributes.some(
@@ -144,6 +143,7 @@ export function addRenderIds(): PluginOption {
   return {
     name: 'add-render-ids',
     enforce: 'pre',
+    apply: 'serve', // Only run during local development / sandbox mode
     async transform(code, id) {
       // need all module files AND the noLayout query (layout wrapper plugin)
       if (!/\.([cm]?[jt]sx)(\?noLayout)?$/.test(id)) {

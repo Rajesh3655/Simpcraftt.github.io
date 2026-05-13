@@ -35,7 +35,9 @@ module.exports = {
 				'9xl': ['clamp(4rem, 2.5rem + 7.5vw, 8rem)', { lineHeight: '1' }],
 			},
 			fontFamily: {
-				sreda: ['Sreda', 'serif'],
+				editorial: ['Bodoni Moda', 'Cormorant Garamond', 'Didot', 'Bodoni 72', 'serif'],
+				luxury: ['Cormorant Garamond', 'Bodoni Moda', 'Didot', 'serif'],
+				sreda: ['Bodoni Moda', 'Cormorant Garamond', 'serif'],
 				'a-bee-zee': 'A Bee Zee',
 				'ad-la-m-display': 'Ad La M Display',
 				'ar-one-sans': 'Ar One Sans',

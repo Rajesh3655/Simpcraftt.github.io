@@ -19,10 +19,22 @@ import {
   X,
   Zap
 } from "lucide-react";
-import { AnimatePresence, motion, useMotionValue, useScroll, useSpring, useTransform } from "motion/react";
+import { AnimatePresence, motion, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react";
 import React, { useEffect, useState } from "react";
 import { toast, Toaster } from "sonner";
 import ThemeToggle from "./ThemeToggle";
+
+const REVEAL_EASE = [0.22, 1, 0.36, 1];
+const REVEAL_VIEWPORT = { once: true, amount: 0.12, margin: "0px 0px -14% 0px" };
+const HERO_STAGGER = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.04,
+    },
+  },
+};
 
 // --- Data ---
 const FAQ_DATA = [
@@ -206,7 +218,8 @@ const ParticleBackground = () => {
 
   useEffect(() => {
     // Generate random particles only on the client side to avoid hydration mismatch
-    const particleArray = Array.from({ length: 40 }).map((_, i) => ({
+    const isMobile = window.innerWidth < 768;
+    const particleArray = Array.from({ length: isMobile ? 12 : 40 }).map((_, i) => ({
       id: i,
       size: Math.random() * 4 + 2,
       x: Math.random() * 100,
@@ -333,7 +346,7 @@ const FAQItem = ({ item }) => {
   );
 };
 
-const ProductCard = ({ product, idx }) => {
+const ProductCard = ({ product, idx, isMobile }) => {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
 
@@ -365,27 +378,27 @@ const ProductCard = ({ product, idx }) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0.7, y: 12 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay: idx * 0.2 }}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      className="relative h-full w-full group"
+      viewport={{ once: true, amount: 0.1, margin: "0px 0px -12% 0px" }}
+      transition={{ duration: 0.45, delay: idx * 0.06, ease: "easeOut" }}
+      onMouseMove={isMobile ? undefined : handleMouseMove}
+      onMouseLeave={isMobile ? undefined : handleMouseLeave}
+      className="relative h-full w-full group scroll-reveal"
     >
       <motion.div
         style={{
-          rotateX,
-          rotateY,
+          rotateX: isMobile ? 0 : rotateX,
+          rotateY: isMobile ? 0 : rotateY,
           transformPerspective: 1000,
         }}
-        className="relative h-full bg-surface dark:bg-surface-dark/5 border border-gray-200 dark:border-white/10 rounded-[2.5rem] p-6 md:p-8 hover:bg-gray-50 dark:hover:bg-white/[0.08] transition-colors duration-500 shadow-lg shadow-gray-200/50 dark:shadow-none cursor-pointer"
+        className="relative h-full lux-panel rounded-[2.5rem] p-6 md:p-8 hover:bg-gray-50/80 dark:hover:bg-white/[0.08] transition-colors duration-200 cursor-pointer"
       >
-        <motion.div style={{ x: translateX, y: translateY }} className="flex flex-col h-full pointer-events-none">
+        <motion.div style={{ x: isMobile ? 0 : translateX, y: isMobile ? 0 : translateY }} className="flex flex-col h-full pointer-events-none">
           <div className="mb-6 md:mb-8 aspect-[4/3] rounded-[2rem] overflow-hidden relative shadow-lg">
             <img
               src={product.image}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 ease-out"
               alt={product.title}
             />
             <div className="absolute top-4 left-4">
@@ -394,7 +407,7 @@ const ProductCard = ({ product, idx }) => {
               </span>
             </div>
           </div>
-          <h3 className="text-xl md:text-2xl font-sreda font-bold mb-3">{product.title}</h3>
+          <h3 className="text-2xl md:text-3xl luxury-title mb-3">{product.title}</h3>
           <p className="text-gray-600 dark:text-gray-400 text-sm mb-6 leading-relaxed transition-colors flex-1">
             {product.description}
           </p>
@@ -408,23 +421,89 @@ const ProductCard = ({ product, idx }) => {
 };
 
 export default function LandingPage() {
+  const systemReducedMotion = useReducedMotion();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const prefersReducedMotion = !!systemReducedMotion;
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    const updateViewport = () => setIsMobileViewport(window.innerWidth < 768);
+    updateViewport();
+    window.addEventListener("resize", updateViewport, { passive: true });
+    return () => window.removeEventListener("resize", updateViewport);
+  }, []);
+
+  useEffect(() => {
+    let ticking = false;
+
+    const updateScrolled = () => {
+      const next = window.scrollY > 50;
+      setScrolled((prev) => (prev === next ? prev : next));
+      ticking = false;
+    };
+
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(updateScrolled);
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    updateScrolled();
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   const { scrollY } = useScroll();
+  const revealProps = (delay = 0, duration = 0.55, y = 14) => {
+    const responsiveDelay = isMobileViewport ? Math.max(0, delay * 0.65) : delay;
+    const responsiveDuration = isMobileViewport
+      ? Math.max(0.4, duration - 0.08)
+      : duration;
+    const responsiveY = isMobileViewport ? Math.max(8, y - 2) : y;
+
+    if (prefersReducedMotion) {
+      return {
+        initial: { opacity: 1, y: 0 },
+        whileInView: { opacity: 1, y: 0 },
+        viewport: REVEAL_VIEWPORT,
+        transition: { duration: 0.01 },
+      };
+    }
+
+    return {
+      initial: { opacity: 0.8, y: responsiveY },
+      whileInView: { opacity: 1, y: 0 },
+      viewport: REVEAL_VIEWPORT,
+      transition: { duration: responsiveDuration, delay: responsiveDelay, ease: REVEAL_EASE },
+    };
+  };
+
+  const revealItem = (duration = 0.58, y = 14) => {
+    if (prefersReducedMotion) {
+      return {
+        hidden: { opacity: 1, y: 0 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.01 } },
+      };
+    }
+
+    return {
+      hidden: { opacity: 0.82, y },
+      visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+          duration: isMobileViewport ? Math.max(0.44, duration - 0.08) : duration,
+          ease: REVEAL_EASE,
+        },
+      },
+    };
+  };
   
   // --- Hero Parallax Transforms ---
   const heroBgY = useTransform(scrollY, [0, 1000], ["0%", "40%"]);
-  const heroBgOpacity = useTransform(scrollY, [0, 600], [1, 0]);
-  const heroTextY = useTransform(scrollY, [0, 1000], ["0%", "60%"]);
-  const heroTextOpacity = useTransform(scrollY, [0, 500], [1, 0]);
-  const heroImageY = useTransform(scrollY, [0, 1000], ["0%", "-15%"]);
+  const heroTextY = useTransform(scrollY, [0, 1000], ["0%", "10%"]);
+  const heroImageY = useTransform(scrollY, [0, 1000], ["0%", "0%"]);
 
   const newsletterMutation = useMutation({
     mutationFn: async (email) => {
@@ -477,33 +556,47 @@ export default function LandingPage() {
     e.target.reset();
   };
 
+  const handleMenuNavigate = (e, targetId) => {
+    e.preventDefault();
+    const target = document.getElementById(targetId);
+    if (!target) return;
+
+    const navOffset = window.innerWidth < 768 ? 88 : 96;
+    const targetTop = target.getBoundingClientRect().top + window.scrollY - navOffset;
+    window.scrollTo({ top: targetTop, behavior: "smooth" });
+    setMobileMenuOpen(false);
+  };
+
   return (
-    <div className="min-h-screen bg-surface text-text-base dark:bg-surface-dark dark:text-text-base-dark font-plus-jakarta-sans selection:bg-blue-500/30 transition-colors duration-500 ease-in-out">
+    <div className="min-h-screen bg-[#f1efea] text-text-base dark:bg-[#07090c] dark:text-text-base-dark font-satoshi selection:bg-blue-500/30 transition-colors duration-200 ease-out lux-noise">
       <Toaster position="top-center" expand={true} richColors />
 
-      <GlowingCursor />
+      {!prefersReducedMotion && <GlowingCursor />}
 
       {/* Background Gradients */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none transition-opacity duration-500">
-        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-blue-300/30 dark:bg-blue-600/10 blur-[120px] rounded-full" />
-        <div className="absolute top-[20%] -right-[10%] w-[35%] h-[35%] bg-purple-300/30 dark:bg-purple-600/10 blur-[120px] rounded-full" />
-        <div className="absolute -bottom-[10%] left-[20%] w-[30%] h-[30%] bg-emerald-300/30 dark:bg-emerald-600/10 blur-[120px] rounded-full" />
+      <div className="fixed inset-0 overflow-hidden pointer-events-none transition-opacity duration-200 ease-out">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_14%_18%,rgba(243,228,201,0.52),transparent_36%),radial-gradient(circle_at_88%_14%,rgba(174,194,212,0.3),transparent_34%),radial-gradient(circle_at_78%_72%,rgba(212,186,168,0.22),transparent_40%)] dark:bg-[radial-gradient(circle_at_14%_18%,rgba(62,84,110,0.28),transparent_36%),radial-gradient(circle_at_88%_14%,rgba(72,82,94,0.22),transparent_34%),radial-gradient(circle_at_78%_72%,rgba(84,66,86,0.22),transparent_40%)]" />
+        <div className="absolute -top-[8%] right-[18%] w-[28rem] h-[28rem] bg-white/45 dark:bg-white/5 blur-[140px] rounded-full" />
+        <div className="absolute bottom-[5%] left-[6%] w-[20rem] h-[20rem] bg-[#d3c2ad]/40 dark:bg-[#3f4d62]/20 blur-[120px] rounded-full" />
       </div>
 
       {/* Navbar */}
-      <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      <motion.nav
+        initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: prefersReducedMotion ? 0.01 : 0.55, ease: "easeOut" }}
+        className={`navbar-shell fixed top-0 left-0 right-0 z-50 h-[88px] transition-colors duration-200 ease-out ${
           scrolled
-            ? "bg-white/80 dark:bg-[#050505]/80 backdrop-blur-lg border-b border-black/5 dark:border-white/5 py-4"
-            : "bg-transparent py-6"
+            ? "bg-white/55 dark:bg-[#0a0c10]/70 backdrop-blur-xl border-b border-white/30 dark:border-white/10"
+            : "bg-transparent border-b border-transparent backdrop-blur-xl"
         }`}
       >
-        <div className="container mx-auto px-6 flex items-center justify-between">
+        <div className="container mx-auto px-6 h-full flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-lg flex items-center justify-center font-bold text-xl italic">
               S
             </div>
-            <span className="text-2xl font-sreda font-bold tracking-tight text-black dark:text-white uppercase">
+            <span className="text-2xl md:text-4xl luxury-brand text-black dark:text-white">
               Simpcraftt
             </span>
           </div>
@@ -514,6 +607,7 @@ export default function LandingPage() {
                 <a
                   key={item}
                   href={`#${item.toLowerCase()}`}
+                  onClick={(e) => handleMenuNavigate(e, item.toLowerCase())}
                   className="hover:text-black dark:hover:text-white transition-colors uppercase"
                 >
                   {item}
@@ -526,7 +620,8 @@ export default function LandingPage() {
             <ThemeToggle />
             <a
               href="#notify"
-              className="px-6 py-2.5 bg-brand-primary dark:bg-brand-primary-dark text-white text-sm font-bold rounded-full hover:bg-opacity-90 transition-all uppercase tracking-wider"
+              onClick={(e) => handleMenuNavigate(e, "notify")}
+              className="px-6 py-2.5 bg-black/85 dark:bg-white/90 text-white dark:text-black text-sm font-bold rounded-full hover:scale-[1.03] transition-all uppercase tracking-wider"
             >
               Notify Me
             </a>
@@ -557,7 +652,7 @@ export default function LandingPage() {
                   <a
                     key={item}
                     href={`#${item.toLowerCase()}`}
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={(e) => handleMenuNavigate(e, item.toLowerCase())}
                     className="text-lg font-medium text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
                   >
                     {item}
@@ -566,7 +661,7 @@ export default function LandingPage() {
               )}
               <a
                 href="#notify"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={(e) => handleMenuNavigate(e, "notify")}
                 className="mt-4 px-6 py-3 bg-black text-white dark:bg-white dark:text-black text-center font-bold rounded-xl"
               >
                 Notify Me
@@ -574,21 +669,21 @@ export default function LandingPage() {
             </motion.div>
           )}
         </AnimatePresence>
-      </nav>
+      </motion.nav>
 
       <motion.main
-        initial={{ opacity: 0, y: 30 }}
+        initial={{ opacity: 0.98, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
+        transition={{ duration: 0.45, ease: "easeOut" }}
       >
         {/* Hero Section */}
-        <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 px-6 overflow-hidden">
+        <section className="relative pt-28 pb-20 md:pt-36 md:pb-28 px-6 overflow-hidden">
           {/* Parallax Background Layer */}
           <motion.div 
-            style={{ y: heroBgY, opacity: heroBgOpacity }} 
+            style={prefersReducedMotion || isMobileViewport ? undefined : { y: heroBgY }} 
             className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none"
           >
-            <ParticleBackground />
+            {!prefersReducedMotion && <ParticleBackground />}
             
             {/* Futuristic Concentric Rings */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vw] max-w-[800px] max-h-[800px] border-[1.5px] border-blue-500/20 dark:border-blue-400/10 rounded-full opacity-50" />
@@ -596,140 +691,137 @@ export default function LandingPage() {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[160vw] h-[160vw] max-w-[1600px] max-h-[1600px] border-[1.5px] border-emerald-500/20 dark:border-emerald-400/10 rounded-full opacity-10" />
           </motion.div>
 
-          {/* Parallax Text Layer */}
-          <motion.div 
-            style={{ y: heroTextY, opacity: heroTextOpacity }} 
-            className="container mx-auto text-center relative z-10"
+          <motion.div
+            style={prefersReducedMotion || isMobileViewport ? undefined : { y: heroTextY }}
+            className="container mx-auto relative z-20"
           >
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-md mb-8 shadow-sm dark:shadow-none transition-colors"
-            >
-              <span className="w-2 h-2 rounded-full bg-blue-500 custom-pulse" />
-              <span className="text-sm font-bold tracking-widest text-blue-600 dark:text-blue-400 uppercase transition-colors">
-                Official Website Launching Soon
-              </span>
-            </motion.div>
-
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-8xl font-sreda font-bold mb-6 tracking-tight leading-[1.1]"
-            >
-              Crafting The <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-500 to-emerald-500">
-                Future of Lifestyle
-              </span>
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-12 leading-relaxed transition-colors"
-            >
-              Simpcraftt is redefining elegance in electronics. A new era of
-              premium, futuristic products is launching shortly. Get ready for
-              the revolution.
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
-              className="mb-16"
-            >
-              <CountdownTimer />
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.8 }}
-              className="flex flex-col md:flex-row gap-4 justify-center items-center"
-            >
-              <a
-                href="#notify"
-                className="group px-8 py-4 bg-brand-primary dark:bg-brand-primary-dark text-white font-black rounded-full flex items-center gap-2 hover:scale-105 transition-all uppercase tracking-widest text-sm shadow-xl hover:bg-opacity-90"
+            <div className="grid lg:grid-cols-[1.04fr_0.96fr] gap-10 md:gap-14 xl:gap-20 items-start">
+              <motion.div
+                className="text-left"
+                initial="hidden"
+                animate="visible"
+                variants={HERO_STAGGER}
               >
-                Notify Me When Live
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </a>
-              <a
-                href="#preview"
-                className="px-8 py-4 bg-white/50 dark:bg-white/5 backdrop-blur-md border border-gray-200 dark:border-white/10 text-text-base dark:text-text-base-dark font-black rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-all uppercase tracking-widest text-sm shadow-sm dark:shadow-none"
-              >
-                Upcoming Preview
-              </a>
-            </motion.div>
-          </motion.div>
-
-          {/* Hero Teaser Visual Parallax Wrapper */}
-          <motion.div style={{ y: heroImageY }} className="relative z-20">
-            <motion.div
-              initial={{ opacity: 0, y: 100 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 1 }}
-              className="mt-20 container mx-auto px-6"
-            >
-            <div className="relative group max-w-5xl mx-auto">
-              <div className="absolute inset-0 bg-gradient-to-t from-blue-300/40 dark:from-blue-600/20 to-transparent blur-[80px] -z-10 group-hover:bg-blue-400/40 dark:group-hover:bg-blue-600/30 transition-all duration-700" />
-              <div className="rounded-[2rem] md:rounded-[3rem] overflow-hidden border border-gray-200 dark:border-white/10 shadow-2xl shadow-blue-500/10 dark:shadow-blue-900/20 bg-white/50 dark:bg-white/5 backdrop-blur-sm p-4 transition-colors relative">
-                <img
-                  src="https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?auto=format&fit=crop&q=80&w=1600"
-                  alt="Simpcraftt Premium Device"
-                  className="w-full h-auto rounded-[1.5rem] md:rounded-[2.5rem] transition-transform duration-1000 group-hover:scale-[1.02]"
-                />
-                
-                {/* Floating AI / Specs Tag 1 */}
                 <motion.div
-                  animate={{ y: [-10, 10, -10] }}
-                  transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                  className="absolute top-12 right-12 bg-white/90 dark:bg-black/80 backdrop-blur-xl border border-white/40 dark:border-white/10 p-4 rounded-2xl shadow-2xl hidden md:flex items-center gap-4 transition-colors"
+                  variants={revealItem(0.62, 14)}
+                  className="lux-panel rounded-[2rem] px-6 py-5 md:px-8 md:py-6 mb-8 md:mb-10 max-w-[34rem]"
                 >
-                  <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center transition-colors">
-                    <Cpu className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 transition-colors">Neural Engine</p>
-                    <p className="text-sm font-black text-black dark:text-white transition-colors">SC-A1 Chip</p>
-                  </div>
+                  <p className="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 uppercase tracking-[0.18em] mb-4 font-bold">
+                    Launch Countdown
+                  </p>
+                  <CountdownTimer />
                 </motion.div>
 
-                {/* Floating AI / Specs Tag 2 */}
                 <motion.div
-                  animate={{ y: [10, -10, 10] }}
-                  transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                  className="absolute bottom-12 left-12 bg-white/90 dark:bg-black/80 backdrop-blur-xl border border-white/40 dark:border-white/10 p-4 rounded-2xl shadow-2xl hidden md:flex items-center gap-4 transition-colors"
+                  variants={revealItem(0.52, 12)}
+                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full lux-panel mb-8"
                 >
-                  <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center transition-colors">
-                    <Zap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 transition-colors">Power Output</p>
-                    <p className="text-sm font-black text-black dark:text-white transition-colors">HyperCharge 2.0</p>
+                  <span className="w-2 h-2 rounded-full bg-blue-500 custom-pulse" />
+                  <span className="text-[11px] md:text-xs font-bold hero-kicker text-blue-700 dark:text-blue-300 uppercase transition-colors">Collection Zero Arrives Soon</span>
+                </motion.div>
+
+                <motion.h1
+                  variants={revealItem(0.72, 16)}
+                  className="text-5xl md:text-7xl lg:text-8xl luxury-heading mb-7 md:mb-9 max-w-[12ch]"
+                >
+                  Technology For The <span className="heading-highlight">Quiet Future</span>
+                </motion.h1>
+
+                <motion.p
+                  variants={revealItem(0.62, 14)}
+                  className="text-lg md:text-xl text-gray-700 dark:text-gray-300 max-w-[48ch] mb-10 md:mb-12 leading-relaxed"
+                >
+                  Simpcraftt blends precision electronics with cinematic material language.
+                  Sculpted hardware, atmospheric interfaces, and a premium ecosystem built for the
+                  next decade of everyday life.
+                </motion.p>
+
+                <motion.div
+                  variants={revealItem(0.56, 14)}
+                  className="flex flex-col sm:flex-row gap-4 items-start"
+                >
+                  <a
+                    href="#notify"
+                    className="group px-8 py-4 bg-black/90 dark:bg-white text-white dark:text-black font-black rounded-full flex items-center gap-2 hover:scale-105 transition-all uppercase tracking-widest text-sm shadow-xl"
+                  >
+                    Reserve Access
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </a>
+                  <a
+                    href="#preview"
+                    className="px-8 py-4 lux-panel text-text-base dark:text-text-base-dark font-black rounded-full hover:scale-[1.02] transition-all uppercase tracking-widest text-sm"
+                  >
+                    Explore Vision
+                  </a>
+                </motion.div>
+              </motion.div>
+
+              <motion.div style={prefersReducedMotion || isMobileViewport ? undefined : { y: heroImageY }} className="relative lg:pt-2">
+                <motion.div
+                  initial={{ opacity: prefersReducedMotion ? 1 : 0.82, y: prefersReducedMotion ? 0 : 26, scale: prefersReducedMotion ? 1 : 0.985 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: prefersReducedMotion ? 0.01 : 0.7, delay: prefersReducedMotion ? 0 : 0.18, ease: REVEAL_EASE }}
+                  className="relative scroll-reveal"
+                >
+                  <motion.div
+                    initial={{ opacity: prefersReducedMotion ? 1 : 0.5 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: prefersReducedMotion ? 0.01 : 0.8, ease: "easeOut" }}
+                    className="absolute inset-0 bg-gradient-to-tr from-[#f2d8bb]/50 via-[#c4d4ea]/30 to-transparent dark:from-[#283344]/40 dark:via-[#334056]/30 blur-[90px] -z-10 rounded-[3rem]"
+                  />
+                  <div className="lux-panel rounded-[2.5rem] p-4 md:p-5 relative overflow-hidden min-h-[420px] md:min-h-[560px]">
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/35 to-transparent dark:from-white/10 dark:to-transparent pointer-events-none" />
+                    <img
+                      src="https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?auto=format&fit=crop&q=80&w=1600"
+                      alt="Simpcraftt Premium Device"
+                      loading="eager"
+                      decoding="async"
+                      className="w-full h-full object-cover rounded-[2rem] transition-transform duration-500 ease-out hover:scale-[1.02]"
+                    />
+                    <motion.div
+                      animate={{ y: [-4, 6, -4] }}
+                      transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                      className="absolute top-8 right-6 bg-white/85 dark:bg-black/65 backdrop-blur-xl border border-white/60 dark:border-white/20 p-4 rounded-2xl shadow-2xl hidden md:flex items-center gap-4 scroll-reveal"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center">
+                        <Cpu className="w-5 h-5 text-blue-600 dark:text-blue-300" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">Neural Core</p>
+                        <p className="text-sm font-black text-black dark:text-white">SC-A1 Architecture</p>
+                      </div>
+                    </motion.div>
+                    <motion.div
+                      animate={{ y: [4, -4, 4] }}
+                      transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 0.8 }}
+                      className="absolute bottom-8 left-6 bg-white/85 dark:bg-black/65 backdrop-blur-xl border border-white/60 dark:border-white/20 p-4 rounded-2xl shadow-2xl hidden md:flex items-center gap-4 scroll-reveal"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center">
+                        <Zap className="w-5 h-5 text-purple-600 dark:text-purple-300" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">Ambient Charge</p>
+                        <p className="text-sm font-black text-black dark:text-white">HyperCharge 2.0</p>
+                      </div>
+                    </motion.div>
                   </div>
                 </motion.div>
-              </div>
+              </motion.div>
             </div>
-          </motion.div>
           </motion.div>
         </section>
 
         <BrandMarquee />
 
         {/* Brand Intro */}
-        <section id="preview" className="py-24 px-6 bg-surface dark:bg-white/[0.02] transition-colors">
+        <motion.section id="preview" className="py-24 px-6 transition-colors scroll-reveal" {...revealProps(0.02, 0.55, 12)}>
           <div className="container mx-auto">
             <div className="grid md:grid-cols-2 gap-16 items-center">
               <div>
                 <span className="text-blue-500 font-black tracking-widest uppercase text-sm mb-4 block">
                   About Simpcraftt
                 </span>
-                <h2 className="text-5xl font-sreda font-bold mb-8 leading-tight">
+                <h2 className="text-5xl md:text-6xl luxury-title mb-8">
                   Where Innovation <br /> Meets Craftsmanship
                 </h2>
                 <p className="text-lg text-gray-600 dark:text-gray-400 mb-6 leading-relaxed transition-colors">
@@ -757,6 +849,8 @@ export default function LandingPage() {
                   <div className="aspect-square rounded-3xl overflow-hidden">
                     <img
                       src="https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&q=80&w=600"
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
                       alt="Detail 1"
                     />
@@ -769,6 +863,8 @@ export default function LandingPage() {
                   <div className="aspect-[3/4] rounded-3xl overflow-hidden">
                     <img
                       src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=600"
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
                       alt="Detail 2"
                     />
@@ -776,6 +872,8 @@ export default function LandingPage() {
                   <div className="aspect-square rounded-3xl overflow-hidden">
                     <img
                       src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80&w=600"
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
                       alt="Detail 3"
                     />
@@ -784,16 +882,16 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
     {/* Product Teaser Showcase */}
-    <section className="py-24 px-6">
+    <motion.section className="py-24 px-6 scroll-reveal" {...revealProps(0.02, 0.55, 12)}>
       <div className="container mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-6xl font-sreda font-bold mb-4">
+        <div className="mb-16 md:mb-20 max-w-3xl">
+          <h2 className="text-5xl md:text-7xl luxury-title mb-5">
             Upcoming Lineup
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 max-w-xl mx-auto transition-colors">
+          <p className="text-gray-600 dark:text-gray-400 max-w-xl transition-colors">
             A first look at the products that will define the next
             generation of premium tech.
           </p>
@@ -801,24 +899,40 @@ export default function LandingPage() {
 
         <div className="grid md:grid-cols-3 gap-8">
           {PRODUCTS_TEASER.map((product, idx) => (
-            <ProductCard key={product.title} product={product} idx={idx} />
+            <ProductCard key={product.title} product={product} idx={idx} isMobile={isMobileViewport} />
           ))}
         </div>
       </div>
-    </section>
+    </motion.section>
 
         {/* Features / Why Choose Us */}
-        <section id="features" className="py-24 px-6 relative overflow-hidden">
+        <motion.section id="features" className="py-24 px-6 relative overflow-hidden scroll-reveal" {...revealProps(0.02, 0.55, 12)}>
           <div className="container mx-auto">
-            <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-600/10 dark:to-purple-600/10 border border-gray-200 dark:border-white/10 rounded-[3rem] p-12 md:p-24 relative shadow-xl shadow-gray-200/50 dark:shadow-none transition-colors">
+            <div className="lux-panel rounded-[3rem] p-12 md:p-24 relative transition-colors">
               <RotatingGridBackground />
               <div className="max-w-3xl relative z-10">
-                <h2 className="text-6xl font-sreda font-bold mb-12">
+                <h2 className="text-5xl md:text-7xl luxury-title mb-12">
                   The Simpcraftt <br /> Advantage
                 </h2>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
+                <motion.div
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, amount: 0.1, margin: "0px 0px -12% 0px" }}
+                  variants={{
+                    visible: { transition: { staggerChildren: 0.08 } },
+                    hidden: {},
+                  }}
+                  className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12 scroll-reveal"
+                >
                   {FEATURES.map((feature) => (
-                    <div key={feature.title} className="space-y-4">
+                    <motion.div
+                      key={feature.title}
+                      variants={{
+                        hidden: { opacity: 0.72, y: 10 },
+                        visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: "easeOut" } },
+                      }}
+                      className="space-y-4 scroll-reveal"
+                    >
                       <div className="w-12 h-12 bg-blue-100 dark:bg-white/10 rounded-2xl flex items-center justify-center text-blue-600 dark:text-white transition-colors">
                         {feature.icon}
                       </div>
@@ -826,13 +940,13 @@ export default function LandingPage() {
                       <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed transition-colors">
                         {feature.description}
                       </p>
-                    </div>
+                    </motion.div>
                   ))}
-                </div>
+                </motion.div>
               </div>
               <div className="hidden lg:block absolute -right-12 top-1/2 -translate-y-1/2 z-10">
                 <motion.div
-                  animate={{ y: [-20, 20, -20] }}
+                  animate={{ y: [-8, 8, -8] }}
                   transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
                   className="relative"
                 >
@@ -851,7 +965,8 @@ export default function LandingPage() {
                   </div>
 
                   <motion.div
-                    animate={{ y: [15, -15, 15], rotate: [0, 10, 0] }}
+                    initial={{ y: 15, rotate: 0 }}
+                    animate={{ y: [6, -6, 6], rotate: [0, 4, 0] }}
                     transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
                     className="absolute -top-12 -left-12 w-28 h-28 bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-white/40 dark:border-white/20 rounded-3xl flex items-center justify-center shadow-2xl transition-colors"
                   >
@@ -859,7 +974,8 @@ export default function LandingPage() {
                   </motion.div>
 
                   <motion.div
-                    animate={{ y: [-15, 15, -15], rotate: [0, -10, 0] }}
+                    initial={{ y: -15, rotate: 0 }}
+                    animate={{ y: [-6, 6, -6], rotate: [0, -4, 0] }}
                     transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 2 }}
                     className="absolute -bottom-8 -right-8 w-24 h-24 bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-white/40 dark:border-white/20 rounded-full flex items-center justify-center shadow-2xl transition-colors"
                   >
@@ -869,13 +985,13 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* Testimonials Section */}
-        <section id="community" className="py-24 px-6 relative overflow-hidden">
+        <motion.section id="community" className="py-24 px-6 relative overflow-hidden scroll-reveal" {...revealProps(0.02, 0.55, 12)}>
           <div className="container mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-6xl font-sreda font-bold mb-4">
+              <h2 className="text-5xl md:text-7xl luxury-title mb-5">
                 Community Hype
               </h2>
               <p className="text-gray-600 dark:text-gray-400 transition-colors">
@@ -886,10 +1002,11 @@ export default function LandingPage() {
               {TESTIMONIALS.map((t, idx) => (
                 <motion.div
                   key={idx}
-                  initial={{ opacity: 0, scale: 0.95 }}
+                  initial={{ opacity: 0.72, y: 10, scale: 0.985 }}
                   whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  className="bg-surface dark:bg-surface-dark/5 border border-gray-200 dark:border-white/10 rounded-[2rem] p-8 backdrop-blur-md relative shadow-lg shadow-gray-200/50 dark:shadow-none transition-colors"
+                  viewport={{ once: true, amount: 0.1, margin: "0px 0px -12% 0px" }}
+                  transition={{ duration: 0.45, delay: idx * 0.06, ease: "easeOut" }}
+                  className="lux-panel rounded-[2rem] p-8 relative transition-colors scroll-reveal"
                 >
                   <div className="flex items-center gap-4 mb-6">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center font-bold text-white">
@@ -915,13 +1032,20 @@ export default function LandingPage() {
               ))}
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* FAQ Section */}
-        <section id="faq" className="py-24 px-6 bg-surface dark:bg-white/[0.02] transition-colors">
+        <motion.section
+          id="faq"
+          className="py-24 px-6 transition-colors scroll-reveal"
+          initial={{ opacity: 0.75, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.1, margin: "0px 0px -12% 0px" }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
+        >
           <div className="container mx-auto max-w-3xl">
             <div className="text-center mb-16">
-              <h2 className="text-4xl font-sreda font-bold mb-4 tracking-tight">
+              <h2 className="text-4xl md:text-5xl luxury-title mb-4">
                 Common Inquiries
               </h2>
               <p className="text-gray-600 dark:text-gray-400 transition-colors">
@@ -934,10 +1058,17 @@ export default function LandingPage() {
               ))}
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* Newsletter Section */}
-        <section id="notify" className="py-24 px-6">
+        <motion.section
+          id="notify"
+          className="py-24 px-6 scroll-reveal"
+          initial={{ opacity: 0.75, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.1, margin: "0px 0px -12% 0px" }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
+        >
           <div className="container mx-auto max-w-5xl">
             <div className="bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-600 dark:to-purple-600 rounded-[3rem] p-12 md:p-20 text-center relative overflow-hidden shadow-2xl shadow-blue-500/20 dark:shadow-none transition-colors">
               <div className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none">
@@ -945,8 +1076,9 @@ export default function LandingPage() {
                 <div className="absolute bottom-10 right-10 w-20 h-20 bg-white blur-3xl rounded-full" />
               </div>
 
-              <h2 className="text-6xl font-sreda font-bold mb-6">
-                Stay Ahead of <br /> the Curve
+              <h2 className="text-4xl md:text-7xl luxury-title mb-6">
+                Stay <span className="heading-highlight ml-2">Ahead</span> of <br />
+                the <span className="heading-highlight ml-2">Curve</span>
               </h2>
               <p className="text-xl text-white/90 dark:text-white/80 mb-10 max-w-xl mx-auto transition-colors">
                 Join our inner circle and be the first to know when we launch
@@ -976,14 +1108,21 @@ export default function LandingPage() {
               </p>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* Contact/Lead Section */}
-        <motion.section id="contact" className="py-24 px-6 bg-surface dark:bg-white/[0.01] transition-colors">
+        <motion.section
+          id="contact"
+          className="py-24 px-6 transition-colors scroll-reveal"
+          initial={{ opacity: 0.75, y: 10 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.1, margin: "0px 0px -12% 0px" }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
+        >
           <div className="container mx-auto">
             <div className="grid md:grid-cols-2 gap-16">
               <div>
-                <h2 className="text-6xl font-sreda font-bold mb-8">
+                <h2 className="text-5xl md:text-7xl luxury-title mb-8">
                   Get In Touch
                 </h2>
                 <p className="text-lg text-gray-600 dark:text-gray-400 mb-12 leading-relaxed transition-colors">
@@ -1024,57 +1163,57 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-[3rem] p-8 md:p-12 backdrop-blur-md shadow-2xl shadow-gray-200/50 dark:shadow-none transition-colors">
+              <div className="lux-panel rounded-[3rem] p-8 md:p-12 transition-colors">
                 <form onSubmit={handleLeadSubmit} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-500 transition-colors">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 transition-colors ml-2">
                         Name
                       </label>
                       <input
                         name="name"
                         required
-                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-blue-500 transition-colors text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                        className="w-full bg-gray-50/50 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-2xl px-6 py-4 focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition-colors text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
                         placeholder="John Doe"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-500 transition-colors">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 transition-colors ml-2">
                         Email
                       </label>
                       <input
                         name="email"
                         type="email"
                         required
-                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-blue-500 transition-colors text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                        className="w-full bg-gray-50/50 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-2xl px-6 py-4 focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition-colors text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
                         placeholder="john@example.com"
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-500 transition-colors">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 transition-colors ml-2">
                       WhatsApp (Optional)
                     </label>
                     <input
                       name="whatsapp"
-                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-blue-500 transition-colors text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                      className="w-full bg-gray-50/50 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-2xl px-6 py-4 focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition-colors text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
                       placeholder="+1 (234) 567-890"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-500 transition-colors">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 transition-colors ml-2">
                       Message
                     </label>
                     <textarea
                       name="message"
                       rows="4"
-                      className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-blue-500 transition-colors resize-none text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                      className="w-full bg-gray-50/50 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-2xl px-6 py-4 focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition-colors resize-none text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
                       placeholder="How can we help?"
                     ></textarea>
                   </div>
                   <button
                     disabled={leadMutation.isPending}
-                    className="w-full py-4 bg-black text-white dark:bg-white dark:text-black font-black uppercase tracking-widest rounded-2xl hover:bg-gray-800 dark:hover:bg-gray-200 transition-all flex items-center justify-center gap-2 shadow-lg dark:shadow-none disabled:opacity-50"
+                    className="w-full py-5 bg-black text-white dark:bg-white dark:text-black font-black uppercase tracking-[0.15em] text-xs rounded-2xl hover:scale-[1.02] transition-transform flex items-center justify-center gap-3 shadow-[0_10px_40px_rgb(0,0,0,0.1)] dark:shadow-[0_10px_40px_rgba(255,255,255,0.1)] disabled:opacity-50"
                   >
                     {leadMutation.isPending ? "Sending..." : "Send Message"}
                     <Send className="w-4 h-4" />
@@ -1087,19 +1226,19 @@ export default function LandingPage() {
       </motion.main>
 
       {/* Footer */}
-      <footer className="py-20 px-6 border-t border-gray-200 dark:border-white/10 transition-colors">
-        <div className="container mx-auto">
-          <div className="grid md:grid-cols-4 gap-12 mb-16">
+      <footer className="py-20 px-6 border-t border-gray-200/50 dark:border-white/5 transition-colors relative z-10 bg-white/30 dark:bg-[#030305]/30 backdrop-blur-3xl">
+        <div className="container mx-auto max-w-7xl">
+          <div className="grid md:grid-cols-4 gap-12 mb-20">
             <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-8 h-8 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-lg flex items-center justify-center font-bold text-xl italic">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-lg flex items-center justify-center font-bold text-xl italic text-white dark:text-black shadow-lg">
                   S
                 </div>
-                <span className="text-2xl font-sreda font-bold tracking-tight text-black dark:text-white uppercase transition-colors">
+                <span className="text-2xl md:text-4xl luxury-brand text-gray-900 dark:text-white transition-colors">
                   Simpcraftt
                 </span>
               </div>
-              <p className="text-gray-600 dark:text-gray-400 max-w-sm mb-8 leading-relaxed transition-colors">
+              <p className="text-gray-600 dark:text-gray-400 max-w-sm mb-10 leading-relaxed transition-colors text-lg">
                 Reimagining lifestyle through the lens of futuristic technology
                 and premium craft. The era of Simpcraftt is just beginning.
               </p>
@@ -1112,23 +1251,23 @@ export default function LandingPage() {
                   <a
                     key={idx}
                     href={social.href}
-                    className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center text-black dark:text-white hover:bg-gray-200 dark:hover:bg-white/20 transition-all"
+                    className="w-12 h-12 rounded-full bg-white dark:bg-[#111] border border-gray-200/50 dark:border-white/5 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-gray-900 hover:scale-110 dark:hover:text-white transition-all shadow-sm"
                   >
-                    {React.cloneElement(social.icon, { size: 18 })}
+                    {React.cloneElement(social.icon, { size: 20 })}
                   </a>
                 ))}
               </div>
             </div>
 
             <div>
-              <h5 className="text-sm font-black uppercase tracking-widest mb-6 text-black dark:text-white transition-colors">
+              <h5 className="text-[10px] font-black uppercase tracking-[0.2em] mb-6 text-gray-900 dark:text-white transition-colors">
                 Navigation
               </h5>
-              <ul className="space-y-4 text-gray-600 dark:text-gray-400 text-sm font-medium uppercase tracking-wider transition-colors">
+              <ul className="space-y-4 text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-widest transition-colors">
                 <li>
                   <a
                     href="#preview"
-                    className="hover:text-black dark:hover:text-white transition-colors"
+                    className="hover:text-gray-900 dark:hover:text-white transition-colors"
                   >
                     Preview
                   </a>
@@ -1136,20 +1275,20 @@ export default function LandingPage() {
                 <li>
                   <a
                     href="#features"
-                    className="hover:text-black dark:hover:text-white transition-colors"
+                    className="hover:text-gray-900 dark:hover:text-white transition-colors"
                   >
                     Features
                   </a>
                 </li>
                 <li>
-                  <a href="#faq" className="hover:text-black dark:hover:text-white transition-colors">
+                  <a href="#faq" className="hover:text-gray-900 dark:hover:text-white transition-colors">
                     FAQ
                   </a>
                 </li>
                 <li>
                   <a
                     href="#contact"
-                    className="hover:text-black dark:hover:text-white transition-colors"
+                    className="hover:text-gray-900 dark:hover:text-white transition-colors"
                   >
                     Contact
                   </a>
@@ -1158,22 +1297,22 @@ export default function LandingPage() {
             </div>
 
             <div>
-              <h5 className="text-sm font-black uppercase tracking-widest mb-6 text-black dark:text-white transition-colors">
+              <h5 className="text-[10px] font-black uppercase tracking-[0.2em] mb-6 text-gray-900 dark:text-white transition-colors">
                 Legal
               </h5>
-              <ul className="space-y-4 text-gray-600 dark:text-gray-400 text-sm font-medium uppercase tracking-wider transition-colors">
+              <ul className="space-y-4 text-gray-600 dark:text-gray-400 text-xs font-bold uppercase tracking-widest transition-colors">
                 <li>
-                  <a href="#" className="hover:text-black dark:hover:text-white transition-colors">
+                  <a href="#" className="hover:text-gray-900 dark:hover:text-white transition-colors">
                     Privacy Policy
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-black dark:hover:text-white transition-colors">
+                  <a href="#" className="hover:text-gray-900 dark:hover:text-white transition-colors">
                     Terms of Service
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-black dark:hover:text-white transition-colors">
+                  <a href="#" className="hover:text-gray-900 dark:hover:text-white transition-colors">
                     Cookie Policy
                   </a>
                 </li>
@@ -1181,11 +1320,11 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="pt-12 border-t border-gray-200 dark:border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 transition-colors">
-            <p className="text-xs text-gray-500 uppercase tracking-widest font-medium">
+          <div className="pt-8 border-t border-gray-200/50 dark:border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 transition-colors">
+            <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">
               &copy; 2026 Simpcraftt. All rights reserved.
             </p>
-            <p className="text-xs text-gray-500 uppercase tracking-widest font-medium">
+            <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">
               Simpcraftt.com - Coming Soon
             </p>
           </div>
@@ -1196,10 +1335,10 @@ export default function LandingPage() {
       <a
         href="https://wa.me/1234567890"
         target="_blank"
-        className="fixed bottom-8 right-8 z-[100] w-14 h-14 bg-emerald-500 text-white rounded-full flex items-center justify-center shadow-2xl shadow-emerald-900/50 hover:scale-110 active:scale-95 transition-all group"
+        className="fixed bottom-8 right-8 z-[100] w-14 h-14 bg-white dark:bg-[#111] border border-gray-200/50 dark:border-white/10 text-emerald-500 rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:scale-110 active:scale-95 transition-all group"
       >
-        <MessageCircle className="w-7 h-7" />
-        <span className="absolute right-full mr-4 bg-white text-black px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-xl">
+        <MessageCircle className="w-6 h-6" />
+        <span className="absolute right-full mr-4 bg-white dark:bg-[#111] border border-gray-200/50 dark:border-white/10 text-gray-900 dark:text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-lg">
           Chat on WhatsApp
         </span>
       </a>
