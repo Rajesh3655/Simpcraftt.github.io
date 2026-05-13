@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactLenis } from "lenis/react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,8 +20,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <head>
+    <>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -38,7 +38,6 @@ export default function RootLayout({ children }) {
         />
         <style>{`
           *, *::before, *::after { box-sizing: border-box; }
-          html { scroll-behavior: smooth; }
           body {
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
@@ -65,15 +64,16 @@ export default function RootLayout({ children }) {
           .animate-float  { animation: float 4s ease-in-out infinite; }
           .custom-pulse   { animation: custom-pulse 2s cubic-bezier(0.4,0,0.6,1) infinite; }
         `}</style>
-      </head>
-      <body
-        className="bg-surface text-text-base dark:bg-surface-dark dark:text-text-base-dark antialiased transition-colors duration-200 ease-out"
+      <div
+        className="bg-surface text-text-base dark:bg-surface-dark dark:text-text-base-dark antialiased transition-colors duration-200 ease-out min-h-screen"
         style={{ fontFamily: "'Satoshi', 'Plus Jakarta Sans', sans-serif" }}
       >
-        <QueryClientProvider client={queryClient}>
-          {children}
-        </QueryClientProvider>
-      </body>
-    </html>
+        <ReactLenis root options={{ lerp: 0.1, duration: 1.2, wheelMultiplier: 1.5, smoothWheel: true }}>
+          <QueryClientProvider client={queryClient}>
+            {children}
+          </QueryClientProvider>
+        </ReactLenis>
+      </div>
+    </>
   );
 }

@@ -24,8 +24,8 @@ import React, { useEffect, useState } from "react";
 import { toast, Toaster } from "sonner";
 import ThemeToggle from "./ThemeToggle";
 
-const REVEAL_EASE = [0.22, 1, 0.36, 1];
-const REVEAL_VIEWPORT = { once: true, amount: 0.12, margin: "0px 0px -14% 0px" };
+const REVEAL_EASE = [0.16, 1, 0.3, 1];
+const REVEAL_VIEWPORT = { once: true, amount: 0.1, margin: "0px 0px 0px 0px" };
 const HERO_STAGGER = {
   hidden: {},
   visible: {
@@ -201,7 +201,7 @@ const CountdownTimer = () => {
     <div className="flex gap-4 md:gap-8 justify-center">
       {Object.entries(timeLeft).map(([unit, value]) => (
         <div key={unit} className="flex flex-col items-center">
-          <div className="bg-white/50 dark:bg-white/5 backdrop-blur-md border border-gray-200 dark:border-white/10 rounded-xl w-16 h-16 md:w-24 md:h-24 flex items-center justify-center text-4xl font-bold text-black dark:text-white mb-2 shadow-sm dark:shadow-none transition-colors">
+          <div className="bg-white/50 dark:bg-white/5 backdrop-blur-md border border-gray-200 dark:border-white/10 rounded-xl w-14 h-14 sm:w-16 sm:h-16 md:w-24 md:h-24 flex items-center justify-center text-2xl sm:text-3xl md:text-4xl font-bold text-black dark:text-white mb-2 shadow-sm dark:shadow-none transition-colors">
             {value.toString().padStart(2, "0")}
           </div>
           <span className="text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-medium transition-colors">
@@ -420,12 +420,71 @@ const ProductCard = ({ product, idx, isMobile }) => {
   );
 };
 
+const LoadingScreen = () => {
+  return (
+    <motion.div
+      key="loader"
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0, y: "-100%" }}
+      transition={{ duration: 0.8, ease: [0.76, 0, 0.24, 1] }}
+      className="fixed inset-0 z-[9999] bg-[#f1efea] dark:bg-[#07090c] flex flex-col items-center justify-center lux-noise pointer-events-auto"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
+        className="flex flex-col items-center"
+      >
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-12 h-12 bg-gray-900 dark:bg-white rounded-xl flex items-center justify-center font-bold text-2xl italic text-white dark:text-black shadow-2xl">
+            S
+          </div>
+          <span className="text-3xl md:text-4xl luxury-brand text-gray-900 dark:text-white">
+            Simpcraftt
+          </span>
+        </div>
+        
+        <div className="w-48 h-[2px] bg-gray-300 dark:bg-gray-800 overflow-hidden relative rounded-full">
+          <motion.div 
+            className="absolute inset-0 bg-gray-900 dark:bg-white origin-left"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+          />
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 export default function LandingPage() {
   const systemReducedMotion = useReducedMotion();
+  const [isLoading, setIsLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const prefersReducedMotion = !!systemReducedMotion;
+
+  useEffect(() => {
+    if (isLoading) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isLoading]);
+
+  useEffect(() => {
+    const minLoadTime = new Promise((resolve) => setTimeout(resolve, 1500));
+    const windowLoad = new Promise((resolve) => {
+      if (document.readyState === "complete") resolve();
+      else window.addEventListener("load", resolve);
+    });
+
+    Promise.all([minLoadTime, windowLoad]).then(() => setIsLoading(false));
+  }, []);
 
   useEffect(() => {
     const updateViewport = () => setIsMobileViewport(window.innerWidth < 768);
@@ -501,8 +560,8 @@ export default function LandingPage() {
   };
   
   // --- Hero Parallax Transforms ---
-  const heroBgY = useTransform(scrollY, [0, 1000], ["0%", "40%"]);
-  const heroTextY = useTransform(scrollY, [0, 1000], ["0%", "10%"]);
+  const heroBgY = useTransform(scrollY, [0, 1000], ["0%", "15%"]);
+  const heroTextY = useTransform(scrollY, [0, 1000], ["0%", "4%"]);
   const heroImageY = useTransform(scrollY, [0, 1000], ["0%", "0%"]);
 
   const newsletterMutation = useMutation({
@@ -569,6 +628,10 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#f1efea] text-text-base dark:bg-[#07090c] dark:text-text-base-dark font-satoshi selection:bg-blue-500/30 transition-colors duration-200 ease-out lux-noise">
+      <AnimatePresence mode="wait">
+        {isLoading && <LoadingScreen />}
+      </AnimatePresence>
+
       <Toaster position="top-center" expand={true} richColors />
 
       {!prefersReducedMotion && <GlowingCursor />}
@@ -645,7 +708,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="absolute top-full left-0 right-0 bg-white dark:bg-[#050505] border-b border-black/10 dark:border-white/10 p-6 md:hidden flex flex-col gap-4"
+              className="absolute top-full left-0 right-0 bg-white/95 dark:bg-[#050505]/95 backdrop-blur-xl border-b border-black/10 dark:border-white/10 p-6 md:hidden flex flex-col gap-4 shadow-2xl"
             >
               {["Preview", "Features", "Community", "FAQ", "Contact"].map(
                 (item) => (
@@ -677,7 +740,7 @@ export default function LandingPage() {
         transition={{ duration: 0.45, ease: "easeOut" }}
       >
         {/* Hero Section */}
-        <section className="relative pt-28 pb-20 md:pt-36 md:pb-28 px-6 overflow-hidden">
+        <section className="relative pt-28 pb-20 md:pt-36 md:pb-28 px-6 overflow-hidden min-h-screen flex flex-col justify-center">
           {/* Parallax Background Layer */}
           <motion.div 
             style={prefersReducedMotion || isMobileViewport ? undefined : { y: heroBgY }} 
@@ -722,7 +785,7 @@ export default function LandingPage() {
 
                 <motion.h1
                   variants={revealItem(0.72, 16)}
-                  className="text-5xl md:text-7xl lg:text-8xl luxury-heading mb-7 md:mb-9 max-w-[12ch]"
+                  className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl luxury-heading mb-7 md:mb-9 lg:max-w-[12ch]"
                 >
                   Technology For The <span className="heading-highlight">Quiet Future</span>
                 </motion.h1>
@@ -742,14 +805,14 @@ export default function LandingPage() {
                 >
                   <a
                     href="#notify"
-                    className="group px-8 py-4 bg-black/90 dark:bg-white text-white dark:text-black font-black rounded-full flex items-center gap-2 hover:scale-105 transition-all uppercase tracking-widest text-sm shadow-xl"
+                    className="group px-6 py-4 md:px-8 md:py-4 bg-black/90 dark:bg-white text-white dark:text-black font-black rounded-full flex items-center justify-center gap-2 hover:scale-105 transition-all uppercase tracking-widest text-xs md:text-sm shadow-xl w-full sm:w-auto"
                   >
                     Reserve Access
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </a>
                   <a
                     href="#preview"
-                    className="px-8 py-4 lux-panel text-text-base dark:text-text-base-dark font-black rounded-full hover:scale-[1.02] transition-all uppercase tracking-widest text-sm"
+                    className="px-6 py-4 md:px-8 md:py-4 lux-panel text-text-base dark:text-text-base-dark font-black rounded-full hover:scale-[1.02] transition-all uppercase tracking-widest text-xs md:text-sm text-center w-full sm:w-auto"
                   >
                     Explore Vision
                   </a>
@@ -814,14 +877,14 @@ export default function LandingPage() {
         <BrandMarquee />
 
         {/* Brand Intro */}
-        <motion.section id="preview" className="py-24 px-6 transition-colors scroll-reveal" {...revealProps(0.02, 0.55, 12)}>
+        <motion.section id="preview" className="py-24 md:py-32 px-6 transition-colors scroll-reveal" {...revealProps(0.02, 0.8, 20)}>
           <div className="container mx-auto">
             <div className="grid md:grid-cols-2 gap-16 items-center">
               <div>
                 <span className="text-blue-500 font-black tracking-widest uppercase text-sm mb-4 block">
                   About Simpcraftt
                 </span>
-                <h2 className="text-5xl md:text-6xl luxury-title mb-8">
+                <h2 className="text-4xl sm:text-5xl md:text-6xl luxury-title mb-8">
                   Where Innovation <br /> Meets Craftsmanship
                 </h2>
                 <p className="text-lg text-gray-600 dark:text-gray-400 mb-6 leading-relaxed transition-colors">
@@ -885,10 +948,10 @@ export default function LandingPage() {
         </motion.section>
 
     {/* Product Teaser Showcase */}
-    <motion.section className="py-24 px-6 scroll-reveal" {...revealProps(0.02, 0.55, 12)}>
+    <motion.section className="py-24 md:py-32 px-6 scroll-reveal" {...revealProps(0.02, 0.8, 20)}>
       <div className="container mx-auto">
         <div className="mb-16 md:mb-20 max-w-3xl">
-          <h2 className="text-5xl md:text-7xl luxury-title mb-5">
+          <h2 className="text-4xl sm:text-5xl md:text-7xl luxury-title mb-5">
             Upcoming Lineup
           </h2>
           <p className="text-gray-600 dark:text-gray-400 max-w-xl transition-colors">
@@ -897,7 +960,7 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {PRODUCTS_TEASER.map((product, idx) => (
             <ProductCard key={product.title} product={product} idx={idx} isMobile={isMobileViewport} />
           ))}
@@ -906,12 +969,12 @@ export default function LandingPage() {
     </motion.section>
 
         {/* Features / Why Choose Us */}
-        <motion.section id="features" className="py-24 px-6 relative overflow-hidden scroll-reveal" {...revealProps(0.02, 0.55, 12)}>
+        <motion.section id="features" className="py-24 md:py-32 px-6 relative overflow-hidden scroll-reveal" {...revealProps(0.02, 0.8, 20)}>
           <div className="container mx-auto">
-            <div className="lux-panel rounded-[3rem] p-12 md:p-24 relative transition-colors">
+            <div className="lux-panel rounded-[2rem] md:rounded-[3rem] p-8 md:p-12 lg:p-24 relative transition-colors">
               <RotatingGridBackground />
-              <div className="max-w-3xl relative z-10">
-                <h2 className="text-5xl md:text-7xl luxury-title mb-12">
+              <div className="max-w-full lg:max-w-[55%] xl:max-w-3xl relative z-10">
+                <h2 className="text-4xl sm:text-5xl md:text-7xl luxury-title mb-12">
                   The Simpcraftt <br /> Advantage
                 </h2>
                 <motion.div
@@ -944,7 +1007,7 @@ export default function LandingPage() {
                   ))}
                 </motion.div>
               </div>
-              <div className="hidden lg:block absolute -right-12 top-1/2 -translate-y-1/2 z-10">
+              <div className="hidden lg:block absolute -right-6 xl:-right-12 top-1/2 -translate-y-1/2 z-10 scale-[0.6] lg:scale-75 xl:scale-100 origin-right pointer-events-none">
                 <motion.div
                   animate={{ y: [-8, 8, -8] }}
                   transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
@@ -988,17 +1051,17 @@ export default function LandingPage() {
         </motion.section>
 
         {/* Testimonials Section */}
-        <motion.section id="community" className="py-24 px-6 relative overflow-hidden scroll-reveal" {...revealProps(0.02, 0.55, 12)}>
+        <motion.section id="community" className="py-24 md:py-32 px-6 relative overflow-hidden scroll-reveal" {...revealProps(0.02, 0.8, 20)}>
           <div className="container mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-5xl md:text-7xl luxury-title mb-5">
+              <h2 className="text-4xl sm:text-5xl md:text-7xl luxury-title mb-5">
                 Community Hype
               </h2>
               <p className="text-gray-600 dark:text-gray-400 transition-colors">
                 Join thousands of others waiting for the Simpcraftt era.
               </p>
             </div>
-            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto">
               {TESTIMONIALS.map((t, idx) => (
                 <motion.div
                   key={idx}
@@ -1037,15 +1100,15 @@ export default function LandingPage() {
         {/* FAQ Section */}
         <motion.section
           id="faq"
-          className="py-24 px-6 transition-colors scroll-reveal"
+          className="py-24 md:py-32 px-6 transition-colors scroll-reveal"
           initial={{ opacity: 0.75, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.1, margin: "0px 0px -12% 0px" }}
-          transition={{ duration: 0.45, ease: "easeOut" }}
+          transition={{ duration: 0.8, ease: REVEAL_EASE }}
         >
           <div className="container mx-auto max-w-3xl">
             <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl luxury-title mb-4">
+              <h2 className="text-3xl md:text-5xl luxury-title mb-4">
                 Common Inquiries
               </h2>
               <p className="text-gray-600 dark:text-gray-400 transition-colors">
@@ -1063,21 +1126,21 @@ export default function LandingPage() {
         {/* Newsletter Section */}
         <motion.section
           id="notify"
-          className="py-24 px-6 scroll-reveal"
+          className="py-24 md:py-32 px-6 scroll-reveal"
           initial={{ opacity: 0.75, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.1, margin: "0px 0px -12% 0px" }}
-          transition={{ duration: 0.45, ease: "easeOut" }}
+          transition={{ duration: 0.8, ease: REVEAL_EASE }}
         >
           <div className="container mx-auto max-w-5xl">
-            <div className="bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-600 dark:to-purple-600 rounded-[3rem] p-12 md:p-20 text-center relative overflow-hidden shadow-2xl shadow-blue-500/20 dark:shadow-none transition-colors">
+            <div className="bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-600 dark:to-purple-600 rounded-[2rem] md:rounded-[3rem] p-8 sm:p-12 md:p-20 text-center relative overflow-hidden shadow-2xl shadow-blue-500/20 dark:shadow-none transition-colors">
               <div className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none">
                 <div className="absolute top-10 left-10 w-20 h-20 bg-white blur-3xl rounded-full" />
                 <div className="absolute bottom-10 right-10 w-20 h-20 bg-white blur-3xl rounded-full" />
               </div>
 
-              <h2 className="text-4xl md:text-7xl luxury-title mb-6">
-                Stay <span className="heading-highlight ml-2">Ahead</span> of <br />
+              <h2 className="text-3xl sm:text-4xl md:text-7xl luxury-title mb-6">
+                Stay <span className="heading-highlight ml-2">Ahead</span> of <br className="hidden sm:block" />
                 the <span className="heading-highlight ml-2">Curve</span>
               </h2>
               <p className="text-xl text-white/90 dark:text-white/80 mb-10 max-w-xl mx-auto transition-colors">
@@ -1113,16 +1176,16 @@ export default function LandingPage() {
         {/* Contact/Lead Section */}
         <motion.section
           id="contact"
-          className="py-24 px-6 transition-colors scroll-reveal"
+          className="py-24 md:py-32 px-6 transition-colors scroll-reveal"
           initial={{ opacity: 0.75, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.1, margin: "0px 0px -12% 0px" }}
-          transition={{ duration: 0.45, ease: "easeOut" }}
+          transition={{ duration: 0.8, ease: REVEAL_EASE }}
         >
           <div className="container mx-auto">
             <div className="grid md:grid-cols-2 gap-16">
               <div>
-                <h2 className="text-5xl md:text-7xl luxury-title mb-8">
+                <h2 className="text-4xl sm:text-5xl md:text-7xl luxury-title mb-8">
                   Get In Touch
                 </h2>
                 <p className="text-lg text-gray-600 dark:text-gray-400 mb-12 leading-relaxed transition-colors">
@@ -1163,7 +1226,7 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div className="lux-panel rounded-[3rem] p-8 md:p-12 transition-colors">
+              <div className="lux-panel rounded-[2rem] md:rounded-[3rem] p-6 sm:p-8 md:p-12 transition-colors">
                 <form onSubmit={handleLeadSubmit} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
