@@ -198,10 +198,10 @@ const CountdownTimer = () => {
   }, []);
 
   return (
-    <div className="flex gap-4 md:gap-8 justify-center">
+    <div className="flex gap-2 sm:gap-4 md:gap-8 justify-center w-full max-w-full">
       {Object.entries(timeLeft).map(([unit, value]) => (
         <div key={unit} className="flex flex-col items-center">
-          <div className="bg-white/50 dark:bg-white/5 backdrop-blur-md border border-gray-200 dark:border-white/10 rounded-xl w-14 h-14 sm:w-16 sm:h-16 md:w-24 md:h-24 flex items-center justify-center text-2xl sm:text-3xl md:text-4xl font-bold text-black dark:text-white mb-2 shadow-sm dark:shadow-none transition-colors">
+          <div className="bg-white/50 dark:bg-white/5 backdrop-blur-md border border-gray-200 dark:border-white/10 rounded-xl w-12 h-12 sm:w-16 sm:h-16 md:w-24 md:h-24 flex items-center justify-center text-xl sm:text-3xl md:text-4xl font-bold text-black dark:text-white mb-2 shadow-sm dark:shadow-none transition-colors">
             {value.toString().padStart(2, "0")}
           </div>
           <span className="text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-medium transition-colors">
@@ -627,7 +627,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#f1efea] text-text-base dark:bg-[#07090c] dark:text-text-base-dark font-satoshi selection:bg-blue-500/30 transition-colors duration-200 ease-out lux-noise">
+    <div className="relative min-h-screen w-full max-w-full overflow-x-hidden bg-[#f1efea] text-text-base dark:bg-[#07090c] dark:text-text-base-dark font-satoshi selection:bg-blue-500/30 transition-colors duration-200 ease-out lux-noise">
       <AnimatePresence mode="wait">
         {isLoading && <LoadingScreen />}
       </AnimatePresence>
@@ -785,7 +785,7 @@ export default function LandingPage() {
 
                 <motion.h1
                   variants={revealItem(0.72, 16)}
-                  className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl luxury-heading mb-7 md:mb-9 lg:max-w-[12ch]"
+                  className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl luxury-heading mb-7 md:mb-9 lg:max-w-[12ch] break-words"
                 >
                   Technology For The <span className="heading-highlight">Quiet Future</span>
                 </motion.h1>
@@ -1139,7 +1139,7 @@ export default function LandingPage() {
                 <div className="absolute bottom-10 right-10 w-20 h-20 bg-white blur-3xl rounded-full" />
               </div>
 
-              <h2 className="text-3xl sm:text-4xl md:text-7xl luxury-title mb-6">
+              <h2 className="text-3xl sm:text-4xl md:text-7xl luxury-title mb-6 break-words">
                 Stay <span className="heading-highlight ml-2">Ahead</span> of <br className="hidden sm:block" />
                 the <span className="heading-highlight ml-2">Curve</span>
               </h2>

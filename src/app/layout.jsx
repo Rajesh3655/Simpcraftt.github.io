@@ -38,8 +38,12 @@ export default function RootLayout({ children }) {
         />
         <style>{`
           *, *::before, *::after { box-sizing: border-box; }
-          body {
+          html, body {
+            width: 100%;
+            max-width: 100vw;
             overflow-x: hidden;
+          }
+          body {
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             text-rendering: optimizeLegibility;
