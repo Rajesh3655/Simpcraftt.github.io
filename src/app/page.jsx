@@ -178,7 +178,7 @@ const CountdownTimer = () => {
 
   useEffect(() => {
     const launchDate = new Date();
-    launchDate.setDate(launchDate.getDate() + 15); // Launch in 15 days
+    launchDate.setDate(launchDate.getDate() + 25); // Launch in 25 days
 
     const timer = setInterval(() => {
       const now = new Date().getTime();
@@ -568,7 +568,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f1efea] text-text-base dark:bg-[#07090c] dark:text-text-base-dark font-satoshi selection:bg-blue-500/30 transition-colors duration-200 ease-out lux-noise">
+    <div className="min-h-screen overflow-x-hidden bg-[#f1efea] text-text-base dark:bg-[#07090c] dark:text-text-base-dark font-satoshi selection:bg-blue-500/30 transition-colors duration-200 ease-out lux-noise">
       <Toaster position="top-center" expand={true} richColors />
 
       {!prefersReducedMotion && <GlowingCursor />}
@@ -695,7 +695,7 @@ export default function LandingPage() {
             style={prefersReducedMotion || isMobileViewport ? undefined : { y: heroTextY }}
             className="container mx-auto relative z-20"
           >
-            <div className="grid lg:grid-cols-[1.04fr_0.96fr] gap-10 md:gap-14 xl:gap-20 items-start">
+            <div className="grid lg:grid-cols-[1.04fr_0.96fr] gap-8 md:gap-14 xl:gap-20 items-start">
               <motion.div
                 className="text-left"
                 initial="hidden"
@@ -756,7 +756,7 @@ export default function LandingPage() {
                 </motion.div>
               </motion.div>
 
-              <motion.div style={prefersReducedMotion || isMobileViewport ? undefined : { y: heroImageY }} className="relative lg:pt-2">
+              <motion.div style={prefersReducedMotion || isMobileViewport ? undefined : { y: heroImageY }} className="relative lg:pt-2 w-full max-w-[36rem] mx-auto lg:max-w-none">
                 <motion.div
                   initial={{ opacity: prefersReducedMotion ? 1 : 0.82, y: prefersReducedMotion ? 0 : 26, scale: prefersReducedMotion ? 1 : 0.985 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -767,16 +767,16 @@ export default function LandingPage() {
                     initial={{ opacity: prefersReducedMotion ? 1 : 0.5 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: prefersReducedMotion ? 0.01 : 0.8, ease: "easeOut" }}
-                    className="absolute inset-0 bg-gradient-to-tr from-[#f2d8bb]/50 via-[#c4d4ea]/30 to-transparent dark:from-[#283344]/40 dark:via-[#334056]/30 blur-[90px] -z-10 rounded-[3rem]"
+                    className="absolute inset-2 md:inset-0 bg-gradient-to-tr from-[#f2d8bb]/40 via-[#c4d4ea]/24 to-transparent dark:from-[#283344]/34 dark:via-[#334056]/24 blur-[56px] md:blur-[90px] -z-10 rounded-[3rem]"
                   />
-                  <div className="lux-panel rounded-[2.5rem] p-4 md:p-5 relative overflow-hidden min-h-[420px] md:min-h-[560px]">
+                  <div className="lux-panel rounded-[2rem] md:rounded-[2.5rem] p-3 md:p-5 relative overflow-hidden min-h-[300px] sm:min-h-[360px] md:min-h-[560px]">
                     <div className="absolute inset-0 bg-gradient-to-b from-white/35 to-transparent dark:from-white/10 dark:to-transparent pointer-events-none" />
                     <img
                       src="https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?auto=format&fit=crop&q=80&w=1600"
                       alt="Simpcraftt Premium Device"
                       loading="eager"
                       decoding="async"
-                      className="w-full h-full object-cover rounded-[2rem] transition-transform duration-500 ease-out hover:scale-[1.02]"
+                      className="w-full h-full object-cover rounded-[1.5rem] md:rounded-[2rem] transition-transform duration-500 ease-out hover:scale-[1.02]"
                     />
                     <motion.div
                       animate={{ y: [-4, 6, -4] }}
