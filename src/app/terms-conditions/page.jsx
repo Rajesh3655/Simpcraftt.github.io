@@ -1,0 +1,14 @@
+import { CommerceShell } from "../components/commerce/CommerceLayout";
+
+export default function TermsConditionsPage() {
+  return (
+    <CommerceShell eyebrow="Legal" title="Terms & Conditions" description="Marketplace purchases are governed by the marketplace partner until direct checkout launches.">
+      <section className="px-5 pb-24">
+        <div className="mx-auto max-w-4xl rounded-lg border border-black/10 bg-white/70 p-8 leading-8 text-black/68 dark:border-white/10 dark:bg-white/[0.045] dark:text-white/68">
+          <p>Product information, pricing, availability, warranty eligibility, and marketplace links may change as launch inventory and partner listings are finalized.</p>
+          <p className="mt-4">Direct checkout, coupons, payments, and order management are currently inactive public features and will be governed by updated terms when enabled.</p>
+        </div>
+      </section>
+    </CommerceShell>
+  );
+}
