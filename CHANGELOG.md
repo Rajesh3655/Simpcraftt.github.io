@@ -11,6 +11,9 @@ The format is based on semantic versioning.
 - Added data-driven product records with editable Amazon, Flipkart, and custom marketplace URLs.
 - Added disabled future-commerce UI for cart, checkout, coupons, payments, orders, addresses, and wishlist.
 - Added mock warranty claim and support ticket API endpoints for frontend integration.
+- Added enterprise admin management dashboard on `feature/admin-dashboard`.
+- Added admin routes for overview, products, marketplace links, warranty, customers, ecommerce controls, CMS, support, analytics, media, and settings.
+- Added admin REST API scaffolding for login, products, feature toggles, analytics, and warranty claim management.
 
 ## v1.0.1 - 2026-05-15
 
