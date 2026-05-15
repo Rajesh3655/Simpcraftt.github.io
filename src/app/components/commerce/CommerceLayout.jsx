@@ -1,4 +1,4 @@
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -6,6 +6,7 @@ import {
   Heart,
   Home,
   Lock,
+  Menu,
   PackageCheck,
   Search,
   ShieldCheck,
@@ -14,6 +15,7 @@ import {
   Sparkles,
   TicketCheck,
   User,
+  X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import ThemeToggle from "../../ThemeToggle";
@@ -44,6 +46,8 @@ const bottomNavItems = [
 ];
 
 export function CommerceShell({ children, eyebrow = "Simpcraftt Commerce", title, description }) {
+  const [quickActionsOpen, setQuickActionsOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-[#f6f7f4] pb-20 text-[#111714] transition-colors dark:bg-[#050607] dark:text-white md:pb-0">
       <div className="fixed inset-0 pointer-events-none opacity-70">
@@ -80,17 +84,86 @@ export function CommerceShell({ children, eyebrow = "Simpcraftt Commerce", title
             <ThemeToggle />
           </div>
 
-          <div className="md:hidden">
+          <div className="flex items-center gap-2 md:hidden">
             <ThemeToggle />
+            <button
+              type="button"
+              onClick={() => setQuickActionsOpen((value) => !value)}
+              className="flex h-11 w-11 items-center justify-center rounded-lg border border-black/10 bg-white/72 shadow-sm dark:border-white/10 dark:bg-white/5"
+              aria-label="Open commerce actions"
+              aria-expanded={quickActionsOpen}
+            >
+              {quickActionsOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </div>
       </header>
+
+      <MobileQuickActions open={quickActionsOpen} onClose={() => setQuickActionsOpen(false)} />
 
       {title && <PageHero eyebrow={eyebrow} title={title} description={description} />}
       <main className="relative z-10">{children}</main>
       <CommerceFooter />
       <MobileBottomNav />
     </div>
+  );
+}
+
+function MobileQuickActions({ open, onClose }) {
+  const actions = [
+    { label: "Cart", href: "/cart", icon: ShoppingBag, description: "Future direct purchase bag" },
+    { label: "Checkout", href: "/checkout", icon: CreditCard, description: "Direct checkout preview" },
+    { label: "Profile", href: "/profile", icon: User, description: "Account and ownership" },
+    { label: "Login", href: "/login", icon: Lock, description: "Customer access" },
+    { label: "Support", href: "/support", icon: ShieldCheck, description: "Tickets and WhatsApp" },
+    { label: "Admin", href: "/admin", icon: PackageCheck, description: "Operations console" },
+  ];
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.button
+            type="button"
+            aria-label="Close commerce actions"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 z-40 bg-black/35 backdrop-blur-sm md:hidden"
+          />
+          <motion.aside
+            initial={{ opacity: 0, y: -12, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -12, scale: 0.98 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-x-3 top-[72px] z-50 rounded-3xl border border-black/10 bg-white/92 p-3 shadow-[0_24px_80px_rgba(17,23,20,0.28)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#080a0b]/94 md:hidden"
+          >
+            <div className="mb-3 flex items-center justify-between px-2 pt-1">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">Quick Actions</p>
+                <p className="mt-1 text-sm text-black/52 dark:text-white/52">Commerce, account, and support tools</p>
+              </div>
+              <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-xl bg-black/[0.045] dark:bg-white/[0.07]" aria-label="Close quick actions">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {actions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <a key={action.href} href={action.href} onClick={onClose} className="rounded-2xl bg-black/[0.04] p-4 active:scale-[0.98] dark:bg-white/[0.06]">
+                    <Icon className="mb-3 h-5 w-5 text-emerald-700 dark:text-emerald-300" />
+                    <p className="text-sm font-black">{action.label}</p>
+                    <p className="mt-1 text-xs leading-5 text-black/50 dark:text-white/50">{action.description}</p>
+                  </a>
+                );
+              })}
+            </div>
+          </motion.aside>
+        </>
+      )}
+    </AnimatePresence>
   );
 }
 
