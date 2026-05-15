@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -6,7 +6,6 @@ import {
   Heart,
   Home,
   Lock,
-  Menu,
   PackageCheck,
   Search,
   ShieldCheck,
@@ -15,7 +14,6 @@ import {
   Sparkles,
   TicketCheck,
   User,
-  X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import ThemeToggle from "../../ThemeToggle";
@@ -46,8 +44,6 @@ const bottomNavItems = [
 ];
 
 export function CommerceShell({ children, eyebrow = "Simpcraftt Commerce", title, description }) {
-  const [open, setOpen] = useState(false);
-
   return (
     <div className="min-h-screen bg-[#f6f7f4] pb-20 text-[#111714] transition-colors dark:bg-[#050607] dark:text-white md:pb-0">
       <div className="fixed inset-0 pointer-events-none opacity-70">
@@ -84,34 +80,10 @@ export function CommerceShell({ children, eyebrow = "Simpcraftt Commerce", title
             <ThemeToggle />
           </div>
 
-          <button
-            type="button"
-            onClick={() => setOpen((value) => !value)}
-            className="flex h-11 w-11 items-center justify-center rounded-lg border border-black/10 bg-white/72 shadow-sm md:hidden dark:border-white/10 dark:bg-white/5"
-            aria-label="Toggle navigation"
-          >
-            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          <div className="md:hidden">
+            <ThemeToggle />
+          </div>
         </div>
-
-        <AnimatePresence>
-          {open && (
-            <motion.nav
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden border-t border-black/10 px-4 md:hidden dark:border-white/10"
-            >
-              <div className="grid gap-2 py-4">
-                {[...navItems, { label: "Cart", href: "/cart" }, { label: "Profile", href: "/profile" }].map((item) => (
-                  <a key={item.href} href={item.href} className="rounded-lg bg-white/52 px-4 py-4 text-sm font-black uppercase tracking-[0.12em] shadow-sm hover:bg-black/5 dark:bg-white/[0.045] dark:hover:bg-white/10">
-                    {item.label}
-                  </a>
-                ))}
-              </div>
-            </motion.nav>
-          )}
-        </AnimatePresence>
       </header>
 
       {title && <PageHero eyebrow={eyebrow} title={title} description={description} />}
@@ -124,11 +96,11 @@ export function CommerceShell({ children, eyebrow = "Simpcraftt Commerce", title
 
 function MobileBottomNav() {
   return (
-    <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 rounded-2xl border border-black/10 bg-white/88 p-1.5 shadow-[0_20px_70px_rgba(17,23,20,0.22)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#080a0b]/88 md:hidden">
+    <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 rounded-2xl border border-black/10 bg-white/90 p-1.5 shadow-[0_20px_70px_rgba(17,23,20,0.22)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#080a0b]/90 md:hidden">
       {bottomNavItems.map((item) => {
         const Icon = item.icon;
         return (
-          <a key={item.href} href={item.href} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-black text-black/60 transition active:scale-95 dark:text-white/60">
+          <a key={item.href} href={item.href} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-black text-black/62 transition active:scale-95 dark:text-white/62">
             <Icon className="h-4 w-4" />
             {item.label}
           </a>
