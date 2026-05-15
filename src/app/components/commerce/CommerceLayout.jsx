@@ -4,6 +4,7 @@ import {
   BadgeCheck,
   CreditCard,
   Heart,
+  Home,
   Lock,
   Menu,
   PackageCheck,
@@ -36,22 +37,30 @@ const navItems = [
   { label: "Support", href: "/support" },
 ];
 
+const bottomNavItems = [
+  { label: "Home", href: "/", icon: Home },
+  { label: "Shop", href: "/products", icon: Search },
+  { label: "Care", href: "/warranty", icon: ShieldCheck },
+  { label: "Wishlist", href: "/wishlist", icon: Heart },
+  { label: "Account", href: "/profile", icon: User },
+];
+
 export function CommerceShell({ children, eyebrow = "Simpcraftt Commerce", title, description }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#f6f7f4] text-[#111714] dark:bg-[#050607] dark:text-white transition-colors">
+    <div className="min-h-screen bg-[#f6f7f4] pb-20 text-[#111714] transition-colors dark:bg-[#050607] dark:text-white md:pb-0">
       <div className="fixed inset-0 pointer-events-none opacity-70">
         <div className="absolute inset-0 bg-[linear-gradient(rgba(17,23,20,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(17,23,20,0.06)_1px,transparent_1px)] bg-[size:42px_42px] dark:bg-[linear-gradient(rgba(255,255,255,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.045)_1px,transparent_1px)]" />
       </div>
 
-      <header className="sticky top-0 z-50 border-b border-black/10 bg-[#f6f7f4]/82 backdrop-blur-2xl dark:border-white/10 dark:bg-[#050607]/82">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
+      <header className="sticky top-0 z-50 border-b border-black/10 bg-[#f6f7f4]/88 backdrop-blur-2xl dark:border-white/10 dark:bg-[#050607]/88">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-5 md:py-4">
           <a href="/" className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#111714] text-lg font-black italic text-white dark:bg-white dark:text-[#111714]">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111714] text-base font-black italic text-white dark:bg-white dark:text-[#111714] md:h-10 md:w-10 md:text-lg">
               S
             </span>
-            <span className="luxury-brand text-lg tracking-[0.08em]">Simpcraftt</span>
+            <span className="luxury-brand text-base tracking-[0.08em] md:text-lg">Simpcraftt</span>
           </a>
 
           <nav className="hidden items-center gap-7 md:flex">
@@ -78,7 +87,7 @@ export function CommerceShell({ children, eyebrow = "Simpcraftt Commerce", title
           <button
             type="button"
             onClick={() => setOpen((value) => !value)}
-            className="flex h-11 w-11 items-center justify-center rounded-lg border border-black/10 bg-white/65 md:hidden dark:border-white/10 dark:bg-white/5"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-black/10 bg-white/72 shadow-sm md:hidden dark:border-white/10 dark:bg-white/5"
             aria-label="Toggle navigation"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -91,11 +100,11 @@ export function CommerceShell({ children, eyebrow = "Simpcraftt Commerce", title
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden border-t border-black/10 px-5 md:hidden dark:border-white/10"
+              className="overflow-hidden border-t border-black/10 px-4 md:hidden dark:border-white/10"
             >
               <div className="grid gap-2 py-4">
                 {[...navItems, { label: "Cart", href: "/cart" }, { label: "Profile", href: "/profile" }].map((item) => (
-                  <a key={item.href} href={item.href} className="rounded-lg px-3 py-3 text-sm font-bold uppercase tracking-[0.12em] hover:bg-black/5 dark:hover:bg-white/10">
+                  <a key={item.href} href={item.href} className="rounded-lg bg-white/52 px-4 py-4 text-sm font-black uppercase tracking-[0.12em] shadow-sm hover:bg-black/5 dark:bg-white/[0.045] dark:hover:bg-white/10">
                     {item.label}
                   </a>
                 ))}
@@ -108,7 +117,24 @@ export function CommerceShell({ children, eyebrow = "Simpcraftt Commerce", title
       {title && <PageHero eyebrow={eyebrow} title={title} description={description} />}
       <main className="relative z-10">{children}</main>
       <CommerceFooter />
+      <MobileBottomNav />
     </div>
+  );
+}
+
+function MobileBottomNav() {
+  return (
+    <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 rounded-2xl border border-black/10 bg-white/88 p-1.5 shadow-[0_20px_70px_rgba(17,23,20,0.22)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#080a0b]/88 md:hidden">
+      {bottomNavItems.map((item) => {
+        const Icon = item.icon;
+        return (
+          <a key={item.href} href={item.href} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-black text-black/60 transition active:scale-95 dark:text-white/60">
+            <Icon className="h-4 w-4" />
+            {item.label}
+          </a>
+        );
+      })}
+    </nav>
   );
 }
 
@@ -122,13 +148,13 @@ function IconLink({ href, label, children }) {
 
 export function PageHero({ eyebrow, title, description, action }) {
   return (
-    <section className="relative z-10 overflow-hidden px-5 pb-16 pt-16 md:pt-24">
+    <section className="relative z-10 overflow-hidden px-4 pb-10 pt-10 md:px-5 md:pb-16 md:pt-24">
       <div className="mx-auto max-w-7xl">
         <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.65 }} className="max-w-4xl">
-          <p className="mb-5 text-xs font-black uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">{eyebrow}</p>
-          <h1 className="luxury-heading text-5xl md:text-7xl lg:text-8xl">{title}</h1>
-          {description && <p className="mt-7 max-w-2xl text-lg leading-8 text-black/64 dark:text-white/64">{description}</p>}
-          {action && <div className="mt-9">{action}</div>}
+          <p className="mb-4 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300 md:text-xs">{eyebrow}</p>
+          <h1 className="luxury-heading text-4xl md:text-7xl lg:text-8xl">{title}</h1>
+          {description && <p className="mt-5 max-w-2xl text-base leading-7 text-black/64 dark:text-white/64 md:mt-7 md:text-lg md:leading-8">{description}</p>}
+          {action && <div className="mt-7 md:mt-9">{action}</div>}
         </motion.div>
       </div>
     </section>
@@ -137,7 +163,7 @@ export function PageHero({ eyebrow, title, description, action }) {
 
 export function PrimaryButton({ href, children, disabled = false, external = false }) {
   const className =
-    "inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#111714] px-6 py-3 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:-translate-y-0.5 hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-white/90";
+    "inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#111714] px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-white transition hover:-translate-y-0.5 hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-white/90 sm:w-auto md:tracking-[0.14em]";
 
   if (disabled) {
     return (
@@ -156,7 +182,7 @@ export function PrimaryButton({ href, children, disabled = false, external = fal
 
 export function SecondaryButton({ href, children, external = false }) {
   return (
-    <a href={href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-black/15 bg-white/70 px-6 py-3 text-sm font-black uppercase tracking-[0.14em] text-black transition hover:-translate-y-0.5 hover:bg-white dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10">
+    <a href={href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-black/15 bg-white/70 px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black transition hover:-translate-y-0.5 hover:bg-white dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 sm:w-auto md:tracking-[0.14em]">
       {children}
     </a>
   );
@@ -172,7 +198,7 @@ function SubmitButton({ children }) {
 
 export function ProductGrid({ items = products }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {items.map((product, index) => (
         <ProductCard key={product.slug} product={product} index={index} />
       ))}
@@ -189,21 +215,21 @@ export function ProductCard({ product, index = 0 }) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.2 }}
       transition={{ duration: 0.5, delay: index * 0.04 }}
-      className="group overflow-hidden rounded-lg border border-black/10 bg-white/72 shadow-[0_24px_80px_rgba(17,23,20,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045]"
+      className="group overflow-hidden rounded-2xl border border-black/10 bg-white/78 shadow-[0_20px_60px_rgba(17,23,20,0.1)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045] md:rounded-lg"
     >
       <a href={`/products/${product.slug}`} className="block">
-        <div className="aspect-[4/3] overflow-hidden bg-black/5">
+        <div className="aspect-[1.05/1] overflow-hidden bg-black/5 sm:aspect-[4/3]">
           <img src={product.image} alt={product.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
         </div>
-        <div className="p-5">
+        <div className="p-4 md:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <span className="rounded-full bg-emerald-500/12 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
               {category?.name}
             </span>
             <span className="text-xs font-bold text-black/50 dark:text-white/50">{product.rating} / 5</span>
           </div>
-          <h3 className="text-2xl font-black tracking-tight">{product.name}</h3>
-          <p className="mt-3 min-h-16 text-sm leading-6 text-black/62 dark:text-white/62">{product.summary}</p>
+          <h3 className="text-xl font-black tracking-tight md:text-2xl">{product.name}</h3>
+          <p className="mt-3 text-sm leading-6 text-black/62 dark:text-white/62 md:min-h-16">{product.summary}</p>
           <div className="mt-5 flex items-center justify-between">
             <span className="font-black">{formatPrice(product.price)}</span>
             <span className="inline-flex items-center gap-1 text-xs font-black uppercase tracking-[0.14em]">
@@ -218,12 +244,12 @@ export function ProductCard({ product, index = 0 }) {
 
 export function ProductFilters({ selectedCategory, onCategoryChange, query, onQueryChange, sort, onSortChange }) {
   return (
-    <div className="mb-8 grid gap-3 rounded-lg border border-black/10 bg-white/70 p-3 backdrop-blur-xl md:grid-cols-[1fr_auto_auto] dark:border-white/10 dark:bg-white/[0.045]">
-      <label className="flex items-center gap-3 rounded-md bg-black/[0.035] px-4 py-3 dark:bg-white/[0.05]">
+    <div className="mb-6 grid gap-3 rounded-2xl border border-black/10 bg-white/78 p-3 shadow-[0_20px_60px_rgba(17,23,20,0.08)] backdrop-blur-xl md:mb-8 md:grid-cols-[1fr_auto_auto] md:rounded-lg dark:border-white/10 dark:bg-white/[0.045]">
+      <label className="flex min-h-12 items-center gap-3 rounded-xl bg-black/[0.035] px-4 py-3 dark:bg-white/[0.05] md:rounded-md">
         <Search className="h-4 w-4 text-black/50 dark:text-white/50" />
         <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search products" className="w-full bg-transparent text-sm font-semibold placeholder:text-black/40 dark:placeholder:text-white/40" />
       </label>
-      <label className="flex items-center gap-3 rounded-md bg-black/[0.035] px-4 py-3 dark:bg-white/[0.05]">
+      <label className="flex min-h-12 items-center gap-3 rounded-xl bg-black/[0.035] px-4 py-3 dark:bg-white/[0.05] md:rounded-md">
         <SlidersHorizontal className="h-4 w-4 text-black/50 dark:text-white/50" />
         <select value={selectedCategory} onChange={(event) => onCategoryChange(event.target.value)} className="bg-transparent text-sm font-bold">
           <option value="all">All categories</option>
@@ -232,7 +258,7 @@ export function ProductFilters({ selectedCategory, onCategoryChange, query, onQu
           ))}
         </select>
       </label>
-      <select value={sort} onChange={(event) => onSortChange(event.target.value)} className="rounded-md bg-black/[0.035] px-4 py-3 text-sm font-bold dark:bg-white/[0.05]">
+      <select value={sort} onChange={(event) => onSortChange(event.target.value)} className="min-h-12 rounded-xl bg-black/[0.035] px-4 py-3 text-sm font-bold dark:bg-white/[0.05] md:rounded-md">
         <option value="featured">Featured</option>
         <option value="price-low">Price: Low to high</option>
         <option value="price-high">Price: High to low</option>
@@ -260,7 +286,7 @@ export function FutureCommerceNotice({ title = "Direct purchase launching soon" 
 
 export function BuyPanel({ product }) {
   return (
-    <div className="rounded-lg border border-black/10 bg-white/76 p-5 shadow-[0_24px_80px_rgba(17,23,20,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.05]">
+    <div className="rounded-2xl border border-black/10 bg-white/80 p-4 shadow-[0_24px_80px_rgba(17,23,20,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.05] md:rounded-lg md:p-5">
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.16em] text-black/45 dark:text-white/45">Marketplace launch</p>
@@ -270,12 +296,12 @@ export function BuyPanel({ product }) {
           <Heart className="h-5 w-5" />
         </button>
       </div>
-      <div className="mt-5 grid gap-3">
+      <div className="mt-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
         <SecondaryButton href={product.marketplace.amazon} external>Buy on Amazon</SecondaryButton>
         <SecondaryButton href={product.marketplace.flipkart} external>Buy on Flipkart</SecondaryButton>
         <PrimaryButton href={product.marketplace.custom} external>Buy Now</PrimaryButton>
       </div>
-      <div className="mt-5">
+      <div className="mt-5 hidden md:block">
         <FutureCommerceNotice />
       </div>
     </div>
@@ -287,12 +313,12 @@ export function ProductGallery({ product }) {
 
   return (
     <div>
-      <div className="aspect-square overflow-hidden rounded-lg border border-black/10 bg-white/70 dark:border-white/10 dark:bg-white/[0.045]">
+      <div className="aspect-[1/1.08] overflow-hidden rounded-2xl border border-black/10 bg-white/70 dark:border-white/10 dark:bg-white/[0.045] md:aspect-square md:rounded-lg">
         <img src={active} alt={product.name} className="h-full w-full object-cover" />
       </div>
-      <div className="mt-3 grid grid-cols-4 gap-3">
+      <div className="mt-3 grid grid-cols-4 gap-2 md:gap-3">
         {(product.gallery ?? [product.image]).map((image) => (
-          <button key={image} type="button" onClick={() => setActive(image)} className={`aspect-square overflow-hidden rounded-md border ${active === image ? "border-emerald-500" : "border-black/10 dark:border-white/10"}`}>
+          <button key={image} type="button" onClick={() => setActive(image)} className={`aspect-square overflow-hidden rounded-xl border md:rounded-md ${active === image ? "border-emerald-500" : "border-black/10 dark:border-white/10"}`}>
             <img src={image} alt="" className="h-full w-full object-cover" />
           </button>
         ))}
@@ -310,12 +336,12 @@ export function EcommerceStepper({ current = 0 }) {
   ];
 
   return (
-    <div className="grid gap-3 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {steps.map((step, index) => {
         const Icon = step.icon;
         const isActive = index <= current;
         return (
-          <div key={step.label} className={`rounded-lg border p-4 ${isActive ? "border-emerald-500/40 bg-emerald-400/10" : "border-black/10 bg-white/60 dark:border-white/10 dark:bg-white/[0.04]"}`}>
+          <div key={step.label} className={`rounded-2xl border p-4 md:rounded-lg ${isActive ? "border-emerald-500/40 bg-emerald-400/10" : "border-black/10 bg-white/60 dark:border-white/10 dark:bg-white/[0.04]"}`}>
             <Icon className="mb-3 h-5 w-5" />
             <p className="text-sm font-black uppercase tracking-[0.14em]">{step.label}</p>
           </div>
@@ -328,9 +354,9 @@ export function EcommerceStepper({ current = 0 }) {
 export function AccountShell({ title, description, children }) {
   return (
     <CommerceShell eyebrow="Account" title={title} description={description}>
-      <section className="px-5 pb-24">
+      <section className="px-4 pb-24 md:px-5">
         <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[280px_1fr]">
-          <aside className="rounded-lg border border-black/10 bg-white/70 p-4 dark:border-white/10 dark:bg-white/[0.045]">
+          <aside className="rounded-2xl border border-black/10 bg-white/70 p-3 dark:border-white/10 dark:bg-white/[0.045] md:rounded-lg md:p-4">
             {["Profile", "Addresses", "Orders", "Wishlist", "Registered Products"].map((item) => (
               <a key={item} href={item === "Profile" ? "/profile" : "#"} className="block rounded-md px-4 py-3 text-sm font-bold hover:bg-black/5 dark:hover:bg-white/10">
                 {item}

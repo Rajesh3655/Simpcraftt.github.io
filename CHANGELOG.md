@@ -14,6 +14,7 @@ The format is based on semantic versioning.
 - Added enterprise admin management dashboard on `feature/admin-dashboard`.
 - Added admin routes for overview, products, marketplace links, warranty, customers, ecommerce controls, CMS, support, analytics, media, and settings.
 - Added admin REST API scaffolding for login, products, feature toggles, analytics, and warranty claim management.
+- Improved premium mobile webapp UX on `feature/premium-mobile-ux` with bottom navigation, mobile-first homepage spacing, touch-friendly product cards, compact filters, and responsive admin drawer behavior.
 
 ## v1.0.1 - 2026-05-15
 

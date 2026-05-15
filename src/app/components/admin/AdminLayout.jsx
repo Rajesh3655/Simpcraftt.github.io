@@ -103,7 +103,9 @@ export function AdminShell({ title = "Admin Command Center", description, childr
     <div className="min-h-screen bg-[#f3f5f2] text-[#111714] dark:bg-[#050607] dark:text-white">
       <div className="fixed inset-0 pointer-events-none bg-[linear-gradient(rgba(17,23,20,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(17,23,20,0.05)_1px,transparent_1px)] bg-[size:40px_40px] dark:bg-[linear-gradient(rgba(255,255,255,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.045)_1px,transparent_1px)]" />
 
-      <aside className={`fixed inset-y-0 left-0 z-50 w-72 border-r border-black/10 bg-white/88 p-4 backdrop-blur-2xl transition-transform lg:translate-x-0 dark:border-white/10 dark:bg-[#080a0b]/92 ${navOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      {navOpen && <button className="fixed inset-0 z-40 bg-black/35 backdrop-blur-sm lg:hidden" onClick={() => setNavOpen(false)} aria-label="Close admin overlay" />}
+
+      <aside className={`fixed inset-y-0 left-0 z-50 w-[86vw] max-w-80 border-r border-black/10 bg-white/92 p-4 backdrop-blur-2xl transition-transform lg:w-72 lg:translate-x-0 dark:border-white/10 dark:bg-[#080a0b]/94 ${navOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex items-center justify-between gap-3 px-2 py-3">
           <a href="/admin" className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#111714] text-lg font-black italic text-white dark:bg-white dark:text-[#111714]">S</span>
@@ -117,7 +119,7 @@ export function AdminShell({ title = "Admin Command Center", description, childr
           </button>
         </div>
 
-        <nav className="mt-6 grid gap-1">
+        <nav className="mt-6 grid max-h-[calc(100svh-180px)] gap-1 overflow-y-auto pb-24 lg:max-h-none lg:overflow-visible lg:pb-0">
           {adminNav.map((item) => {
             const Icon = item.icon;
             return (
@@ -141,9 +143,9 @@ export function AdminShell({ title = "Admin Command Center", description, childr
       </aside>
 
       <div className="relative z-10 lg:pl-72">
-        <header className="sticky top-0 z-40 border-b border-black/10 bg-[#f3f5f2]/84 px-5 py-4 backdrop-blur-2xl dark:border-white/10 dark:bg-[#050607]/84">
+        <header className="sticky top-0 z-30 border-b border-black/10 bg-[#f3f5f2]/88 px-4 py-3 backdrop-blur-2xl dark:border-white/10 dark:bg-[#050607]/88 md:px-5 md:py-4">
           <div className="flex items-center justify-between gap-4">
-            <button className="rounded-lg border border-black/10 p-3 lg:hidden dark:border-white/10" onClick={() => setNavOpen(true)} aria-label="Open admin navigation">
+            <button className="rounded-lg border border-black/10 bg-white/72 p-3 shadow-sm lg:hidden dark:border-white/10 dark:bg-white/[0.045]" onClick={() => setNavOpen(true)} aria-label="Open admin navigation">
               <LayoutDashboard className="h-5 w-5" />
             </button>
             <label className="hidden min-h-11 w-full max-w-lg items-center gap-3 rounded-lg border border-black/10 bg-white/68 px-4 md:flex dark:border-white/10 dark:bg-white/[0.045]">
@@ -164,15 +166,15 @@ export function AdminShell({ title = "Admin Command Center", description, childr
           </div>
         </header>
 
-        <main className="px-5 py-8">
+        <main className="px-4 py-6 md:px-5 md:py-8">
           <div className="mx-auto max-w-7xl">
-            <div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+            <div className="mb-6 flex flex-col justify-between gap-5 md:mb-8 md:flex-row md:items-end">
               <div>
                 <p className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">Enterprise Management</p>
-                <h1 className="luxury-title text-4xl md:text-6xl">{title}</h1>
+                <h1 className="luxury-title text-3xl md:text-6xl">{title}</h1>
                 {description && <p className="mt-4 max-w-3xl leading-7 text-black/60 dark:text-white/60">{description}</p>}
               </div>
-              <div className="flex gap-3">
+              <div className="grid gap-3 sm:flex">
                 <AdminButton href="/products">View Storefront</AdminButton>
                 <AdminButton href="/admin/settings" tone="solid">Feature Toggles</AdminButton>
               </div>
@@ -236,13 +238,13 @@ function AdminSectionContent({ section }) {
 
 function MetricGrid() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
       {adminStats.map((stat) => (
-        <div key={stat.label} className="rounded-lg border border-black/10 bg-white/74 p-5 shadow-[0_24px_80px_rgba(17,23,20,0.06)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045]">
+        <div key={stat.label} className="rounded-2xl border border-black/10 bg-white/78 p-4 shadow-[0_20px_60px_rgba(17,23,20,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045] md:rounded-lg md:p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.16em] text-black/44 dark:text-white/44">{stat.label}</p>
-              <p className="mt-4 text-3xl font-black">{stat.value}</p>
+              <p className="mt-3 text-2xl font-black md:mt-4 md:text-3xl">{stat.value}</p>
               <p className="mt-2 text-sm font-semibold text-black/56 dark:text-white/56">{stat.trend}</p>
             </div>
             <StatusPill status={stat.status} />
@@ -460,12 +462,12 @@ function SettingsAdmin() {
 
 function AdminPanel({ title, icon: Icon, children }) {
   return (
-    <section className="rounded-lg border border-black/10 bg-white/74 p-5 shadow-[0_24px_80px_rgba(17,23,20,0.06)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045]">
+    <section className="rounded-2xl border border-black/10 bg-white/78 p-4 shadow-[0_20px_60px_rgba(17,23,20,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045] md:rounded-lg md:p-5">
       <div className="mb-5 flex items-center gap-3">
         <span className="rounded-lg bg-emerald-500/12 p-2 text-emerald-700 dark:text-emerald-300">
           <Icon className="h-5 w-5" />
         </span>
-        <h2 className="text-xl font-black">{title}</h2>
+        <h2 className="text-lg font-black md:text-xl">{title}</h2>
       </div>
       {children}
     </section>
@@ -474,7 +476,7 @@ function AdminPanel({ title, icon: Icon, children }) {
 
 function AdminTable({ columns, rows }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
       <table className="w-full min-w-[720px] border-separate border-spacing-y-2 text-left text-sm">
         <thead>
           <tr>
@@ -501,9 +503,9 @@ function AdminTable({ columns, rows }) {
 
 function ModuleGrid({ modules }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       {modules.map((module) => (
-        <div key={module.name} className="rounded-lg bg-black/[0.035] p-5 dark:bg-white/[0.05]">
+        <div key={module.name} className="rounded-xl bg-black/[0.035] p-4 dark:bg-white/[0.05] md:p-5">
           <div className="mb-4 flex items-center justify-between gap-4">
             <h3 className="font-black">{module.name}</h3>
             <StatusPill status={module.enabled ? "Enabled" : "Disabled"} />
@@ -527,9 +529,9 @@ function AdminList({ items }) {
 
 function AdminToolbar({ primary, secondary }) {
   return (
-    <div className="flex flex-col justify-between gap-3 rounded-lg border border-black/10 bg-white/74 p-4 md:flex-row md:items-center dark:border-white/10 dark:bg-white/[0.045]">
+    <div className="flex flex-col justify-between gap-3 rounded-2xl border border-black/10 bg-white/78 p-4 md:flex-row md:items-center md:rounded-lg dark:border-white/10 dark:bg-white/[0.045]">
       <p className="text-sm font-bold text-black/58 dark:text-white/58">Changes are staged in admin architecture and ready for secure backend persistence.</p>
-      <div className="flex gap-3">
+      <div className="grid gap-3 sm:flex">
         <AdminButton href="#">{secondary}</AdminButton>
         <AdminButton href="#" tone="solid">{primary}</AdminButton>
       </div>
