@@ -177,21 +177,25 @@ const CountdownTimer = () => {
   });
 
   useEffect(() => {
-    // Set a fixed target launch date instead of a rolling 25 days
-    const launchDate = new Date("2026-12-31T00:00:00Z");
+    // Launch target: 30th of this month (local time)
+    const now = new Date();
+    const launchDate = new Date(now.getFullYear(), now.getMonth(), 30, 0, 0, 0, 0);
 
     const timer = setInterval(() => {
       const now = new Date().getTime();
       const distance = launchDate - now;
+      const safeDistance = Math.max(distance, 0);
 
       setTimeLeft({
-        days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+        days: Math.floor(safeDistance / (1000 * 60 * 60 * 24)),
         hours: Math.floor(
-          (distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+          (safeDistance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
         ),
-        minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
-        seconds: Math.floor((distance % (1000 * 60)) / 1000),
+        minutes: Math.floor((safeDistance % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((safeDistance % (1000 * 60)) / 1000),
       });
+
+      if (distance <= 0) clearInterval(timer);
     }, 1000);
 
     return () => clearInterval(timer);
@@ -477,13 +481,25 @@ export default function LandingPage() {
   }, [isLoading]);
 
   useEffect(() => {
+    const loaderSeen = sessionStorage.getItem("simpcraftt_loader_seen") === "1";
+    if (loaderSeen) {
+      setIsLoading(false);
+      return;
+    }
+
     const minLoadTime = new Promise((resolve) => setTimeout(resolve, 1500));
     const windowLoad = new Promise((resolve) => {
       if (document.readyState === "complete") resolve();
-      else window.addEventListener("load", resolve);
+      else {
+        const onLoad = () => resolve();
+        window.addEventListener("load", onLoad, { once: true });
+      }
     });
 
-    Promise.all([minLoadTime, windowLoad]).then(() => setIsLoading(false));
+    Promise.all([minLoadTime, windowLoad]).then(() => {
+      sessionStorage.setItem("simpcraftt_loader_seen", "1");
+      setIsLoading(false);
+    });
   }, []);
 
   useEffect(() => {
@@ -1217,6 +1233,7 @@ export default function LandingPage() {
                       <a
                         href="https://wa.me/1234567890"
                         target="_blank"
+                        rel="noopener noreferrer"
                         className="mt-2 inline-flex items-center gap-2 text-emerald-400 font-black uppercase tracking-widest text-xs hover:gap-3 transition-all"
                       >
                         Start Chat <ChevronRight className="w-4 h-4" />
@@ -1402,6 +1419,7 @@ export default function LandingPage() {
       <a
         href="https://wa.me/1234567890"
         target="_blank"
+        rel="noopener noreferrer"
         className="fixed bottom-8 right-8 z-[100] w-14 h-14 bg-white dark:bg-[#111] border border-gray-200/50 dark:border-white/10 text-emerald-500 rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:scale-110 active:scale-95 transition-all group"
       >
         <MessageCircle className="w-6 h-6" />
