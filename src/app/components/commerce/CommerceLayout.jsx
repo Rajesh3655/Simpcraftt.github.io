@@ -16,7 +16,7 @@ import {
   User,
   X,
 } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import ThemeToggle from "../../ThemeToggle";
 import {
   categories,
