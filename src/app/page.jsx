@@ -177,8 +177,8 @@ const CountdownTimer = () => {
   });
 
   useEffect(() => {
-    const launchDate = new Date();
-    launchDate.setDate(launchDate.getDate() + 25); // Launch in 25 days
+    // Set a fixed target launch date instead of a rolling 25 days
+    const launchDate = new Date("2026-12-31T00:00:00Z");
 
     const timer = setInterval(() => {
       const now = new Date().getTime();
@@ -1230,10 +1230,11 @@ export default function LandingPage() {
                 <form onSubmit={handleLeadSubmit} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 transition-colors ml-2">
+                      <label htmlFor="name" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 transition-colors ml-2">
                         Name
                       </label>
                       <input
+                        id="name"
                         name="name"
                         required
                         className="w-full bg-gray-50/50 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-2xl px-6 py-4 focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition-colors text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
@@ -1241,10 +1242,11 @@ export default function LandingPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 transition-colors ml-2">
+                      <label htmlFor="email" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 transition-colors ml-2">
                         Email
                       </label>
                       <input
+                        id="email"
                         name="email"
                         type="email"
                         required
@@ -1254,20 +1256,22 @@ export default function LandingPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 transition-colors ml-2">
+                    <label htmlFor="whatsapp" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 transition-colors ml-2">
                       WhatsApp (Optional)
                     </label>
                     <input
+                      id="whatsapp"
                       name="whatsapp"
                       className="w-full bg-gray-50/50 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-2xl px-6 py-4 focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition-colors text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
                       placeholder="+1 (234) 567-890"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 transition-colors ml-2">
+                    <label htmlFor="message" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 transition-colors ml-2">
                       Message
                     </label>
                     <textarea
+                      id="message"
                       name="message"
                       rows="4"
                       className="w-full bg-gray-50/50 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-2xl px-6 py-4 focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition-colors resize-none text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
