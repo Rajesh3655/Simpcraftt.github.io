@@ -1,11 +1,11 @@
-import { readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import {
 	type RouteConfigEntry,
 	index,
 	route,
 } from '@react-router/dev/routes';
+import { readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -13,6 +13,7 @@ type Tree = {
 	path: string;
 	children: Tree[];
 	hasPage: boolean;
+	pageFileName?: string;
 	isParam: boolean;
 	paramName: string;
 	isCatchAll: boolean;
@@ -52,8 +53,9 @@ function buildRouteTree(dir: string, basePath = ''): Tree {
 			const childPath = basePath ? `${basePath}/${file}` : file;
 			const childNode = buildRouteTree(filePath, childPath);
 			node.children.push(childNode);
-		} else if (file === 'page.jsx') {
+		} else if (file === 'page.jsx' || file === 'page.tsx') {
 			node.hasPage = true;
+			node.pageFileName = file;
     }
 	}
 
@@ -65,7 +67,7 @@ function generateRoutes(node: Tree): RouteConfigEntry[] {
 
 	if (node.hasPage) {
 		const componentPath =
-			node.path === '' ? `./${node.path}page.jsx` : `./${node.path}/page.jsx`;
+			node.path === '' ? `./${node.path}${node.pageFileName}` : `./${node.path}/${node.pageFileName}`;
 
 		if (node.path === '') {
 			routes.push(index(componentPath));

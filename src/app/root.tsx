@@ -445,7 +445,10 @@ export function Layout({ children }: { children: ReactNode }) {
         <link rel="icon" href="/src/__create/favicon.png" />
         {LoadFontsSSR ? <LoadFontsSSR /> : null}
       </head>
-      <body>
+      <body
+        className="antialiased min-h-screen"
+        style={{ fontFamily: "'Satoshi', 'General Sans', system-ui, sans-serif", background: "var(--bg, #07080a)", color: "var(--text-primary, #f0f0ee)" }}
+      >
         <ClientOnly loader={() => children} />
         <Toaster position={isMobile ? 'top-center' : 'bottom-right'} />
         <ScrollRestoration />

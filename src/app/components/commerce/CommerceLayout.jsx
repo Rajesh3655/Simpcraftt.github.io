@@ -1,285 +1,257 @@
-import { AnimatePresence, motion } from "motion/react";
-import {
-  ArrowRight,
-  BadgeCheck,
-  CreditCard,
-  Heart,
-  Home,
-  Lock,
-  Menu,
-  PackageCheck,
-  Search,
-  ShieldCheck,
-  ShoppingBag,
-  SlidersHorizontal,
-  Sparkles,
-  TicketCheck,
-  User,
-  X,
-} from "lucide-react";
-import { useMemo, useState } from "react";
+﻿import { useState, useEffect } from "react";
 import ThemeToggle from "../../ThemeToggle";
-import {
-  categories,
-  collections,
-  faqs,
-  formatPrice,
-  getCategoryById,
-  platformStatus,
-  products,
-} from "../../data/commerce";
+import { categories, collections, faqs, formatPrice, getCategoryById, platformStatus, products } from "../../data/commerce";
+import { motion, AnimatePresence } from "motion/react";
+import { ArrowRight, ChevronDown, Heart, Home, Menu, Search, ShieldCheck, User, X } from "lucide-react";
 
-const navItems = [
-  { label: "Home", href: "/" },
-  { label: "Products", href: "/products" },
-  { label: "Collections", href: "/collections" },
-  { label: "Warranty", href: "/warranty" },
-  { label: "Support", href: "/support" },
+const nav = [
+  { l: "Products", h: "/products" },
+  { l: "Collections", h: "/collections" },
+  { l: "Warranty", h: "/warranty" },
+  { l: "Support", h: "/support" },
+];
+const bnav = [
+  { l: "Home", h: "/", i: Home },
+  { l: "Shop", h: "/products", i: Search },
+  { l: "Care", h: "/warranty", i: ShieldCheck },
+  { l: "Account", h: "/profile", i: User },
 ];
 
-const bottomNavItems = [
-  { label: "Home", href: "/", icon: Home },
-  { label: "Shop", href: "/products", icon: Search },
-  { label: "Care", href: "/warranty", icon: ShieldCheck },
-  { label: "Wishlist", href: "/wishlist", icon: Heart },
-  { label: "Account", href: "/profile", icon: User },
-];
+function Navbar({ transparent = false }) {
+  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
 
-export function CommerceShell({ children, eyebrow = "Simpcraftt Commerce", title, description }) {
-  const [quickActionsOpen, setQuickActionsOpen] = useState(false);
+  useEffect(() => {
+    const fn = () => setScrolled(window.scrollY > 72);
+    window.addEventListener("scroll", fn, { passive: true });
+    fn();
+    return () => window.removeEventListener("scroll", fn);
+  }, []);
+
+  const solid = !transparent || scrolled;
+  const ease = "cubic-bezier(0.22,1,0.36,1)";
 
   return (
-    <div className="min-h-screen bg-[#f6f7f4] pb-20 text-[#111714] transition-colors dark:bg-[#050607] dark:text-white md:pb-0">
-      <div className="fixed inset-0 pointer-events-none opacity-70">
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(17,23,20,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(17,23,20,0.06)_1px,transparent_1px)] bg-[size:42px_42px] dark:bg-[linear-gradient(rgba(255,255,255,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.045)_1px,transparent_1px)]" />
-      </div>
+    <>
+      <nav style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+        height: 64, display: "flex", alignItems: "center",
+        padding: "0 clamp(1.5rem,5vw,3rem)",
+        background: solid ? "rgba(7,8,10,0.94)" : "transparent",
+        backdropFilter: solid ? "blur(24px) saturate(1.5)" : "none",
+        WebkitBackdropFilter: solid ? "blur(24px) saturate(1.5)" : "none",
+        borderBottom: solid ? "1px solid rgba(255,255,255,0.07)" : "1px solid transparent",
+        transition: `background .5s ${ease}, border-color .5s ${ease}, backdrop-filter .5s ${ease}`,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", maxWidth: 1200, margin: "0 auto" }}>
 
-      <header className="sticky top-0 z-50 border-b border-black/10 bg-[#f6f7f4]/88 backdrop-blur-2xl dark:border-white/10 dark:bg-[#050607]/88">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-5 md:py-4">
-          <a href="/" className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#111714] text-base font-black italic text-white dark:bg-white dark:text-[#111714] md:h-10 md:w-10 md:text-lg">
-              S
-            </span>
-            <span className="luxury-brand text-base tracking-[0.08em] md:text-lg">Simpcraftt</span>
+          {/* Logo */}
+          <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+            <span style={{ width: 32, height: 32, background: "#fff", color: "#07080a", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 7, fontWeight: 800, fontSize: 14, fontStyle: "italic", flexShrink: 0, letterSpacing: "-0.02em" }}>S</span>
+            <span style={{ fontWeight: 700, fontSize: 15, letterSpacing: "-0.01em", color: "#fff" }}>Simpcraftt</span>
           </a>
 
-          <nav className="hidden items-center gap-7 md:flex">
-            {navItems.map((item) => (
-              <a key={item.href} href={item.href} className="text-xs font-black uppercase tracking-[0.16em] text-black/60 transition hover:text-black dark:text-white/60 dark:hover:text-white">
-                {item.label}
+          {/* Desktop links */}
+          <div className="hidden md:flex" style={{ display: "flex", gap: 36, alignItems: "center" }}>
+            {nav.map(n => (
+              <a key={n.h} href={n.h} style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)", textDecoration: "none", transition: "color .2s" }}
+                onMouseOver={e => e.currentTarget.style.color = "#fff"}
+                onMouseOut={e => e.currentTarget.style.color = "rgba(255,255,255,0.5)"}>
+                {n.l}
               </a>
             ))}
-          </nav>
-
-          <div className="hidden items-center gap-3 md:flex">
-            <IconLink href="/wishlist" label="Wishlist">
-              <Heart className="h-4 w-4" />
-            </IconLink>
-            <IconLink href="/cart" label="Cart">
-              <ShoppingBag className="h-4 w-4" />
-            </IconLink>
-            <IconLink href="/profile" label="Profile">
-              <User className="h-4 w-4" />
-            </IconLink>
-            <ThemeToggle />
           </div>
 
-          <div className="flex items-center gap-2 md:hidden">
+          {/* Actions */}
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <ThemeToggle />
-            <button
-              type="button"
-              onClick={() => setQuickActionsOpen((value) => !value)}
-              className="flex h-11 w-11 items-center justify-center rounded-lg border border-black/10 bg-white/72 shadow-sm dark:border-white/10 dark:bg-white/5"
-              aria-label="Open commerce actions"
-              aria-expanded={quickActionsOpen}
-            >
-              {quickActionsOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            <a href="/profile" aria-label="Account" title="Account"
+              style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.55)", textDecoration: "none", transition: "all .2s" }}
+              onMouseOver={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)"; e.currentTarget.style.color = "#fff"; e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
+              onMouseOut={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "rgba(255,255,255,0.55)"; e.currentTarget.style.background = "transparent"; }}>
+              <User size={14} />
+            </a>
+            <button type="button" onClick={() => setOpen(v => !v)} className="md:hidden"
+              style={{ width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "none", color: "rgba(255,255,255,0.7)", cursor: "pointer", transition: "all .2s" }}>
+              {open ? <X size={14} /> : <Menu size={14} />}
             </button>
           </div>
         </div>
-      </header>
+      </nav>
 
-      <MobileQuickActions open={quickActionsOpen} onClose={() => setQuickActionsOpen(false)} />
-
-      {title && <PageHero eyebrow={eyebrow} title={title} description={description} />}
-      <main className="relative z-10">{children}</main>
+      {/* Mobile drawer */}
+      <AnimatePresence>
+        {open && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpen(false)}
+              style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(0,0,0,.7)", backdropFilter: "blur(6px)" }} />
+            <motion.div initial={{ opacity: 0, y: -10, scale: .98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: .98 }}
+              transition={{ duration: .22, ease: [.22,1,.36,1] }}
+              style={{ position: "fixed", top: 72, left: 12, right: 12, zIndex: 90, background: "#0d0e11", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "0.75rem", boxShadow: "0 32px 80px rgba(0,0,0,.7)" }}>
+              <div style={{ padding: "0.5rem 0.75rem 0.75rem", borderBottom: "1px solid rgba(255,255,255,0.07)", marginBottom: "0.5rem" }}>
+                <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)" }}>Navigation</p>
+              </div>
+              {[...nav, { l: "About", h: "/about" }, { l: "Login", h: "/login" }].map(n => (
+                <a key={n.h} href={n.h} onClick={() => setOpen(false)}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 12px", borderRadius: 12, color: "rgba(255,255,255,0.7)", textDecoration: "none", fontWeight: 600, fontSize: 15, transition: "all .15s" }}
+                  onMouseOver={e => { e.currentTarget.style.background = "rgba(255,255,255,.05)"; e.currentTarget.style.color = "#fff"; }}
+                  onMouseOut={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(255,255,255,0.7)"; }}>
+                  {n.l}
+                  <ArrowRight size={13} style={{ color: "rgba(255,255,255,.25)" }} />
+                </a>
+              ))}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+export function CommerceShell({ children, heroNav = false }) {
+  return (
+    <div style={{ background: "var(--bg)", color: "var(--text-primary)", minHeight: "100vh", paddingBottom: 80 }}>
+      <Navbar transparent={heroNav} />
+      <main>{children}</main>
       <CommerceFooter />
       <MobileBottomNav />
     </div>
   );
 }
 
-function MobileQuickActions({ open, onClose }) {
-  const actions = [
-    { label: "Cart", href: "/cart", icon: ShoppingBag, description: "Future direct purchase bag" },
-    { label: "Checkout", href: "/checkout", icon: CreditCard, description: "Direct checkout preview" },
-    { label: "Profile", href: "/profile", icon: User, description: "Account and ownership" },
-    { label: "Login", href: "/login", icon: Lock, description: "Customer access" },
-    { label: "Support", href: "/support", icon: ShieldCheck, description: "Tickets and WhatsApp" },
-    { label: "Admin", href: "/admin", icon: PackageCheck, description: "Operations console" },
-  ];
-
-  return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.button
-            type="button"
-            aria-label="Close commerce actions"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 z-40 bg-black/35 backdrop-blur-sm md:hidden"
-          />
-          <motion.aside
-            initial={{ opacity: 0, y: -12, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -12, scale: 0.98 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-x-3 top-[72px] z-50 rounded-3xl border border-black/10 bg-white/92 p-3 shadow-[0_24px_80px_rgba(17,23,20,0.28)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#080a0b]/94 md:hidden"
-          >
-            <div className="mb-3 flex items-center justify-between px-2 pt-1">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">Quick Actions</p>
-                <p className="mt-1 text-sm text-black/52 dark:text-white/52">Commerce, account, and support tools</p>
-              </div>
-              <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-xl bg-black/[0.045] dark:bg-white/[0.07]" aria-label="Close quick actions">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {actions.map((action) => {
-                const Icon = action.icon;
-                return (
-                  <a key={action.href} href={action.href} onClick={onClose} className="rounded-2xl bg-black/[0.04] p-4 active:scale-[0.98] dark:bg-white/[0.06]">
-                    <Icon className="mb-3 h-5 w-5 text-emerald-700 dark:text-emerald-300" />
-                    <p className="text-sm font-black">{action.label}</p>
-                    <p className="mt-1 text-xs leading-5 text-black/50 dark:text-white/50">{action.description}</p>
-                  </a>
-                );
-              })}
-            </div>
-          </motion.aside>
-        </>
-      )}
-    </AnimatePresence>
-  );
-}
-
 function MobileBottomNav() {
   return (
-    <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 rounded-2xl border border-black/10 bg-white/90 p-1.5 shadow-[0_20px_70px_rgba(17,23,20,0.22)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#080a0b]/90 md:hidden">
-      {bottomNavItems.map((item) => {
-        const Icon = item.icon;
-        return (
-          <a key={item.href} href={item.href} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-black text-black/62 transition active:scale-95 dark:text-white/62">
-            <Icon className="h-4 w-4" />
-            {item.label}
-          </a>
-        );
-      })}
+    <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 90, display: "grid", gridTemplateColumns: "repeat(4,1fr)", height: 68, borderTop: "1px solid rgba(255,255,255,0.07)", background: "rgba(7,8,10,0.96)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }} className="md:hidden">
+      {bnav.map(({ l, h, i: I }) => (
+        <a key={h} href={h} style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, textDecoration: "none", color: "rgba(255,255,255,0.45)", fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", transition: "color .2s" }}
+          onMouseOver={e => e.currentTarget.style.color = "#fff"}
+          onMouseOut={e => e.currentTarget.style.color = "rgba(255,255,255,0.45)"}>
+          <I size={18} />
+          {l}
+        </a>
+      ))}
     </nav>
   );
 }
 
-function IconLink({ href, label, children }) {
+function CommerceFooter() {
   return (
-    <a href={href} aria-label={label} title={label} className="flex h-10 w-10 items-center justify-center rounded-lg border border-black/10 bg-white/65 text-black transition hover:bg-black hover:text-white dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white dark:hover:text-black">
-      {children}
-    </a>
-  );
-}
-
-export function PageHero({ eyebrow, title, description, action }) {
-  return (
-    <section className="relative z-10 overflow-hidden px-4 pb-10 pt-10 md:px-5 md:pb-16 md:pt-24">
-      <div className="mx-auto max-w-7xl">
-        <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.65 }} className="max-w-4xl">
-          <p className="mb-4 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300 md:text-xs">{eyebrow}</p>
-          <h1 className="luxury-heading text-4xl md:text-7xl lg:text-8xl">{title}</h1>
-          {description && <p className="mt-5 max-w-2xl text-base leading-7 text-black/64 dark:text-white/64 md:mt-7 md:text-lg md:leading-8">{description}</p>}
-          {action && <div className="mt-7 md:mt-9">{action}</div>}
-        </motion.div>
+    <footer style={{ borderTop: "1px solid rgba(255,255,255,0.07)", padding: "5rem clamp(1.5rem,5vw,3rem) 4rem" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gap: "3rem", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))" }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+            <span style={{ width: 30, height: 30, background: "#fff", color: "#07080a", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 6, fontWeight: 800, fontSize: 13, fontStyle: "italic" }}>S</span>
+            <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: "-0.01em" }}>Simpcraftt</span>
+          </div>
+          <p style={{ fontSize: 13, lineHeight: 1.7, color: "rgba(255,255,255,0.4)", maxWidth: 220 }}>
+            Premium electronics. Marketplace-first. Direct commerce coming soon.
+          </p>
+        </div>
+        {[
+          ["Shop", [["Products", "/products"], ["Collections", "/collections"], ["Warranty", "/warranty"]]],
+          ["Company", [["About", "/about"], ["Support", "/support"], ["Privacy", "/privacy-policy"], ["Terms", "/terms-conditions"]]],
+          ["Account", [["Login", "/login"], ["Register", "/register"], ["Profile", "/profile"], ["Wishlist", "/wishlist"]]],
+        ].map(([title, links]) => (
+          <div key={title}>
+            <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", marginBottom: 20 }}>{title}</p>
+            {links.map(([label, href]) => (
+              <a key={href} href={href} style={{ display: "block", marginBottom: 12, fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.48)", textDecoration: "none", transition: "color .2s" }}
+                onMouseOver={e => e.currentTarget.style.color = "#fff"}
+                onMouseOut={e => e.currentTarget.style.color = "rgba(255,255,255,0.48)"}>
+                {label}
+              </a>
+            ))}
+          </div>
+        ))}
       </div>
-    </section>
+      <div style={{ maxWidth: 1200, margin: "3rem auto 0", paddingTop: "2rem", borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", fontWeight: 500 }}>&copy; {new Date().getFullYear()} Simpcraftt. All rights reserved.</p>
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: 500 }}>Direct checkout: coming soon</p>
+      </div>
+    </footer>
   );
 }
 
-export function PrimaryButton({ href, children, disabled = false, external = false }) {
-  const className =
-    "inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#111714] px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-white transition hover:-translate-y-0.5 hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-white/90 sm:w-auto md:tracking-[0.14em]";
-
-  if (disabled) {
-    return (
-      <button type="button" disabled className={className}>
-        {children}
-      </button>
-    );
-  }
-
+export function PrimaryButton({ href, children, disabled = false, external = false, onClick }) {
+  const style = {
+    display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+    height: 46, padding: "0 1.5rem",
+    background: "#fff", color: "#07080a",
+    borderRadius: 10, border: "none", cursor: "pointer",
+    fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase",
+    textDecoration: "none", whiteSpace: "nowrap",
+    transition: "all .22s cubic-bezier(0.22,1,0.36,1)",
+    boxShadow: "0 1px 0 rgba(255,255,255,0.12) inset",
+  };
+  if (disabled) return <button type="button" disabled style={{ ...style, opacity: .35, cursor: "not-allowed" }}>{children}</button>;
   return (
-    <a href={href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined} className={className}>
+    <a href={href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}
+      onClick={onClick} style={style}
+      onMouseOver={e => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,.4), 0 1px 0 rgba(255,255,255,0.12) inset"; }}
+      onMouseOut={e => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "0 1px 0 rgba(255,255,255,0.12) inset"; }}>
       {children}
     </a>
   );
 }
 
-export function SecondaryButton({ href, children, external = false }) {
+export function SecondaryButton({ href, children, external = false, onClick }) {
+  const style = {
+    display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+    height: 46, padding: "0 1.5rem",
+    background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.75)",
+    borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer",
+    fontSize: "0.78rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase",
+    textDecoration: "none", whiteSpace: "nowrap",
+    transition: "all .22s cubic-bezier(0.22,1,0.36,1)",
+  };
   return (
-    <a href={href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-black/15 bg-white/70 px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-black transition hover:-translate-y-0.5 hover:bg-white dark:border-white/15 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 sm:w-auto md:tracking-[0.14em]">
+    <a href={href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}
+      onClick={onClick} style={style}
+      onMouseOver={e => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.22)"; e.currentTarget.style.color = "#fff"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+      onMouseOut={e => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; e.currentTarget.style.color = "rgba(255,255,255,0.75)"; e.currentTarget.style.transform = ""; }}>
       {children}
     </a>
   );
 }
 
-function SubmitButton({ children }) {
+export function FutureCommerceNotice({ title = "Direct purchase launching soon" }) {
   return (
-    <button type="submit" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#111714] px-6 py-3 text-sm font-black uppercase tracking-[0.14em] text-white transition hover:-translate-y-0.5 hover:bg-black dark:bg-white dark:text-black dark:hover:bg-white/90">
-      {children}
-    </button>
-  );
-}
-
-export function ProductGrid({ items = products }) {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {items.map((product, index) => (
-        <ProductCard key={product.slug} product={product} index={index} />
-      ))}
+    <div style={{ borderRadius: 10, border: "1px solid rgba(255,200,50,0.15)", background: "rgba(255,200,50,0.04)", padding: "1.25rem 1.5rem" }}>
+      <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,200,50,0.6)", marginBottom: 8 }}>Notice</p>
+      <p style={{ fontSize: 13, lineHeight: 1.6, color: "rgba(255,255,255,0.45)" }}>
+        Cart, checkout, and payments are architected and disabled for this launch phase.
+      </p>
     </div>
   );
 }
-
 export function ProductCard({ product, index = 0 }) {
-  const category = getCategoryById(product.category);
-
+  const cat = getCategoryById(product.category);
   return (
     <motion.article
-      initial={{ opacity: 0, y: 16 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.5, delay: index * 0.04 }}
-      className="group overflow-hidden rounded-2xl border border-black/10 bg-white/78 shadow-[0_20px_60px_rgba(17,23,20,0.1)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045] md:rounded-lg"
-    >
-      <a href={`/products/${product.slug}`} className="block">
-        <div className="aspect-[1.05/1] overflow-hidden bg-black/5 sm:aspect-[4/3]">
-          <img src={product.image} alt={product.name} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-        </div>
-        <div className="p-4 md:p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <span className="rounded-full bg-emerald-500/12 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">
-              {category?.name}
+      initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: .12 }} transition={{ duration: .55, delay: index * .07 }}
+      style={{ borderRadius: 16, overflow: "hidden", background: "#0d0e11", border: "1px solid rgba(255,255,255,0.07)", transition: "border-color .3s, transform .3s cubic-bezier(0.22,1,0.36,1), box-shadow .3s" }}
+      onMouseOver={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.14)"; e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 20px 48px rgba(0,0,0,.5)"; }}
+      onMouseOut={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}>
+      <a href={"/products/" + product.slug} style={{ display: "block", textDecoration: "none", color: "inherit" }}>
+        <div style={{ aspectRatio: "3/2", overflow: "hidden", background: "#111318", position: "relative" }}>
+          <img src={product.image} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform .7s cubic-bezier(0.22,1,0.36,1)", display: "block" }}
+            onMouseOver={e => e.currentTarget.style.transform = "scale(1.05)"}
+            onMouseOut={e => e.currentTarget.style.transform = "scale(1)"} />
+          <div style={{ position: "absolute", top: 14, left: 14 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", height: 22, padding: "0 10px", borderRadius: 99, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.12)", fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.65)" }}>
+              {cat?.name}
             </span>
-            <span className="text-xs font-bold text-black/50 dark:text-white/50">{product.rating} / 5</span>
           </div>
-          <h3 className="text-xl font-black tracking-tight md:text-2xl">{product.name}</h3>
-          <p className="mt-3 text-sm leading-6 text-black/62 dark:text-white/62 md:min-h-16">{product.summary}</p>
-          <div className="mt-5 flex items-center justify-between">
-            <span className="font-black">{formatPrice(product.price)}</span>
-            <span className="inline-flex items-center gap-1 text-xs font-black uppercase tracking-[0.14em]">
-              View <ArrowRight className="h-4 w-4" />
-            </span>
+        </div>
+        <div style={{ padding: "1.5rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+            <h3 style={{ fontWeight: 700, fontSize: "clamp(1.1rem,2vw,1.3rem)", letterSpacing: "-0.016em", lineHeight: 1.2 }}>{product.name}</h3>
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontWeight: 600, flexShrink: 0, marginLeft: 12 }}>★ {product.rating}</span>
+          </div>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.65, marginBottom: 20, minHeight: 42 }}>{product.summary}</p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+            <span style={{ fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em" }}>{formatPrice(product.price)}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)", display: "flex", alignItems: "center", gap: 4 }}>View <ArrowRight size={12} /></span>
           </div>
         </div>
       </a>
@@ -287,84 +259,144 @@ export function ProductCard({ product, index = 0 }) {
   );
 }
 
-export function ProductFilters({ selectedCategory, onCategoryChange, query, onQueryChange, sort, onSortChange }) {
+export function ProductGrid({ items = products }) {
   return (
-    <div className="mb-6 grid gap-3 rounded-2xl border border-black/10 bg-white/78 p-3 shadow-[0_20px_60px_rgba(17,23,20,0.08)] backdrop-blur-xl md:mb-8 md:grid-cols-[1fr_auto_auto] md:rounded-lg dark:border-white/10 dark:bg-white/[0.045]">
-      <label className="flex min-h-12 items-center gap-3 rounded-xl bg-black/[0.035] px-4 py-3 dark:bg-white/[0.05] md:rounded-md">
-        <Search className="h-4 w-4 text-black/50 dark:text-white/50" />
-        <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search products" className="w-full bg-transparent text-sm font-semibold placeholder:text-black/40 dark:placeholder:text-white/40" />
-      </label>
-      <label className="flex min-h-12 items-center gap-3 rounded-xl bg-black/[0.035] px-4 py-3 dark:bg-white/[0.05] md:rounded-md">
-        <SlidersHorizontal className="h-4 w-4 text-black/50 dark:text-white/50" />
-        <select value={selectedCategory} onChange={(event) => onCategoryChange(event.target.value)} className="bg-transparent text-sm font-bold">
-          <option value="all">All categories</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>{category.name}</option>
-          ))}
-        </select>
-      </label>
-      <select value={sort} onChange={(event) => onSortChange(event.target.value)} className="min-h-12 rounded-xl bg-black/[0.035] px-4 py-3 text-sm font-bold dark:bg-white/[0.05] md:rounded-md">
-        <option value="featured">Featured</option>
-        <option value="price-low">Price: Low to high</option>
-        <option value="price-high">Price: High to low</option>
-        <option value="rating">Rating</option>
-      </select>
+    <div style={{ display: "grid", gap: "1px", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", background: "rgba(255,255,255,0.07)", borderRadius: 18, overflow: "hidden", border: "1px solid rgba(255,255,255,0.07)" }}>
+      {items.map((p, i) => (
+        <motion.div key={p.slug} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: .5, delay: i * .06 }}>
+          <a href={"/products/" + p.slug} style={{ display: "block", textDecoration: "none", color: "inherit", background: "#07080a", transition: "background .2s", height: "100%" }}
+            onMouseOver={e => e.currentTarget.style.background = "#0d0e11"}
+            onMouseOut={e => e.currentTarget.style.background = "#07080a"}>
+            <div style={{ aspectRatio: "3/2", overflow: "hidden" }}>
+              <img src={p.image} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform .6s cubic-bezier(0.22,1,0.36,1)" }}
+                onMouseOver={e => e.currentTarget.style.transform = "scale(1.04)"}
+                onMouseOut={e => e.currentTarget.style.transform = "scale(1)"} />
+            </div>
+            <div style={{ padding: "1.5rem" }}>
+              <span style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", display: "block", marginBottom: 10 }}>{getCategoryById(p.category)?.name}</span>
+              <h3 style={{ fontWeight: 700, fontSize: "1.2rem", letterSpacing: "-0.016em", marginBottom: 8 }}>{p.name}</h3>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6, marginBottom: 20 }}>{p.summary}</p>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontWeight: 700, fontSize: 16 }}>{formatPrice(p.price)}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", display: "flex", alignItems: "center", gap: 4 }}>View <ArrowRight size={11} /></span>
+              </div>
+            </div>
+          </a>
+        </motion.div>
+      ))}
     </div>
   );
 }
 
-export function FutureCommerceNotice({ title = "Direct purchase launching soon" }) {
+export function CollectionGrid() {
   return (
-    <div className="rounded-lg border border-amber-500/30 bg-amber-400/10 p-5 text-amber-900 dark:text-amber-100">
-      <div className="flex items-start gap-4">
-        <Lock className="mt-1 h-5 w-5" />
-        <div>
-          <h3 className="font-black">{title}</h3>
-          <p className="mt-2 text-sm leading-6 opacity-80">
-            Cart, checkout, payments, coupons, orders, and address management are designed into the platform but disabled for public users in this launch phase.
-          </p>
+    <div style={{ display: "grid", gap: "1px", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", background: "rgba(255,255,255,0.07)", borderRadius: 18, overflow: "hidden", border: "1px solid rgba(255,255,255,0.07)" }}>
+      {collections.map((c, i) => (
+        <a key={c.slug} href={"/products?collection=" + c.slug}
+          style={{ display: "block", padding: "2rem", textDecoration: "none", color: "inherit", background: "#07080a", transition: "background .25s" }}
+          onMouseOver={e => e.currentTarget.style.background = "#0d0e11"}
+          onMouseOut={e => e.currentTarget.style.background = "#07080a"}>
+          <span style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", display: "block", marginBottom: 20 }}>{c.productSlugs.length} Products</span>
+          <h3 style={{ fontWeight: 700, fontSize: "clamp(1.4rem,2.5vw,1.8rem)", letterSpacing: "-0.02em", lineHeight: 1.1, marginBottom: 14 }}>{c.name}</h3>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", lineHeight: 1.65 }}>{c.description}</p>
+          <div style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>
+            Explore <ArrowRight size={12} />
+          </div>
+        </a>
+      ))}
+    </div>
+  );
+}
+
+export function FeatureBand() {
+  const fs = [
+    { t: "Warranty-ready", d: "Registration, claim tracking, invoice upload, and status flow." },
+    { t: "Marketplace-first", d: "Amazon, Flipkart, and custom links per product — editable anytime." },
+    { t: "Commerce-ready", d: "Cart, checkout, and payments engineered in, staged for activation." },
+  ];
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))" }}>
+      {fs.map((f, i) => (
+        <div key={f.t} style={{ padding: "2.5rem 2rem", borderLeft: i > 0 ? "1px solid rgba(255,255,255,0.07)" : "none" }}>
+          <div style={{ width: 28, height: 1, background: "rgba(255,255,255,0.2)", marginBottom: 24 }} />
+          <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 12, letterSpacing: "-0.01em" }}>{f.t}</p>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", lineHeight: 1.65 }}>{f.d}</p>
         </div>
-      </div>
+      ))}
     </div>
   );
 }
 
+export function FAQList() {
+  const [open, setOpen] = useState(null);
+  return (
+    <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid rgba(255,255,255,0.07)" }}>
+      {faqs.map((f, i) => (
+        <div key={f.question} style={{ borderTop: i > 0 ? "1px solid rgba(255,255,255,0.07)" : "none", background: open === i ? "#0d0e11" : "transparent", transition: "background .2s" }}>
+          <button type="button" onClick={() => setOpen(open === i ? null : i)}
+            style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.5rem 1.75rem", background: "none", border: "none", cursor: "pointer", color: "inherit", textAlign: "left", gap: 16 }}>
+            <span style={{ fontWeight: 600, fontSize: 15, letterSpacing: "-0.01em" }}>{f.question}</span>
+            <span style={{ width: 24, height: 24, borderRadius: 6, border: "1px solid rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "rgba(255,255,255,0.4)", fontSize: 14, transform: open === i ? "rotate(45deg)" : "none", transition: "transform .25s" }}>+</span>
+          </button>
+          <AnimatePresence>
+            {open === i && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: .28 }} style={{ overflow: "hidden" }}>
+                <p style={{ padding: "0 1.75rem 1.5rem", fontSize: 14, color: "rgba(255,255,255,0.45)", lineHeight: 1.7 }}>{f.answer}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function PageHero({ eyebrow, title, description, action }) {
+  return (
+    <section style={{ padding: "clamp(6rem,12vw,10rem) clamp(1.5rem,5vw,3rem) clamp(4rem,6vw,6rem)" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .75 }}>
+          {eyebrow && <p style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", marginBottom: 24 }}>{eyebrow}</p>}
+          <h1 style={{ fontWeight: 700, fontSize: "clamp(2.5rem,5vw,5rem)", letterSpacing: "-0.028em", lineHeight: 0.95, maxWidth: "16ch" }}>{title}</h1>
+          {description && <p style={{ marginTop: 24, fontSize: "clamp(0.95rem,1.5vw,1.05rem)", lineHeight: 1.7, color: "rgba(255,255,255,0.48)", maxWidth: "54ch" }}>{description}</p>}
+          {action && <div style={{ marginTop: 36 }}>{action}</div>}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
 export function BuyPanel({ product }) {
   return (
-    <div className="rounded-2xl border border-black/10 bg-white/80 p-4 shadow-[0_24px_80px_rgba(17,23,20,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.05] md:rounded-lg md:p-5">
-      <div className="flex items-center justify-between gap-4">
+    <div style={{ borderRadius: 16, background: "#0d0e11", border: "1px solid rgba(255,255,255,0.08)", padding: "1.75rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-black/45 dark:text-white/45">Marketplace launch</p>
-          <p className="mt-1 text-2xl font-black">{formatPrice(product.price)}</p>
+          <p style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", marginBottom: 10 }}>Marketplace Price</p>
+          <p style={{ fontWeight: 700, fontSize: 32, letterSpacing: "-0.02em" }}>{formatPrice(product.price)}</p>
         </div>
-        <button className="flex h-11 w-11 items-center justify-center rounded-lg border border-black/10 bg-white dark:border-white/10 dark:bg-white/5" aria-label="Add to wishlist">
-          <Heart className="h-5 w-5" />
-        </button>
+        <button style={{ width: 40, height: 40, borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", background: "none", color: "rgba(255,255,255,0.45)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all .2s" }} aria-label="Add to wishlist"><Heart size={16} /></button>
       </div>
-      <div className="mt-5 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+      <div style={{ display: "grid", gap: 10, marginBottom: 20 }}>
         <SecondaryButton href={product.marketplace.amazon} external>Buy on Amazon</SecondaryButton>
         <SecondaryButton href={product.marketplace.flipkart} external>Buy on Flipkart</SecondaryButton>
         <PrimaryButton href={product.marketplace.custom} external>Buy Now</PrimaryButton>
       </div>
-      <div className="mt-5 hidden md:block">
-        <FutureCommerceNotice />
-      </div>
+      <FutureCommerceNotice />
     </div>
   );
 }
 
 export function ProductGallery({ product }) {
   const [active, setActive] = useState(product.gallery?.[0] ?? product.image);
-
   return (
     <div>
-      <div className="aspect-[1/1.08] overflow-hidden rounded-2xl border border-black/10 bg-white/70 dark:border-white/10 dark:bg-white/[0.045] md:aspect-square md:rounded-lg">
-        <img src={active} alt={product.name} className="h-full w-full object-cover" />
+      <div style={{ aspectRatio: "1", overflow: "hidden", borderRadius: 16, border: "1px solid rgba(255,255,255,0.08)", background: "#0d0e11" }}>
+        <motion.img key={active} src={active} alt={product.name} initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: .4 }} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
       </div>
-      <div className="mt-3 grid grid-cols-4 gap-2 md:gap-3">
-        {(product.gallery ?? [product.image]).map((image) => (
-          <button key={image} type="button" onClick={() => setActive(image)} className={`aspect-square overflow-hidden rounded-xl border md:rounded-md ${active === image ? "border-emerald-500" : "border-black/10 dark:border-white/10"}`}>
-            <img src={image} alt="" className="h-full w-full object-cover" />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginTop: 10 }}>
+        {(product.gallery ?? [product.image]).map(img => (
+          <button key={img} type="button" onClick={() => setActive(img)}
+            style={{ aspectRatio: "1", overflow: "hidden", borderRadius: 10, border: "1px solid " + (active === img ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.08)"), background: "none", cursor: "pointer", padding: 0, transition: "border-color .2s" }}>
+            <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </button>
         ))}
       </div>
@@ -372,38 +404,52 @@ export function ProductGallery({ product }) {
   );
 }
 
-export function EcommerceStepper({ current = 0 }) {
-  const steps = [
-    { label: "Cart", icon: ShoppingBag },
-    { label: "Address", icon: PackageCheck },
-    { label: "Payment", icon: CreditCard },
-    { label: "Order", icon: TicketCheck },
-  ];
-
+export function ProductFilters({ selectedCategory, onCategoryChange, query, onQueryChange, sort, onSortChange }) {
+  const inp = { height: 48, borderRadius: 10, border: "1px solid rgba(255,255,255,0.09)", background: "#0d0e11", color: "#f0f0ee", padding: "0 1rem", fontFamily: "inherit", fontSize: 14, fontWeight: 500, cursor: "pointer" };
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {steps.map((step, index) => {
-        const Icon = step.icon;
-        const isActive = index <= current;
-        return (
-          <div key={step.label} className={`rounded-2xl border p-4 md:rounded-lg ${isActive ? "border-emerald-500/40 bg-emerald-400/10" : "border-black/10 bg-white/60 dark:border-white/10 dark:bg-white/[0.04]"}`}>
-            <Icon className="mb-3 h-5 w-5" />
-            <p className="text-sm font-black uppercase tracking-[0.14em]">{step.label}</p>
-          </div>
-        );
-      })}
+    <div style={{ display: "grid", gap: 10, gridTemplateColumns: "1fr auto auto", marginBottom: 36 }}>
+      <label style={{ ...inp, display: "flex", alignItems: "center", gap: 10, cursor: "text" }}>
+        <Search size={14} style={{ color: "rgba(255,255,255,0.28)", flexShrink: 0 }} />
+        <input value={query} onChange={e => onQueryChange(e.target.value)} placeholder="Search products…" style={{ background: "none", border: "none", color: "inherit", fontSize: 14, fontWeight: 500, width: "100%", fontFamily: "inherit" }} />
+      </label>
+      <select value={selectedCategory} onChange={e => onCategoryChange(e.target.value)} style={inp}>
+        <option value="all">All categories</option>
+        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+      <select value={sort} onChange={e => onSortChange(e.target.value)} style={inp}>
+        <option value="featured">Featured</option>
+        <option value="price-low">Price: Low–High</option>
+        <option value="price-high">Price: High–Low</option>
+        <option value="rating">Top Rated</option>
+      </select>
+    </div>
+  );
+}
+
+export function EcommerceStepper({ current = 0 }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 1, background: "rgba(255,255,255,0.07)", borderRadius: 12, overflow: "hidden" }}>
+      {["Cart", "Address", "Payment", "Order"].map((s, i) => (
+        <div key={s} style={{ padding: "1.25rem 1rem", background: i <= current ? "#0d0e11" : "#07080a", textAlign: "center" }}>
+          <p style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: i <= current ? "#fff" : "rgba(255,255,255,0.28)" }}>{s}</p>
+        </div>
+      ))}
     </div>
   );
 }
 
 export function AccountShell({ title, description, children }) {
   return (
-    <CommerceShell eyebrow="Account" title={title} description={description}>
-      <section className="px-4 pb-24 md:px-5">
-        <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[280px_1fr]">
-          <aside className="rounded-2xl border border-black/10 bg-white/70 p-3 dark:border-white/10 dark:bg-white/[0.045] md:rounded-lg md:p-4">
-            {["Profile", "Addresses", "Orders", "Wishlist", "Registered Products"].map((item) => (
-              <a key={item} href={item === "Profile" ? "/profile" : "#"} className="block rounded-md px-4 py-3 text-sm font-bold hover:bg-black/5 dark:hover:bg-white/10">
+    <CommerceShell>
+      <PageHero eyebrow="Account" title={title} description={description} />
+      <section style={{ padding: "0 clamp(1.5rem,5vw,3rem) 6rem" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gap: 24, gridTemplateColumns: "220px 1fr" }}>
+          <aside style={{ borderRadius: 14, border: "1px solid rgba(255,255,255,0.08)", background: "#0d0e11", padding: "0.5rem", alignSelf: "start" }}>
+            {["Profile", "Orders", "Wishlist", "Registered Products"].map(item => (
+              <a key={item} href={item === "Profile" ? "/profile" : "#"}
+                style={{ display: "block", padding: "10px 14px", borderRadius: 9, fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.5)", textDecoration: "none", transition: "all .15s" }}
+                onMouseOver={e => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#fff"; }}
+                onMouseOut={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(255,255,255,0.5)"; }}>
                 {item}
               </a>
             ))}
@@ -416,178 +462,67 @@ export function AccountShell({ title, description, children }) {
 }
 
 export function AdminPanelPreview() {
-  const capabilities = [
-    "Add, edit, delete products",
-    "Upload and organize product images",
-    "Manage categories and visibility",
-    "Update Amazon and Flipkart URLs per product",
-    "Review warranty claims and support tickets",
-    "Manage users, banners, and product content",
-  ];
-
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {capabilities.map((capability) => (
-        <div key={capability} className="rounded-lg border border-black/10 bg-white/70 p-5 dark:border-white/10 dark:bg-white/[0.045]">
-          <BadgeCheck className="mb-4 h-5 w-5 text-emerald-600 dark:text-emerald-300" />
-          <p className="font-bold">{capability}</p>
+    <div style={{ display: "grid", gap: "1px", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", background: "rgba(255,255,255,0.07)", borderRadius: 16, overflow: "hidden" }}>
+      {["Manage products", "Manage categories", "Upload images", "Edit marketplace URLs", "Review warranty claims", "Manage users"].map(c => (
+        <div key={c} style={{ padding: "1.5rem", background: "#07080a" }}>
+          <div style={{ width: 24, height: 1, background: "rgba(255,255,255,0.2)", marginBottom: 18 }} />
+          <p style={{ fontWeight: 700, fontSize: 14 }}>{c}</p>
         </div>
       ))}
     </div>
   );
 }
 
+function Field({ label, name, type = "text", textarea = false, required = false }) {
+  const s = { width: "100%", borderRadius: 10, border: "1px solid rgba(255,255,255,0.09)", background: "#0d0e11", color: "#f0f0ee", padding: "0 1rem", fontFamily: "inherit", fontSize: 14, fontWeight: 500 };
+  return (
+    <label style={{ display: "grid", gap: 8 }}>
+      <span style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)" }}>{label}</span>
+      {textarea ? <textarea name={name} required={required} rows={4} style={{ ...s, height: "auto", padding: "0.875rem 1rem" }} /> : <input name={name} type={type} required={required} style={{ ...s, height: 48 }} />}
+    </label>
+  );
+}
+
+function Sel({ label, name, options }) {
+  return (
+    <label style={{ display: "grid", gap: 8 }}>
+      <span style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)" }}>{label}</span>
+      <select name={name} style={{ height: 48, borderRadius: 10, border: "1px solid rgba(255,255,255,0.09)", background: "#0d0e11", color: "#f0f0ee", padding: "0 1rem", fontFamily: "inherit", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+        {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+      </select>
+    </label>
+  );
+}
+
 export function WarrantyForm() {
   const [ticket, setTicket] = useState("");
-
-  const submitWarranty = async (event) => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-    const res = await fetch("/api/warranty-claims", { method: "POST", body: formData });
-    const data = await res.json();
-    setTicket(data.ticketId ?? "SCW-PENDING");
-    form.reset();
-  };
-
+  const submit = async e => { e.preventDefault(); const f = e.currentTarget; const res = await fetch("/api/warranty-claims", { method: "POST", body: new FormData(f) }); const d = await res.json(); setTicket(d.ticketId ?? "SCW-PENDING"); f.reset(); };
   return (
-    <form onSubmit={submitWarranty} className="grid gap-4 rounded-lg border border-black/10 bg-white/76 p-5 dark:border-white/10 dark:bg-white/[0.045]">
-      <div className="grid gap-4 md:grid-cols-3">
-        <Field name="name" label="Full name" required />
-        <Field name="email" type="email" label="Email" required />
-        <Field name="phone" label="Phone" required />
-      </div>
-      <div className="grid gap-4 md:grid-cols-3">
-        <Select name="productSlug" label="Product" options={products.map((product) => [product.slug, product.name])} />
-        <Field name="serialNumber" label="Serial number" required />
-        <Field name="purchaseDate" label="Purchase date" type="date" required />
-      </div>
-      <div className="grid gap-4 md:grid-cols-3">
-        <Field name="invoiceNumber" label="Invoice number" required />
-        <Field name="dealer" label="Dealer / store" required />
-        <Field name="pincode" label="Pincode" required />
-      </div>
+    <form onSubmit={submit} style={{ display: "grid", gap: 20 }}>
+      <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))" }}><Field name="name" label="Full name" required /><Field name="email" type="email" label="Email" required /><Field name="phone" label="Phone" required /></div>
+      <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))" }}><Sel name="productSlug" label="Product" options={products.map(p => [p.slug, p.name])} /><Field name="serialNumber" label="Serial number" required /><Field name="purchaseDate" label="Purchase date" type="date" required /></div>
+      <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))" }}><Field name="invoiceNumber" label="Invoice number" required /><Field name="dealer" label="Dealer/store" required /><Field name="pincode" label="Pincode" required /></div>
       <Field name="address" label="Address" required />
       <Field name="invoice" label="Invoice upload" type="file" required />
-      <label className="flex items-center gap-3 text-sm font-semibold">
-        <input type="checkbox" required className="h-4 w-4" />
-        I confirm that the provided details are accurate.
-      </label>
-      <SubmitButton>Submit Warranty Claim</SubmitButton>
-      {ticket && (
-        <div className="rounded-lg bg-emerald-500/12 p-4 text-sm font-bold text-emerald-800 dark:text-emerald-200">
-          Claim submitted. Ticket ID: {ticket}
-        </div>
-      )}
+      <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "rgba(255,255,255,0.55)" }}><input type="checkbox" required style={{ width: 16, height: 16 }} />I confirm the details are accurate.</label>
+      <PrimaryButton href="#" onClick={e => { e.preventDefault(); e.target.closest("form").requestSubmit(); }}>Submit Warranty Claim</PrimaryButton>
+      {ticket && <div style={{ padding: "1.25rem", borderRadius: 10, background: "rgba(91,108,242,.12)", border: "1px solid rgba(91,108,242,.25)", fontSize: 14, fontWeight: 600 }}>Submitted — Ticket ID: {ticket}</div>}
     </form>
   );
 }
 
 export function SupportForm() {
   const [ticket, setTicket] = useState("");
-
-  const submitSupport = async (event) => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const payload = Object.fromEntries(new FormData(form));
-    const res = await fetch("/api/support-tickets", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    setTicket(data.ticketId ?? "SCS-PENDING");
-    form.reset();
-  };
-
+  const submit = async e => { e.preventDefault(); const f = e.currentTarget; const res = await fetch("/api/support-tickets", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(Object.fromEntries(new FormData(f))) }); const d = await res.json(); setTicket(d.ticketId ?? "SCS-PENDING"); f.reset(); };
   return (
-    <form onSubmit={submitSupport} className="grid gap-4 rounded-lg border border-black/10 bg-white/76 p-5 dark:border-white/10 dark:bg-white/[0.045]">
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field name="name" label="Full name" required />
-        <Field name="email" type="email" label="Email" required />
-      </div>
-      <Select name="topic" label="Topic" options={[["marketplace", "Marketplace purchase"], ["warranty", "Warranty"], ["product", "Product information"], ["partnership", "Partnership"]]} />
+    <form onSubmit={submit} style={{ display: "grid", gap: 20 }}>
+      <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))" }}><Field name="name" label="Full name" required /><Field name="email" type="email" label="Email" required /></div>
+      <Sel name="topic" label="Topic" options={[["marketplace", "Marketplace purchase"], ["warranty", "Warranty"], ["product", "Product information"], ["partnership", "Partnership"]]} />
       <Field name="message" label="Message" textarea required />
-      <SubmitButton>Create Support Ticket</SubmitButton>
-      {ticket && (
-        <div className="rounded-lg bg-emerald-500/12 p-4 text-sm font-bold text-emerald-800 dark:text-emerald-200">
-          Support ticket created: {ticket}
-        </div>
-      )}
+      <PrimaryButton href="#" onClick={e => { e.preventDefault(); e.target.closest("form").requestSubmit(); }}>Create Support Ticket</PrimaryButton>
+      {ticket && <div style={{ padding: "1.25rem", borderRadius: 10, background: "rgba(91,108,242,.12)", border: "1px solid rgba(91,108,242,.25)", fontSize: 14, fontWeight: 600 }}>Ticket created: {ticket}</div>}
     </form>
-  );
-}
-
-function Field({ label, name, type = "text", textarea = false, required = false }) {
-  const className = "w-full rounded-lg border border-black/10 bg-white/70 px-4 py-3 text-sm font-semibold dark:border-white/10 dark:bg-white/[0.045]";
-  return (
-    <label className="grid gap-2">
-      <span className="text-[10px] font-black uppercase tracking-[0.16em] text-black/48 dark:text-white/48">{label}</span>
-      {textarea ? <textarea name={name} required={required} rows={5} className={className} /> : <input name={name} type={type} required={required} className={className} />}
-    </label>
-  );
-}
-
-function Select({ label, name, options }) {
-  return (
-    <label className="grid gap-2">
-      <span className="text-[10px] font-black uppercase tracking-[0.16em] text-black/48 dark:text-white/48">{label}</span>
-      <select name={name} className="w-full rounded-lg border border-black/10 bg-white/70 px-4 py-3 text-sm font-semibold dark:border-white/10 dark:bg-white/[0.045]">
-        {options.map(([value, label]) => (
-          <option key={value} value={value}>{label}</option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-export function FAQList() {
-  return (
-    <div className="grid gap-4">
-      {faqs.map((faq) => (
-        <details key={faq.question} className="rounded-lg border border-black/10 bg-white/70 p-5 dark:border-white/10 dark:bg-white/[0.045]">
-          <summary className="cursor-pointer text-lg font-black">{faq.question}</summary>
-          <p className="mt-4 leading-7 text-black/64 dark:text-white/64">{faq.answer}</p>
-        </details>
-      ))}
-    </div>
-  );
-}
-
-export function FeatureBand() {
-  const features = [
-    { icon: ShieldCheck, title: "Warranty-ready", text: "Registration, claims, serial details, invoice upload, and ticket tracking." },
-    { icon: Sparkles, title: "Marketplace-first", text: "Every product supports editable Amazon, Flipkart, and custom purchase links." },
-    { icon: ShoppingBag, title: "Commerce-ready", text: "Cart, checkout, coupons, payments, and orders are modeled for future activation." },
-  ];
-
-  return (
-    <div className="grid gap-4 md:grid-cols-3">
-      {features.map((feature) => {
-        const Icon = feature.icon;
-        return (
-          <div key={feature.title} className="rounded-lg border border-black/10 bg-white/70 p-6 dark:border-white/10 dark:bg-white/[0.045]">
-            <Icon className="mb-5 h-6 w-6 text-emerald-700 dark:text-emerald-300" />
-            <h3 className="text-xl font-black">{feature.title}</h3>
-            <p className="mt-3 text-sm leading-6 text-black/62 dark:text-white/62">{feature.text}</p>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-export function CollectionGrid() {
-  return (
-    <div className="grid gap-5 md:grid-cols-3">
-      {collections.map((collection) => (
-        <a key={collection.slug} href={`/products?collection=${collection.slug}`} className="rounded-lg border border-black/10 bg-white/70 p-6 transition hover:-translate-y-1 hover:bg-white dark:border-white/10 dark:bg-white/[0.045] dark:hover:bg-white/10">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">{collection.productSlugs.length} products</p>
-          <h3 className="mt-5 text-3xl font-black tracking-tight">{collection.name}</h3>
-          <p className="mt-4 leading-7 text-black/62 dark:text-white/62">{collection.description}</p>
-        </a>
-      ))}
-    </div>
   );
 }
 
@@ -595,58 +530,13 @@ export function useFilteredProducts() {
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sort, setSort] = useState("featured");
-
-  const filteredProducts = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    const result = products.filter((product) => {
-      const categoryMatches = selectedCategory === "all" || product.category === selectedCategory;
-      const textMatches = !normalizedQuery || `${product.name} ${product.summary} ${product.features.join(" ")}`.toLowerCase().includes(normalizedQuery);
-      return categoryMatches && textMatches;
-    });
-
-    return [...result].sort((a, b) => {
-      if (sort === "price-low") return a.price - b.price;
-      if (sort === "price-high") return b.price - a.price;
-      if (sort === "rating") return b.rating - a.rating;
-      return 0;
-    });
-  }, [query, selectedCategory, sort]);
-
+  const q = query.trim().toLowerCase();
+  const r = products.filter(p => {
+    const cm = selectedCategory === "all" || p.category === selectedCategory;
+    const tm = !q || `${p.name} ${p.summary} ${(p.features || []).join(" ")}`.toLowerCase().includes(q);
+    return cm && tm;
+  });
+  const filteredProducts = [...r].sort((a, b) =>
+    sort === "price-low" ? a.price - b.price : sort === "price-high" ? b.price - a.price : sort === "rating" ? b.rating - a.rating : 0);
   return { filteredProducts, query, setQuery, selectedCategory, setSelectedCategory, sort, setSort };
-}
-
-function CommerceFooter() {
-  return (
-    <footer className="relative z-10 border-t border-black/10 px-5 py-12 dark:border-white/10">
-      <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
-        <div>
-          <p className="luxury-brand text-2xl">Simpcraftt</p>
-          <p className="mt-4 max-w-sm text-sm leading-6 text-black/58 dark:text-white/58">
-            A premium product ecosystem moving from marketplace-first launches into full direct commerce.
-          </p>
-        </div>
-        <FooterColumn title="Shop" links={[["Products", "/products"], ["Collections", "/collections"], ["Cart", "/cart"], ["Checkout", "/checkout"]]} />
-        <FooterColumn title="Care" links={[["Warranty", "/warranty"], ["Support", "/support"], ["FAQ", "/faq"], ["Contact", "/contact"]]} />
-        <FooterColumn title="Company" links={[["About", "/about"], ["Privacy", "/privacy-policy"], ["Terms", "/terms-conditions"], ["Admin", "/admin"]]} />
-      </div>
-      <div className="mx-auto mt-10 max-w-7xl text-xs font-bold uppercase tracking-[0.16em] text-black/42 dark:text-white/42">
-        v2 ecommerce platform foundation. Direct checkout: {platformStatus.directCheckoutEnabled ? "enabled" : "disabled"}
-      </div>
-    </footer>
-  );
-}
-
-function FooterColumn({ title, links }) {
-  return (
-    <div>
-      <h4 className="mb-4 text-xs font-black uppercase tracking-[0.16em]">{title}</h4>
-      <div className="grid gap-3">
-        {links.map(([label, href]) => (
-          <a key={href} href={href} className="text-sm font-semibold text-black/58 hover:text-black dark:text-white/58 dark:hover:text-white">
-            {label}
-          </a>
-        ))}
-      </div>
-    </div>
-  );
 }

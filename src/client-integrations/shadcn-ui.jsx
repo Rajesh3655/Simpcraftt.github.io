@@ -443,13 +443,10 @@ function CustomCarousel({ items }) {
 			className="mx-20 w-[calc(100%-160px)]"
 		>
 			<CarouselContent>
-				{items.map((item) => (
+				{items.map((item, index) => (
 					<CarouselItem
 						className="md:basis-1/2 lg:basis-1/3"
-						key={
-							item.id ||
-							`carousel-item-${Math.random().toString(36).substr(2, 9)}`
-						}
+						key={item.id || `carousel-item-${index}`}
 					>
 						{item.content}
 					</CarouselItem>
@@ -509,7 +506,7 @@ function CommandPalette({
 	}, [asDialog, dialogTriggerKey]);
 
 	const render = (
-		<Command className="rounded-lg border shadow-md">
+		<Command className="rounded-lg border shadow-md bg-white dark:bg-[#0a0a0c] text-black dark:text-white border-gray-200 dark:border-white/10">
 			<CommandInput placeholder="Type a command or search..." />
 			<CommandList>
 				{commandGroups.length === 0 && (
@@ -576,7 +573,7 @@ function CustomContextMenu({ triggerLabel, items }) {
 			<ContextMenuTrigger className="h-full w-full">
 				{triggerLabel}
 			</ContextMenuTrigger>
-			<ContextMenuContent>
+			<ContextMenuContent className="bg-white dark:bg-[#0a0a0c] text-black dark:text-white border border-gray-200 dark:border-white/10 shadow-lg">
 				<ContextMenuGroup>{renderMenuItems(items)}</ContextMenuGroup>
 			</ContextMenuContent>
 		</ContextMenu>
@@ -598,7 +595,7 @@ function CustomDialog({
 				<Button variant="outline">{triggerButtonText}</Button>
 			</DialogTrigger>
 			<DialogPortal>
-				<DialogContent className="sm:max-w-[425px]">
+				<DialogContent className="sm:max-w-[425px] bg-white dark:bg-[#0a0a0c] text-black dark:text-white border border-gray-200 dark:border-white/10 shadow-xl">
 					<DialogHeader>
 						<DialogTitle>{title}</DialogTitle>
 						<DialogDescription>{description}</DialogDescription>
@@ -624,7 +621,7 @@ function CustomDrawer({
 				<Button variant="outline">{openButtonText}</Button>
 			</DrawerTrigger>
 			<DrawerPortal>
-				<DrawerContent>
+				<DrawerContent className="bg-white/80 dark:bg-[#0a0a0c]/80 backdrop-blur-xl text-black dark:text-white border-t border-gray-200 dark:border-white/10 shadow-2xl">
 					<div className="mx-auto w-full max-w-sm">
 						<DrawerHeader>
 							<DrawerTitle>{title}</DrawerTitle>
@@ -672,7 +669,7 @@ function CustomDropdown({ triggerLabel, menuLabel, items }) {
 			<DropdownMenuTrigger asChild>
 				<Button variant="outline">{triggerLabel}</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent className="w-56">
+			<DropdownMenuContent className="w-56 bg-white/80 dark:bg-[#0a0a0c]/80 backdrop-blur-xl text-black dark:text-white border border-gray-200 dark:border-white/10 shadow-lg">
 				{menuLabel && <DropdownMenuLabel>{menuLabel}</DropdownMenuLabel>}
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>{renderMenuItems(items)}</DropdownMenuGroup>
@@ -688,11 +685,11 @@ function CustomMenubar({ menuData }) {
 			{menuData.map((menu) => (
 				<MenubarMenu key={menu.trigger}>
 					<MenubarTrigger>{menu.trigger}</MenubarTrigger>
-					<MenubarContent>
-						{menu.items.map((item) => {
+					<MenubarContent className="bg-white dark:bg-[#0a0a0c] text-black dark:text-white border border-gray-200 dark:border-white/10 shadow-lg">
+						{menu.items.map((item, index) => {
 							switch (item.type) {
 								case 'separator':
-									return <MenubarSeparator key={`separator-${item.type}`} />;
+									return <MenubarSeparator key={`separator-${index}`} />;
 								case 'submenu':
 									return (
 										<MenubarSub key={item.label}>
@@ -746,7 +743,7 @@ function CustomHoverCard({ trigger, children }) {
 	return (
 		<HoverCard>
 			<HoverCardTrigger asChild>{trigger}</HoverCardTrigger>
-			<HoverCardContent className="w-80">{children}</HoverCardContent>
+			<HoverCardContent className="w-80 bg-white dark:bg-[#0a0a0c] text-black dark:text-white border border-gray-200 dark:border-white/10 shadow-lg">{children}</HoverCardContent>
 		</HoverCard>
 	);
 }
@@ -758,7 +755,7 @@ function CustomNavigation({ sections }) {
 				{sections.map((section) => (
 					<NavigationMenuItem key={section.trigger}>
 						<NavigationMenuTrigger>{section.trigger}</NavigationMenuTrigger>
-						<NavigationMenuContent>
+						<NavigationMenuContent className="bg-white dark:bg-[#0a0a0c] text-black dark:text-white border border-gray-200 dark:border-white/10 shadow-lg">
 							<ul className="grid gap-3 p-6 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr]">
 								{section.items.map((item) => (
 									<li
@@ -911,7 +908,7 @@ function CustomPopover({ triggerLabel = 'Open', children }) {
 			<PopoverTrigger asChild>
 				<Button variant="outline">{triggerLabel}</Button>
 			</PopoverTrigger>
-			<PopoverContent className="w-80">{children}</PopoverContent>
+			<PopoverContent className="w-80 bg-white dark:bg-[#0a0a0c] text-black dark:text-white border border-gray-200 dark:border-white/10 shadow-lg">{children}</PopoverContent>
 		</Popover>
 	);
 }
@@ -920,15 +917,15 @@ function CustomSelect({ placeholder, label, value, onValueChange, groups }) {
 	return (
 		<Select value={value} onValueChange={onValueChange}>
 			<SelectTrigger>
-				<SelectValue placeholder={placeholder} />
+				<SelectValue placeholder={placeholder} className="text-black dark:text-white" />
 			</SelectTrigger>
-			<SelectContent>
+			<SelectContent className="bg-white dark:bg-[#0a0a0c] text-black dark:text-white border border-gray-200 dark:border-white/10 shadow-lg">
 				<SelectScrollUpButton>
 					<ChevronUpIcon />
 				</SelectScrollUpButton>
 
-				{groups.map((group) => (
-					<Fragment key={group.groupName || 'default-group'}>
+				{groups.map((group, index) => (
+					<Fragment key={group.groupName || `default-group-${index}`}>
 						<SelectGroup>
 							{group.groupName && <SelectLabel>{group.groupName}</SelectLabel>}
 							{group.items.map((item) => (
@@ -968,7 +965,7 @@ function CustomSheet({
 				<Button variant="outline">{buttonLabel}</Button>
 			</SheetTrigger>
 			<SheetPortal>
-				<SheetContent>
+				<SheetContent className="bg-white dark:bg-[#0a0a0c] text-black dark:text-white border-l border-gray-200 dark:border-white/10 shadow-2xl">
 					<SheetHeader>
 						<SheetTitle>{title}</SheetTitle>
 						<SheetDescription>{description}</SheetDescription>
@@ -1024,59 +1021,23 @@ function CustomTooltip({
 }
 
 export {
-	CustomAccordion,
-	CustomAlert,
-	CustomAlertDialog,
-	CustomAvatar,
-	CustomBreadcrumb,
-	CustomCard,
-	CustomCarousel,
-	CollapsibleSection,
-	CommandPalette,
-	CustomContextMenu,
-	CustomDialog,
-	CustomDrawer,
-	CustomDropdown,
-	CustomMenubar,
-	CustomHoverCard,
-	CustomNavigation,
-	CustomPagination,
-	CustomPopover,
-	CustomSelect,
-	CustomSheet,
-	CustomTabs,
-	CustomTooltip,
 	Accordion,
 	AccordionContent,
 	AccordionItem,
 	AccordionTrigger,
 	Alert,
-	AlertDescription,
-	AlertTitle,
-	AlertDialog,
-	AlertDialogTitle,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogPortal,
-	AlertDialogContent,
-	AlertDialogOverlay,
-	AlertDialogTrigger,
-	AlertDialogDescription,
-	AspectRatio,
+	AlertDescription, AlertDialog, AlertDialogAction,
+	AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+	AlertDialogHeader, AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogTrigger, AlertTitle, AspectRatio,
 	Avatar,
 	AvatarFallback,
 	AvatarImage,
 	Badge,
-	Breadcrumb,
-	BreadcrumbItem,
+	Breadcrumb, BreadcrumbEllipsis, BreadcrumbItem,
 	BreadcrumbLink,
 	BreadcrumbList,
 	BreadcrumbPage,
-	BreadcrumbSeparator,
-	BreadcrumbEllipsis,
-	Button,
+	BreadcrumbSeparator, Button,
 	Calendar,
 	Card,
 	CardContent,
@@ -1091,98 +1052,57 @@ export {
 	CarouselPrevious,
 	Checkbox,
 	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-	Command,
-	CommandEmpty,
+	CollapsibleContent, CollapsibleSection, CollapsibleTrigger,
+	Command, CommandDialog, CommandEmpty,
 	CommandGroup,
 	CommandInput,
 	CommandItem,
-	CommandList,
-	CommandSeparator,
-	CommandDialog,
-	CommandShortcut,
-	ContextMenu,
-	ContextMenuSub,
-	ContextMenuItem,
-	ContextMenuGroup,
-	ContextMenuLabel,
-	ContextMenuPortal,
-	ContextMenuContent,
-	ContextMenuTrigger,
-	ContextMenuShortcut,
-	ContextMenuRadioItem,
-	ContextMenuSeparator,
-	ContextMenuRadioGroup,
-	ContextMenuSubContent,
-	ContextMenuSubTrigger,
-	ContextMenuCheckboxItem,
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-	DialogClose,
-	DialogFooter,
-	DialogPortal,
-	DialogOverlay,
-	Drawer,
+	CommandList, CommandPalette, CommandSeparator, CommandShortcut,
+	ContextMenu, ContextMenuCheckboxItem, ContextMenuContent, ContextMenuGroup, ContextMenuItem, ContextMenuLabel,
+	ContextMenuPortal, ContextMenuRadioGroup, ContextMenuRadioItem,
+	ContextMenuSeparator, ContextMenuShortcut, ContextMenuSub, ContextMenuSubContent,
+	ContextMenuSubTrigger, ContextMenuTrigger, CustomAccordion,
+	CustomAlert,
+	CustomAlertDialog,
+	CustomAvatar,
+	CustomBreadcrumb,
+	CustomCard,
+	CustomCarousel, CustomContextMenu,
+	CustomDialog,
+	CustomDrawer,
+	CustomDropdown, CustomHoverCard, CustomMenubar, CustomNavigation,
+	CustomPagination,
+	CustomPopover,
+	CustomSelect,
+	CustomSheet,
+	CustomTabs,
+	CustomTooltip, Dialog, DialogClose, DialogContent,
+	DialogDescription, DialogFooter, DialogHeader, DialogOverlay, DialogPortal, DialogTitle,
+	DialogTrigger, Drawer,
 	DrawerClose,
 	DrawerContent,
 	DrawerDescription,
 	DrawerFooter,
-	DrawerHeader,
-	DrawerTitle,
-	DrawerTrigger,
-	DrawerPortal,
-	DrawerOverlay,
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-	DropdownMenuSub,
-	DropdownMenuGroup,
-	DropdownMenuPortal,
-	DropdownMenuShortcut,
-	DropdownMenuRadioItem,
-	DropdownMenuRadioGroup,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
-	DropdownMenuCheckboxItem,
-	HoverCard,
+	DrawerHeader, DrawerOverlay, DrawerPortal, DrawerTitle,
+	DrawerTrigger, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
+	DropdownMenuLabel, DropdownMenuPortal, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuSub, DropdownMenuSubContent,
+	DropdownMenuSubTrigger, DropdownMenuTrigger, HoverCard,
 	HoverCardContent,
 	HoverCardTrigger,
-	Input,
-	Label,
-	Menubar,
-	MenubarContent,
-	MenubarItem,
-	MenubarMenu,
-	MenubarSeparator,
-	MenubarShortcut,
-	MenubarTrigger,
-	MenubarSub,
-	MenubarGroup,
-	MenubarLabel,
-	MenubarPortal,
-	MenubarRadioItem,
-	MenubarRadioGroup,
-	MenubarSubContent,
-	MenubarSubTrigger,
-	MenubarCheckboxItem,
-	NavigationMenu,
+	Input, InputOTP,
+	InputOTPGroup,
+	InputOTPSeparator,
+	InputOTPSlot, Label,
+	Menubar, MenubarCheckboxItem, MenubarContent, MenubarGroup, MenubarItem, MenubarLabel, MenubarMenu, MenubarPortal, MenubarRadioGroup, MenubarRadioItem, MenubarSeparator,
+	MenubarShortcut, MenubarSub, MenubarSubContent,
+	MenubarSubTrigger, MenubarTrigger, NavigationMenu,
 	NavigationMenuContent,
 	NavigationMenuIndicator,
 	NavigationMenuItem,
 	NavigationMenuLink,
 	NavigationMenuList,
 	NavigationMenuTrigger,
-	NavigationMenuViewport,
-	navigationMenuTriggerStyle,
-	Pagination,
+	NavigationMenuViewport, Pagination,
 	PaginationContent,
 	PaginationEllipsis,
 	PaginationItem,
@@ -1201,60 +1121,29 @@ export {
 	ScrollArea,
 	ScrollBar,
 	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-	SelectScrollUpButton,
-	SelectGroup,
-	SelectLabel,
-	SelectSeparator,
-	SelectScrollDownButton,
-	Separator,
+	SelectContent, SelectGroup, SelectItem, SelectLabel, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectTrigger,
+	SelectValue, Separator,
 	Sheet,
-	SheetClose,
-	SheetTitle,
-	SheetFooter,
-	SheetHeader,
-	SheetPortal,
-	SheetContent,
-	SheetOverlay,
-	SheetTrigger,
-	SheetDescription,
-	Skeleton,
+	SheetClose, SheetContent, SheetDescription, SheetFooter,
+	SheetHeader, SheetOverlay, SheetPortal, SheetTitle, SheetTrigger, Skeleton,
 	Slider,
 	Switch,
 	Table,
 	TableBody,
 	TableCaption,
-	TableCell,
-	TableHead,
+	TableCell, TableFooter, TableHead,
 	TableHeader,
-	TableRow,
-	TableFooter,
-	Tabs,
+	TableRow, Tabs,
 	TabsContent,
 	TabsList,
 	TabsTrigger,
 	Textarea,
-	Toast,
-	ToastClose,
-	ToastTitle,
-	ToastAction,
-	ToastProvider,
-	ToastViewport,
-	ToastDescription,
-	useToast,
-	Toaster,
+	Toast, ToastAction, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport, Toaster,
 	Toggle,
 	ToggleGroup,
 	ToggleGroupItem,
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
-	TooltipTrigger,
-	InputOTP,
-	InputOTPGroup,
-	InputOTPSeparator,
-	InputOTPSlot,
+	TooltipTrigger, navigationMenuTriggerStyle, useToast
 };
