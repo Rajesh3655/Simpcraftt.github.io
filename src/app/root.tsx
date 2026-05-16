@@ -1,12 +1,12 @@
 import {
   Links,
   Meta,
-  Outlet,
   Scripts,
   ScrollRestoration,
   useAsyncError,
   useLocation,
-  useRouteError,
+  useOutlet,
+  useRouteError
 } from 'react-router';
 
 import { useButton } from '@react-aria/button';
@@ -26,7 +26,9 @@ import fetch from '@/__create/fetch';
 import { LoadFonts } from 'virtual:load-fonts.jsx';
 // @ts-expect-error -- generated auth module, no type declarations available
 import { SessionProvider } from '@auth/create/react';
+import { AnimatePresence, motion } from "framer-motion";
 import { toPng } from 'html-to-image';
+import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { serializeError } from 'serialize-error';
 import { Toaster, toast } from 'sonner';
@@ -172,7 +174,6 @@ function InternalErrorBoundary({ error: errorArg }: Route.ErrorBoundaryProps) {
   }
   return (
     <>
-      {!isInIframe() && (
         <div
           className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 max-w-md z-50 transition-all duration-500 ease-out ${
             isOpen ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
@@ -216,7 +217,6 @@ function InternalErrorBoundary({ error: errorArg }: Route.ErrorBoundaryProps) {
             </div>
           </div>
         </div>
-      )}
     </>
   );
 }
@@ -459,10 +459,60 @@ export function Layout({ children }: { children: ReactNode }) {
 
 export const ErrorBoundary = InternalErrorBoundary;
 
+function PremiumLoader() {
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Lock scrolling while the cinematic overlay is active
+    document.body.style.overflow = 'hidden';
+    
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+      document.body.style.overflow = '';
+    }, 800); // 0.8 seconds of loading time for the spinner
+
+    return () => {
+      clearTimeout(timer);
+      document.body.style.overflow = '';
+    };
+  }, []);
+
+  return (
+    <AnimatePresence>
+      {isLoading && (
+        <motion.div
+          key="premium-loader"
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#F8F7F5] dark:bg-[#0A0A0C]"
+        >
+          {/* Swap 'text-blue-600 dark:text-blue-400' with your specific brand color */}
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 dark:text-blue-400" strokeWidth={1.5} />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 export default function App() {
+  const location = useLocation();
+  const outlet = useOutlet();
+
   return (
     <SessionProvider>
-      <Outlet />
+      <PremiumLoader />
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={location.pathname}
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -15 }}
+          transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+        >
+          {outlet}
+        </motion.div>
+      </AnimatePresence>
     </SessionProvider>
   );
 }

@@ -8,16 +8,16 @@ module.exports = {
 		extend: {
 			colors: {
 				surface: {
-					DEFAULT: '#ffffff',
-					dark: '#0a0a0a',
+					DEFAULT: '#F6F3EE',
+					dark: '#050505',
 				},
 				'brand-primary': {
-					DEFAULT: '#3b82f6',
-					dark: '#6d28d9',
+					DEFAULT: '#111111',
+					dark: '#fafafa',
 				},
 				'text-base': {
-					DEFAULT: '#1f2937',
-					dark: '#e5e7eb',
+					DEFAULT: '#111111',
+					dark: '#fafafa',
 				},
 			},
 			fontSize: {

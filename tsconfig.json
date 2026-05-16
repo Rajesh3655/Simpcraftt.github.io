@@ -17,6 +17,7 @@
 		"checkJs": false,
 		"rootDirs": [".", "./.react-router/types"],
 		"baseUrl": ".",
+		"ignoreDeprecations": "6.0",
 		"esModuleInterop": true,
 		"verbatimModuleSyntax": true,
 		"noEmit": true,

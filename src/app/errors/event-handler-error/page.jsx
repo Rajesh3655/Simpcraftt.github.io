@@ -4,3 +4,4 @@ export default function Page() {
   };
   return <button onClick={handleClick}>Click me</button>;
 }
+
