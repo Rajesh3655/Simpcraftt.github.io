@@ -4,7 +4,7 @@ import { signIn } from '@auth/create/react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 
-const isDev = process.env.NEXT_PUBLIC_CREATE_ENV === 'DEVELOPMENT';
+const isDev = import.meta.env.DEV;
 
 const PROVIDER_LABELS = {
 	google: 'Google',
@@ -22,10 +22,6 @@ export default function SocialDevShimPage() {
 		}
 	}, [navigate]);
 
-	if (!isDev) {
-		return null;
-	}
-
 	const params =
 		typeof window !== 'undefined'
 			? new URLSearchParams(window.location.search)
@@ -41,6 +37,8 @@ export default function SocialDevShimPage() {
 	const [missingSecrets, setMissingSecrets] = useState(null);
 
 	useEffect(() => {
+		if (!isDev) return;
+
 		fetch(
 			`/api/__create/check-social-secrets?provider=${encodeURIComponent(provider)}`
 		)
@@ -50,6 +48,10 @@ export default function SocialDevShimPage() {
 				console.error('Failed to check social secrets:', err);
 			});
 	}, [provider]);
+
+	if (!isDev) {
+		return null;
+	}
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
@@ -145,4 +147,3 @@ export default function SocialDevShimPage() {
 		</div>
 	);
 }
-

@@ -3,7 +3,7 @@ const createTicketId = (prefix) => `${prefix}-${Date.now().toString(36).toUpperC
 export async function POST(request) {
   try {
     const formData = await request.formData();
-    const requiredFields = ["name", "email", "phone", "productSlug", "serialNumber", "purchaseDate", "invoiceNumber"];
+    const requiredFields = ["name", "email", "phone", "productSlug", "serialNumber", "purchaseDate", "invoiceNumber", "dealer", "pincode", "address", "invoice"];
     const missing = requiredFields.filter((field) => !formData.get(field));
 
     if (missing.length > 0) {

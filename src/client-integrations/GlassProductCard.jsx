@@ -1,7 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUpRight, ChevronLeft, ChevronRight, Heart, Loader2, ShoppingBag, X } from 'lucide-react';
+import { ArrowUpRight, ChevronLeft, ChevronRight, Heart, ShoppingBag, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { formatPrice } from '../app/data/commerce';
@@ -138,14 +138,12 @@ export function GlassProductCard({ product }) {
       whileHover={{ y: -8, scale: 1.02 }}
       onClick={() => setIsOpen(true)}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      className="group relative flex w-full max-w-sm cursor-pointer flex-col justify-between overflow-hidden rounded-[2rem] border border-white/40 dark:border-white/10 bg-white/30 dark:bg-white/5 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-2xl transition-all duration-500 hover:shadow-[0_16px_64px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_16px_64px_rgba(0,0,0,0.6)] hover:bg-white/40 dark:hover:bg-white/10"
+      className="group relative flex w-full max-w-sm cursor-pointer flex-col justify-between overflow-hidden rounded-2xl border border-black/5 dark:border-white/5 bg-slate-50 dark:bg-white/[0.02] p-4 transition-colors duration-300 hover:bg-white dark:hover:bg-white/[0.04]"
     >
-      {/* Shine effect */}
-      <div className="pointer-events-none absolute inset-0 rounded-[2rem] bg-gradient-to-tr from-white/10 via-white/40 dark:via-white/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
       {/* Product Badge */}
       {product.badge && (
-        <motion.div layoutId={`product-badge-${product.slug}`} className="absolute left-6 top-6 z-10 rounded-full border border-white/50 dark:border-white/20 bg-white/60 dark:bg-white/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-white shadow-sm backdrop-blur-md">
+        <motion.div layoutId={`product-badge-${product.slug}`} className="absolute left-6 top-6 z-10 rounded-full border border-black/5 dark:border-white/10 bg-white/90 dark:bg-black/50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-900 dark:text-white backdrop-blur-md">
           {product.badge}
         </motion.div>
       )}
@@ -154,40 +152,40 @@ export function GlassProductCard({ product }) {
       <motion.button
         layoutId={`wishlist-btn-${product.slug}`}
         onClick={handleWishlist}
-        className={`absolute right-6 top-6 z-20 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-md transition-all duration-300 hover:scale-110 active:scale-95 ${
+        className={`absolute right-6 top-6 z-20 flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 ${
           isWishlisted 
-            ? 'bg-rose-500/10 text-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.2)] hover:bg-rose-500/20' 
-            : 'border border-white/50 dark:border-white/20 bg-white/60 dark:bg-white/10 text-slate-800 dark:text-white hover:bg-white/80 dark:hover:bg-white/20'
+            ? 'bg-rose-50 text-rose-500 dark:bg-rose-500/20 hover:bg-rose-100' 
+            : 'border border-black/5 dark:border-white/10 bg-white dark:bg-black/50 text-slate-800 dark:text-white hover:bg-slate-50 dark:hover:bg-white/10'
         }`}
       >
         <Heart className={`h-4 w-4 transition-all duration-300 ${isWishlisted ? 'fill-current drop-shadow-[0_0_8px_rgba(244,63,94,0.5)]' : ''}`} />
       </motion.button>
 
       {/* Cinematic Image Container */}
-      <motion.div layoutId={`product-image-container-${product.slug}`} className="relative mb-5 aspect-[4/5] w-full overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800">
+      <motion.div layoutId={`product-image-container-${product.slug}`} className="relative mb-4 aspect-[4/5] w-full overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800/50">
         <motion.div
-          className="h-full w-full bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-110"
+          className="h-full w-full bg-cover bg-center transition-transform duration-700 ease-out group-hover:scale-105"
           style={{ backgroundImage: `url(${product.image})` }}
         />
         {/* Subtle inner shadow for depth */}
-        <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]" />
+        <div className="pointer-events-none absolute inset-0 rounded-xl shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]" />
       </motion.div>
 
       {/* Card Content */}
       <div className="relative z-10 flex flex-col gap-1 px-2 pb-2">
         <div className="flex items-start justify-between">
           <div className="flex flex-col">
-            <motion.p layoutId={`product-category-${product.slug}`} className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+            <motion.p layoutId={`product-category-${product.slug}`} className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
               {product.category}
             </motion.p>
-            <motion.h3 layoutId={`product-title-${product.slug}`} className="text-xl font-extrabold leading-tight tracking-tight text-slate-900 dark:text-white">
+            <motion.h3 layoutId={`product-title-${product.slug}`} className="text-xl font-bold leading-tight tracking-tight text-slate-900 dark:text-white">
               {product.name}
             </motion.h3>
           </div>
           <motion.button
-            whileHover={{ scale: 1.1, rotate: 45 }}
+            whileHover={{ scale: 1.05, rotate: 45 }}
             whileTap={{ scale: 0.95 }}
-            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-white/60 dark:border-white/20 bg-white/50 dark:bg-white/10 text-slate-900 dark:text-white shadow-sm backdrop-blur-md transition-colors hover:bg-white/80 dark:hover:bg-white/20"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-black/5 dark:border-white/10 bg-white dark:bg-black/50 text-slate-900 dark:text-white transition-colors hover:bg-slate-50 dark:hover:bg-white/10"
           >
             <ArrowUpRight className="h-5 w-5" />
           </motion.button>
@@ -204,7 +202,7 @@ export function GlassProductCard({ product }) {
     {/* Cinematic Expanding Modal */}
     <AnimatePresence>
       {isOpen && (
-        <div className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center px-4 py-8 sm:p-12 md:p-24">
+        <motion.div className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 md:p-12">
           {/* Dark Blurred Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -218,7 +216,7 @@ export function GlassProductCard({ product }) {
           {/* Expanded Card Structure */}
           <motion.div
             layoutId={`product-card-${product.slug}`}
-            className="pointer-events-auto relative z-10 flex w-full max-w-5xl flex-col overflow-hidden rounded-[2.5rem] border border-white/20 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 p-3 shadow-[0_32px_128px_rgba(0,0,0,0.4)] dark:shadow-[0_32px_128px_rgba(0,0,0,0.8)] backdrop-blur-2xl md:flex-row"
+            className="pointer-events-auto relative z-10 flex w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-black/5 dark:border-white/10 bg-white dark:bg-[#0A0A0C] p-3 shadow-2xl md:flex-row"
             transition={springTransition}
           >
             {/* Wishlist Button */}
@@ -241,7 +239,7 @@ export function GlassProductCard({ product }) {
               exit={{ opacity: 0, scale: 0.8 }}
               transition={{ delay: 0.1, duration: 0.2 }}
               onClick={handleClose}
-              className="absolute right-6 top-6 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/5 dark:bg-white/10 text-slate-800 dark:text-white backdrop-blur-md transition-all hover:scale-110 hover:bg-black/10 dark:hover:bg-white/20 active:scale-95"
+              className="absolute right-6 top-6 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white dark:bg-white/10 text-slate-800 dark:text-white backdrop-blur-md transition-all hover:scale-110 hover:bg-slate-50 dark:hover:bg-white/20 active:scale-95"
             >
               <X className="h-5 w-5" />
             </motion.button>
@@ -249,7 +247,7 @@ export function GlassProductCard({ product }) {
             {/* Expanded Image */}
             <motion.div
               layoutId={`product-image-container-${product.slug}`}
-              className="group/slider relative aspect-square w-full shrink-0 overflow-hidden rounded-[2rem] bg-slate-100 dark:bg-slate-800 md:w-1/2"
+              className="group/slider relative aspect-square w-full shrink-0 overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800/50 md:w-1/2"
               onMouseEnter={() => setIsAutoPlayPaused(true)}
               onMouseLeave={() => setIsAutoPlayPaused(false)}
             >
@@ -278,7 +276,7 @@ export function GlassProductCard({ product }) {
                 />
               </AnimatePresence>
               {product.badge && (
-                <motion.div layoutId={`product-badge-${product.slug}`} className="absolute left-6 top-6 z-10 rounded-full border border-white/50 dark:border-white/20 bg-white/70 dark:bg-white/10 px-4 py-1.5 text-[11px] font-black uppercase tracking-widest text-slate-800 dark:text-white shadow-sm backdrop-blur-md">
+                <motion.div layoutId={`product-badge-${product.slug}`} className="absolute left-6 top-6 z-10 rounded-full border border-black/5 dark:border-white/10 bg-white/90 dark:bg-black/50 px-4 py-1.5 text-[11px] font-black uppercase tracking-widest text-slate-800 dark:text-white backdrop-blur-md">
                   {product.badge}
                 </motion.div>
               )}
@@ -330,20 +328,20 @@ export function GlassProductCard({ product }) {
                   </div>
                 </>
               )}
-              <div className="pointer-events-none absolute inset-0 rounded-[2rem] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]" />
+              <div className="pointer-events-none absolute inset-0 rounded-2xl shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]" />
             </motion.div>
 
             {/* Expanded Content */}
             <div className="flex w-full flex-col justify-center p-6 md:w-1/2 md:p-12">
-              <motion.p layoutId={`product-category-${product.slug}`} className="text-xs font-bold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
+              <motion.p layoutId={`product-category-${product.slug}`} className="text-xs font-bold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-300">
                 {product.category}
               </motion.p>
-              <motion.h3 layoutId={`product-title-${product.slug}`} className="mt-3 text-4xl font-extrabold leading-[1.1] tracking-tight text-slate-900 dark:text-white lg:text-5xl">
+              <motion.h3 layoutId={`product-title-${product.slug}`} className="mt-3 text-3xl sm:text-4xl font-bold leading-[0.95] tracking-tighter text-slate-900 dark:text-white lg:text-5xl">
                 {product.name}
               </motion.h3>
               
               <motion.div layoutId={`product-price-${product.slug}`} className="mt-6 flex items-center">
-                <span className="rounded-2xl border border-white/60 dark:border-white/20 bg-white/50 dark:bg-white/10 px-4 py-2 text-3xl font-bold tracking-tight text-slate-900 dark:text-white shadow-sm backdrop-blur-sm">
+                <span className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
                   {formatPrice(product.price)}
                 </span>
               </motion.div>
@@ -371,16 +369,26 @@ export function GlassProductCard({ product }) {
                 <button
                   onClick={handleAddToCart}
                   disabled={isAddingToCart}
-                  className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-full bg-slate-900 dark:bg-white px-8 py-4 text-sm font-bold uppercase tracking-widest text-white dark:text-slate-900 shadow-xl dark:shadow-white/10 transition-all hover:-translate-y-1 hover:bg-slate-800 dark:hover:bg-slate-100 hover:shadow-2xl active:scale-95 disabled:pointer-events-none disabled:opacity-80 disabled:hover:-translate-y-0 sm:w-auto"
+                  className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-full bg-slate-900 dark:bg-white px-8 py-4 text-sm font-bold uppercase tracking-widest text-white dark:text-slate-900 shadow-xl dark:shadow-white/10 transition-all hover:-translate-y-1 hover:bg-slate-800 dark:hover:bg-slate-100 hover:shadow-2xl active:scale-95 disabled:pointer-events-none sm:w-auto"
                 >
-                  <span className="relative z-10 flex items-center gap-2">
-                    {isAddingToCart ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <ShoppingBag className="h-5 w-5" />
-                    )}
-                    {isAddingToCart ? 'Adding...' : 'Add to Cart'}
+                  <span className={`relative z-10 flex items-center gap-2 transition-opacity duration-300 ${isAddingToCart ? 'opacity-0' : 'opacity-100'}`}>
+                    <ShoppingBag className="h-5 w-5" />
+                    Add to Cart
                   </span>
+                  
+                  {isAddingToCart && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900">
+                      <style>{`
+                        @keyframes shimmer-btn {
+                          0% { transform: translateX(-100%); }
+                          100% { transform: translateX(100%); }
+                        }
+                      `}</style>
+                      <div className="absolute inset-0 -translate-x-full [animation:shimmer-btn_1.5s_infinite_linear] bg-gradient-to-r from-transparent via-white/20 dark:via-black/10 to-transparent" />
+                      <span className="relative z-10 text-sm font-bold uppercase tracking-widest">Adding...</span>
+                    </div>
+                  )}
+
                   {!isAddingToCart && (
                     <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 dark:via-black/10 to-transparent transition-transform duration-500 ease-out group-hover:translate-x-full" />
                   )}
@@ -388,7 +396,7 @@ export function GlassProductCard({ product }) {
               </motion.div>
             </div>
           </motion.div>
-        </div>
+        </motion.div>
       )}
     </AnimatePresence>
     </>

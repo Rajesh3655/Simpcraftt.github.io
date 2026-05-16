@@ -1,4 +1,4 @@
-import { CommerceShell } from "../components/commerce/CommerceLayout";
+import { CommerceShell, MotionSection } from "../components/commerce/CommerceLayout";
 
 export default function AboutPage() {
   return (
@@ -7,7 +7,7 @@ export default function AboutPage() {
       title="A premium product house for modern device culture."
       description="Simpcraftt designs a cinematic product ecosystem: launch-ready marketplace commerce today, direct ownership and service infrastructure tomorrow."
     >
-      <section className="px-6 pb-32 lg:px-24">
+      <MotionSection className="px-6 pb-32 lg:px-24">
         <div className="mx-auto max-w-[1400px] space-y-12">
           <div className="rounded-[2.5rem] bg-white/50 p-10 shadow-[0_4px_24px_rgba(0,0,0,0.02)] backdrop-blur-xl dark:bg-white/[0.02] border border-white/60 dark:border-white/5 sm:p-16 lg:p-24">
             <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">Brand story</p>
@@ -17,7 +17,7 @@ export default function AboutPage() {
             </p>
           </div>
         </div>
-      </section>
+      </MotionSection>
     </CommerceShell>
   );
 }

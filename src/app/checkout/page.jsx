@@ -1,9 +1,9 @@
-import { CommerceShell, EcommerceStepper, FutureCommerceNotice } from "../components/commerce/CommerceLayout";
+import { CommerceShell, EcommerceStepper, FutureCommerceNotice, MotionSection } from "../components/commerce/CommerceLayout";
 
 export default function CheckoutPage() {
   return (
     <CommerceShell eyebrow="Checkout" title="Checkout architecture, quietly prepared." description="Addressing, payment, coupon logic, and order confirmation are designed and staged for future activation.">
-      <section className="px-4 pb-24 sm:px-5">
+      <MotionSection className="px-4 pb-24 sm:px-5">
         <div className="mx-auto max-w-7xl space-y-8">
           <EcommerceStepper current={1} />
           <FutureCommerceNotice title="Checkout modules are visually ready, activation pending" />
@@ -20,7 +20,7 @@ export default function CheckoutPage() {
             ))}
           </div>
         </div>
-      </section>
+      </MotionSection>
     </CommerceShell>
   );
 }

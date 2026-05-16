@@ -1,5 +1,4 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactLenis } from "lenis/react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -72,11 +71,9 @@ export default function RootLayout({ children }) {
         className="bg-surface text-text-base dark:bg-surface-dark dark:text-text-base-dark antialiased transition-colors duration-200 ease-out min-h-screen"
         style={{ fontFamily: "'Satoshi', 'Plus Jakarta Sans', sans-serif" }}
       >
-        <ReactLenis root options={{ lerp: 0.1, duration: 1.2, wheelMultiplier: 1.5, smoothWheel: true }}>
-          <QueryClientProvider client={queryClient}>
-            {children}
-          </QueryClientProvider>
-        </ReactLenis>
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
       </div>
     </>
   );

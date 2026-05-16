@@ -1,8 +1,9 @@
-import { useParams } from "react-router";
+import { ArrowLeft } from "lucide-react";
+import { useNavigate, useParams } from "react-router";
 import {
   BuyPanel,
   CommerceShell,
-  PrimaryButton,
+  MotionSection,
   ProductGallery,
   ProductGrid,
   SecondaryButton,
@@ -10,17 +11,18 @@ import {
 import { getCategoryById, getProductBySlug, products } from "../../data/commerce";
 
 export default function ProductDetailsPage() {
+  const navigate = useNavigate();
   const { slug } = useParams();
   const product = getProductBySlug(slug);
 
   if (!product) {
     return (
       <CommerceShell eyebrow="Product" title="Product not found" description="This product is not available in the active catalogue.">
-        <section className="px-4 pb-24 sm:px-5">
+        <MotionSection className="px-4 pb-24 sm:px-5">
           <div className="mx-auto max-w-7xl">
             <SecondaryButton href="/products">Back to Products</SecondaryButton>
           </div>
-        </section>
+        </MotionSection>
       </CommerceShell>
     );
   }
@@ -30,8 +32,21 @@ export default function ProductDetailsPage() {
 
   return (
     <CommerceShell eyebrow={category?.name ?? "Product"} title={product.name} description={product.description}>
-      <section className="px-4 pb-24 sm:px-5">
-        <div className="mx-auto max-w-7xl space-y-12">
+      <MotionSection className="px-4 pb-24 sm:px-5">
+        <div className="mx-auto max-w-7xl space-y-8">
+          <div className="flex items-center justify-between border-t border-slate-900/10 pt-5 dark:border-white/10">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="inline-flex min-h-[38px] items-center gap-2 rounded-full border border-slate-900/10 bg-white/55 px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-600 transition-colors hover:bg-white hover:text-slate-950 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back
+            </button>
+            <p className="hidden text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 sm:block">
+              {product.status}
+            </p>
+          </div>
           <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:gap-12">
             <ProductGallery product={product} />
             <div className="space-y-5">
@@ -44,8 +59,7 @@ export default function ProductDetailsPage() {
                     <span key={variant} className="rounded-full border border-[var(--lux-border)] bg-[var(--lux-surface)] px-3 py-2 text-xs font-bold uppercase tracking-[0.12em]">{variant}</span>
                   ))}
                 </div>
-                <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                  <PrimaryButton href={product.marketplace.custom} external>Buy Now</PrimaryButton>
+                <div className="mt-7">
                   <SecondaryButton href="/warranty">Warranty Coverage</SecondaryButton>
                 </div>
               </div>
@@ -85,7 +99,7 @@ export default function ProductDetailsPage() {
             </div>
           )}
         </div>
-      </section>
+      </MotionSection>
     </CommerceShell>
   );
 }

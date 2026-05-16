@@ -1,22 +1,94 @@
-import { CollectionGrid, CommerceShell, ProductGrid } from "../components/commerce/CommerceLayout";
-import { products } from "../data/commerce";
+import { AnimatePresence, motion } from "framer-motion";
+import { Layers, LayoutGrid, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { CommerceShell, MotionSection, ProductGrid } from "../components/commerce/CommerceLayout";
+import { collections, products } from "../data/commerce";
 
 export default function CollectionsPage() {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const activeCollection = collections[activeIndex];
+  const collectionProducts = products.filter(p => activeCollection.productSlugs.includes(p.slug));
+
   return (
-    <CommerceShell eyebrow="Collections" title="Curated product systems for real workflows." description="Collections organize products by use-case, design intent, and listening context.">
-      <section className="px-4 pb-24 sm:px-5">
-        <div className="mx-auto max-w-7xl space-y-14">
-          <CollectionGrid />
-          <div className="lux-divider pt-10">
-            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-blue-700 dark:text-blue-300 sm:text-xs sm:tracking-[0.18em]">Complete catalogue</p>
-            <h2 className="luxury-title mt-3 text-3xl sm:text-4xl">All products</h2>
-            <div className="mt-8">
-              <ProductGrid items={products} />
-            </div>
+    <CommerceShell 
+      eyebrow="Ecosystems" 
+      title="Curated for context." 
+      description="Explore our product families, designed to work together seamlessly across different environments."
+    >
+      <MotionSection className="pb-10 md:pb-16 lg:pb-20">
+        <div className="mx-auto w-full max-w-[1400px] space-y-8 md:space-y-12 px-6 md:px-8 lg:px-12">
+          
+          {/* Interactive Ecosystem Map / Selector */}
+          <div className="grid grid-cols-3 gap-3 sm:gap-4">
+            {collections.map((collection, index) => {
+              const isActive = index === activeIndex;
+              const icons = [Sparkles, LayoutGrid, Layers];
+              const Icon = icons[index] ?? Sparkles;
+
+              return (
+                <motion.button
+                  key={collection.slug}
+                  onClick={() => setActiveIndex(index)}
+                  whileHover={{ y: -4 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`group relative flex w-full flex-col items-start overflow-hidden rounded-2xl border p-3 text-left transition-all duration-300 sm:p-6 md:p-8 ${
+                    isActive
+                      ? "border-slate-900/20 bg-white dark:border-white/20 dark:bg-white/10"
+                      : "border-slate-900/5 bg-slate-50 opacity-70 hover:opacity-100 dark:border-white/5 dark:bg-white/[0.02]"
+                  }`}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="collection-active-bg"
+                      className="absolute inset-0 z-0 bg-slate-50 dark:bg-white/5"
+                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                    />
+                  )}
+                  <div className={`relative z-10 mb-4 flex h-9 w-9 items-center justify-center rounded-full transition-colors duration-300 sm:mb-6 sm:h-12 sm:w-12 ${
+                    isActive 
+                      ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" 
+                      : "bg-slate-900/5 text-slate-500 group-hover:bg-slate-900/10 dark:bg-white/10 dark:text-slate-400 dark:group-hover:bg-white/20"
+                  }`}>
+                    <Icon className="h-4 w-4 sm:h-6 sm:w-6" />
+                  </div>
+                  <div className="relative z-10">
+                    <p className="mb-2 text-[8px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300 sm:mb-3 sm:text-[10px] sm:tracking-[0.2em]">
+                      {collection.productSlugs.length} products
+                    </p>
+                    <h3 className={`text-sm font-bold leading-tight tracking-tight transition-colors duration-300 sm:text-xl md:text-2xl ${
+                      isActive ? "text-slate-900 dark:text-white" : "text-slate-700 dark:text-slate-400"
+                    }`}>
+                      {collection.name}
+                    </h3>
+                  </div>
+                </motion.button>
+              );
+            })}
+          </div>
+
+          {/* Dynamic Collection Content */}
+          <div className="pt-4 md:pt-8">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeCollection.slug}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <div className="mb-8 flex flex-col items-start justify-between gap-6 md:mb-12 md:flex-row md:items-end rounded-2xl bg-slate-50 p-6 md:p-8 dark:bg-white/[0.02] border border-black/5 dark:border-white/10">
+                  <div className="max-w-2xl">
+                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight md:text-3xl text-slate-900 dark:text-white">{activeCollection.name}</h2>
+                    <p className="mt-4 text-lg leading-relaxed text-slate-600 dark:text-slate-400">{activeCollection.description}</p>
+                  </div>
+                </div>
+                
+                <ProductGrid items={collectionProducts} />
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
-      </section>
+      </MotionSection>
     </CommerceShell>
   );
 }
-

@@ -1,4 +1,4 @@
-import { CommerceShell, ProductFilters, ProductGrid, useFilteredProducts } from "../components/commerce/CommerceLayout";
+import { CommerceShell, MotionSection, ProductFilters, ProductGrid, useFilteredProducts } from "../components/commerce/CommerceLayout";
 
 export default function ProductsPage() {
   const filterState = useFilteredProducts();
@@ -6,16 +6,17 @@ export default function ProductsPage() {
   return (
     <CommerceShell
       eyebrow="Catalogue"
-      title="A curated portfolio of modern listening tools."
+      title="Products"
       description="Each product is presented as a premium object with calm storytelling, technical clarity, and marketplace-ready purchase access."
     >
-      <section className="lux-divider px-4 pb-24 sm:px-5">
+      <MotionSection className="lux-divider px-4 pb-24 sm:px-5">
         <div className="mx-auto max-w-7xl">
           <ProductFilters {...filterState} />
-          <ProductGrid items={filterState.filteredProducts} columns="featured" />
+          <ProductGrid items={filterState.filteredProducts} />
         </div>
-      </section>
+      </MotionSection>
     </CommerceShell>
   );
 }
 
+    

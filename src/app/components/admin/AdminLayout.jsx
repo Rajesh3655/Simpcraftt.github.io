@@ -1,17 +1,26 @@
+"use client";
+
 import {
   Activity,
   BarChart3,
   Bell,
   Boxes,
+  CheckCircle2,
   CreditCard,
+  Eye,
+  EyeOff,
+  FileSearch,
   FileText,
   Globe,
   Images,
   LayoutDashboard,
-  Link,
+  Link as LinkIcon,
   LockKeyhole,
   Megaphone,
+  MessageSquare,
   Package,
+  Pencil,
+  Plus,
   Search,
   Settings,
   ShieldCheck,
@@ -19,10 +28,14 @@ import {
   SlidersHorizontal,
   TicketCheck,
   ToggleLeft,
+  Trash2,
   Users,
+  UploadCloud,
+  UserRound,
   WalletCards,
 } from "lucide-react";
 import { useState } from "react";
+import { Link, NavLink } from "react-router";
 import ThemeToggle from "../../ThemeToggle";
 import {
   activityLog,
@@ -42,7 +55,7 @@ import { categories, collections, formatPrice, products } from "../../data/comme
 const adminNav = [
   { label: "Overview", href: "/admin", icon: LayoutDashboard },
   { label: "Products", href: "/admin/products", icon: Package },
-  { label: "Marketplace", href: "/admin/marketplace", icon: Link },
+  { label: "Marketplace", href: "/admin/marketplace", icon: LinkIcon },
   { label: "Warranty", href: "/admin/warranty", icon: ShieldCheck },
   { label: "Customers", href: "/admin/customers", icon: Users },
   { label: "Ecommerce", href: "/admin/ecommerce", icon: ShoppingCart },
@@ -101,17 +114,20 @@ export function AdminShell({ title = "Admin Command Center", description, childr
 
   return (
     <div className="min-h-screen font-sans selection:bg-slate-900 selection:text-white dark:selection:bg-white dark:selection:text-slate-900 bg-[#F8F7F5] dark:bg-[#0A0A0C]">
-      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(circle_at_8%_0%,rgba(220,210,195,0.4),transparent_30%),radial-gradient(circle_at_92%_8%,rgba(195,205,215,0.4),transparent_32%)] dark:bg-[radial-gradient(circle_at_8%_0%,rgba(30,35,45,0.4),transparent_30%),radial-gradient(circle_at_92%_8%,rgba(20,25,35,0.5),transparent_32%)]" />
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/5 dark:to-white/5" />
+        <div className="absolute inset-0 opacity-[0.025] dark:opacity-[0.04] mix-blend-overlay" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }} />
+      </div>
 
       <aside className={`fixed inset-y-0 left-0 z-50 w-72 border-r border-slate-900/5 bg-white/80 p-4 backdrop-blur-2xl transition-transform lg:translate-x-0 dark:border-white/5 dark:bg-black/50 ${navOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex items-center justify-between gap-3 px-2 py-3">
-          <a href="/admin" className="flex items-center gap-3">
+          <Link to="/admin" className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-[15px] font-medium text-white dark:bg-white dark:text-slate-900">S</span>
             <span>
               <span className="block text-sm font-semibold tracking-wide text-slate-900 dark:text-white">Simpcraftt</span>
-              <span className="text-xs font-medium text-slate-500">Admin OS</span>
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Admin OS</span>
             </span>
-          </a>
+          </Link>
           <button className="rounded-xl border border-slate-900/10 p-2 text-slate-500 lg:hidden dark:border-white/10 dark:text-slate-400" onClick={() => setNavOpen(false)} aria-label="Close admin navigation">
             <SlidersHorizontal className="h-4 w-4" />
           </button>
@@ -121,10 +137,10 @@ export function AdminShell({ title = "Admin Command Center", description, childr
           {adminNav.map((item) => {
             const Icon = item.icon;
             return (
-              <a key={item.href} href={item.href} className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-900/5 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white">
+              <NavLink key={item.href} to={item.href} className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-900/5 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white">
                 <Icon className="h-4 w-4" />
                 {item.label}
-              </a>
+              </NavLink>
             );
           })}
         </nav>
@@ -134,14 +150,14 @@ export function AdminShell({ title = "Admin Command Center", description, childr
             <LockKeyhole className="h-5 w-5 text-slate-900 dark:text-white" />
             <div>
               <p className="text-sm font-medium text-slate-900 dark:text-white">Protected Admin</p>
-              <p className="text-xs text-slate-500">JWT/session layer planned</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">JWT/session layer planned</p>
             </div>
           </div>
         </div>
       </aside>
 
       <div className="relative z-10 lg:pl-72">
-        <header className="sticky top-0 z-40 border-b border-slate-900/5 bg-[#F8F7F5]/80 px-6 py-4 backdrop-blur-2xl dark:border-white/5 dark:bg-[#0A0A0C]/80">
+        <header className="fixed left-0 right-0 top-0 z-40 border-b border-slate-900/5 bg-[#F8F7F5]/80 px-6 py-4 backdrop-blur-2xl dark:border-white/5 dark:bg-[#0A0A0C]/80 md:px-8 lg:left-72 lg:px-12">
           <div className="flex items-center justify-between gap-4">
             <button className="rounded-xl border border-slate-900/10 p-3 text-slate-500 lg:hidden dark:border-white/10 dark:text-slate-400" onClick={() => setNavOpen(true)} aria-label="Open admin navigation">
               <LayoutDashboard className="h-5 w-5" />
@@ -158,18 +174,18 @@ export function AdminShell({ title = "Admin Command Center", description, childr
               <ThemeToggle />
               <div className="hidden rounded-full border border-slate-900/10 bg-white/50 px-5 py-2 md:block dark:border-white/10 dark:bg-white/5">
                 <p className="text-sm font-medium text-slate-900 dark:text-white">{adminUser.name}</p>
-                <p className="text-xs text-slate-500">{adminUser.role}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{adminUser.role}</p>
               </div>
             </div>
           </div>
         </header>
 
-        <main className="px-6 py-10">
-          <div className="mx-auto max-w-7xl">
+        <main className="px-6 pb-10 pt-24 md:px-8 lg:px-12">
+          <div className="mx-auto w-full max-w-[1400px]">
             <div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end">
               <div>
-                <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">Enterprise Management</p>
-                <h1 className="text-4xl font-medium tracking-tight text-slate-900 sm:text-5xl dark:text-white">{title}</h1>
+                <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-300">Enterprise Management</p>
+                <h1 className="text-3xl sm:text-4xl font-bold tracking-tighter text-slate-900 sm:text-5xl dark:text-white">{title}</h1>
                 {description && <p className="mt-5 max-w-3xl text-lg font-light leading-relaxed text-slate-600 dark:text-slate-400">{description}</p>}
               </div>
               <div className="flex gap-3">
@@ -238,11 +254,11 @@ function MetricGrid() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {adminStats.map((stat) => (
-        <div key={stat.label} className="rounded-[1.5rem] border border-slate-900/5 bg-white/50 p-6 shadow-sm backdrop-blur-md dark:border-white/5 dark:bg-white/[0.02]">
+        <div key={stat.label} className="rounded-2xl border border-slate-900/5 bg-white/50 p-6 shadow-sm dark:border-white/5 dark:bg-white/[0.02]">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{stat.label}</p>
-              <p className="mt-4 text-3xl font-medium tracking-tight text-slate-900 dark:text-white">{stat.value}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">{stat.label}</p>
+              <p className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{stat.value}</p>
               <p className="mt-2 text-sm font-medium text-slate-500">{stat.trend}</p>
             </div>
             <StatusPill status={stat.status} />
@@ -264,9 +280,68 @@ function ProductsAdmin() {
 
   return (
     <div className="space-y-6">
+      <ComingSoonBanner
+        title="Admin product management coming soon"
+        description="Create, edit, delete, upload, feature, and visibility workflows are designed below and ready for persistence once backend product APIs are connected."
+        icon={Package}
+      />
       <AdminToolbar primary="Add Product" secondary="Import CSV" />
+      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <AdminPanel title="Add / Edit Product" icon={Pencil}>
+          <div className="grid gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <AdminInput label="Product name" placeholder="Aura Audio Pro" />
+              <AdminInput label="SKU / slug" placeholder="aura-audio-pro" />
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <AdminInput label="Price" placeholder="7999" />
+              <AdminSelect label="Category" options={categories.map((category) => category.name)} />
+              <AdminSelect label="Stock status" options={["Coming Soon", "Preview", "Prototype", "Live"]} />
+            </div>
+            <AdminInput label="Short summary" placeholder="Premium product summary for cards and detail pages" />
+            <div className="grid gap-4 md:grid-cols-2">
+              <ToggleRow icon={CheckCircle2} title="Featured product" description="Highlight in homepage and collection modules." enabled />
+              <ToggleRow icon={Eye} title="Visible on storefront" description="Publish product to public catalogue." enabled />
+            </div>
+            <button type="button" disabled className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white opacity-60 dark:bg-white dark:text-slate-900">
+              <Plus className="h-4 w-4" />
+              Save Product Soon
+            </button>
+          </div>
+        </AdminPanel>
+        <AdminPanel title="Upload Placeholders" icon={UploadCloud}>
+          <div className="grid gap-4">
+            {["Hero image", "Gallery images", "Specification PDF"].map((item) => (
+              <div key={item} className="flex min-h-[92px] items-center justify-between gap-4 rounded-xl border border-dashed border-slate-900/15 bg-white/40 p-4 dark:border-white/15 dark:bg-white/[0.02]">
+                <div>
+                  <p className="font-medium text-slate-900 dark:text-white">{item}</p>
+                  <p className="mt-1 text-sm text-slate-500">Storage connection pending.</p>
+                </div>
+                <UploadCloud className="h-5 w-5 text-slate-400" />
+              </div>
+            ))}
+          </div>
+        </AdminPanel>
+      </div>
       <AdminPanel title="Product Catalogue" icon={Package}>
         <AdminTable columns={["Product", "Category", "Price", "Stock Status", "Badge"]} rows={rows} />
+      </AdminPanel>
+      <AdminPanel title="Product Row Actions" icon={Trash2}>
+        <div className="grid gap-3">
+          {products.slice(0, 3).map((product, index) => (
+            <div key={product.slug} className="grid gap-3 rounded-xl border border-slate-900/5 bg-white/40 p-4 dark:border-white/5 dark:bg-white/[0.02] md:grid-cols-[1fr_auto] md:items-center">
+              <div>
+                <p className="font-medium text-slate-900 dark:text-white">{product.name}</p>
+                <p className="mt-1 text-sm text-slate-500">{product.status} · {product.badge}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <ActionPill icon={Pencil} label="Edit Soon" />
+                <ActionPill icon={index % 2 === 0 ? Eye : EyeOff} label={index % 2 === 0 ? "Visible" : "Hidden"} />
+                <ActionPill icon={Trash2} label="Delete Confirm" tone="danger" />
+              </div>
+            </div>
+          ))}
+        </div>
       </AdminPanel>
       <div className="grid gap-6 lg:grid-cols-3">
         <AdminPanel title="Categories" icon={Boxes}>
@@ -304,10 +379,47 @@ function MarketplaceAdmin() {
 function WarrantyAdmin() {
   return (
     <div className="space-y-6">
+      <ComingSoonBanner
+        title="Warranty management system coming soon"
+        description="Claims, invoice previews, serial checks, customer details, and approval states are staged for backend verification."
+        icon={ShieldCheck}
+      />
       <AdminToolbar primary="Review Claim" secondary="Verify Serial" />
       <AdminPanel title="Warranty Claim Queue" icon={ShieldCheck}>
         <AdminTable columns={["Claim ID", "Customer", "Product", "Serial", "Status", "Priority"]} rows={warrantyClaims.map((claim) => [claim.id, claim.customer, claim.product, claim.serial, claim.status, claim.priority])} />
       </AdminPanel>
+      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        <AdminPanel title="Claim Detail View" icon={FileSearch}>
+          <div className="grid gap-4">
+            {warrantyClaims.slice(0, 1).map((claim) => (
+              <div key={claim.id} className="grid gap-4">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <DetailBlock label="Claim ID" value={claim.id} />
+                  <DetailBlock label="Status" value={claim.status} />
+                  <DetailBlock label="Customer" value={claim.customer} />
+                  <DetailBlock label="Product" value={claim.product} />
+                  <DetailBlock label="Serial number" value={claim.serial} />
+                  <DetailBlock label="Priority" value={claim.priority} />
+                </div>
+                <div className="rounded-xl border border-dashed border-slate-900/15 bg-white/40 p-5 dark:border-white/15 dark:bg-white/[0.02]">
+                  <p className="font-medium text-slate-900 dark:text-white">Invoice preview placeholder</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">Invoice files will render here after storage and secure admin access are connected.</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </AdminPanel>
+        <AdminPanel title="Claim Status Controls" icon={TicketCheck}>
+          <div className="grid gap-3">
+            {["Verification", "Approved", "Rejected", "Pending invoice", "Resolved"].map((status) => (
+              <button key={status} type="button" disabled className="flex items-center justify-between rounded-xl border border-slate-900/5 bg-white/40 px-4 py-3 text-left text-sm font-medium text-slate-600 opacity-80 dark:border-white/5 dark:bg-white/[0.02] dark:text-slate-400">
+                {status}
+                <StatusPill status={status} />
+              </button>
+            ))}
+          </div>
+        </AdminPanel>
+      </div>
       <AdminPanel title="Claim Workflow" icon={TicketCheck}>
         <AdminList items={["Invoice upload review", "Serial number verification", "Approve/reject claim", "Send customer update", "Generate claim ticket history"]} />
       </AdminPanel>
@@ -370,10 +482,42 @@ function CMSAdmin() {
 function SupportAdmin() {
   return (
     <div className="space-y-6">
+      <ComingSoonBanner
+        title="Support ticket system coming soon"
+        description="Complaint intake, ticket history, status badges, and admin reply workflows are visually ready and waiting for ticket APIs."
+        icon={MessageSquare}
+      />
       <AdminToolbar primary="Reply" secondary="Send Announcement" />
       <AdminPanel title="Support Tickets" icon={TicketCheck}>
         <AdminTable columns={["Ticket", "Customer", "Topic", "Status", "Channel"]} rows={supportTickets.map((ticket) => [ticket.id, ticket.customer, ticket.topic, ticket.status, ticket.channel])} />
       </AdminPanel>
+      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <AdminPanel title="Complaint Detail" icon={MessageSquare}>
+          <div className="grid gap-4">
+            {supportTickets.map((ticket) => (
+              <div key={ticket.id} className="rounded-xl border border-slate-900/5 bg-white/40 p-4 dark:border-white/5 dark:bg-white/[0.02]">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-slate-900 dark:text-white">{ticket.id} · {ticket.customer}</p>
+                    <p className="mt-1 text-sm text-slate-500">{ticket.topic} via {ticket.channel}</p>
+                  </div>
+                  <StatusPill status={ticket.status} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </AdminPanel>
+        <AdminPanel title="Admin Reply Layout" icon={UserRound}>
+          <div className="grid gap-4">
+            <AdminSelect label="Reply template" options={["Warranty follow-up", "Marketplace guidance", "Product information", "Escalation note"]} />
+            <textarea disabled rows={7} placeholder="Admin reply composer coming soon" className="w-full resize-none rounded-xl border border-slate-900/10 bg-white/40 px-4 py-3 text-sm text-slate-600 placeholder:text-slate-400 disabled:opacity-70 dark:border-white/10 dark:bg-white/[0.02] dark:text-slate-300" />
+            <button type="button" disabled className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white opacity-60 dark:bg-white dark:text-slate-900">
+              <MessageSquare className="h-4 w-4" />
+              Send Reply Soon
+            </button>
+          </div>
+        </AdminPanel>
+      </div>
       <AdminPanel title="Communication Controls" icon={Bell}>
         <ModuleGrid modules={[
           { name: "Email notifications", description: "Warranty, support, and announcement emails.", enabled: true },
@@ -412,8 +556,8 @@ function MediaAdmin() {
       <AdminToolbar primary="Upload Media" secondary="Optimize Assets" />
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         {products.slice(0, 4).map((product) => (
-          <div key={product.slug} className="overflow-hidden rounded-[1.5rem] border border-slate-900/5 bg-white/50 dark:border-white/5 dark:bg-white/[0.02]">
-            <img src={product.image} alt={product.name} className="aspect-[4/3] w-full object-cover" />
+          <div key={product.slug} className="overflow-hidden rounded-2xl border border-slate-900/5 bg-white/50 dark:border-white/5 dark:bg-white/[0.02]">
+            <img src={product.image} alt={product.name} loading="lazy" decoding="async" className="aspect-[4/3] w-full object-cover" />
             <div className="p-4">
               <p className="font-medium text-slate-900 dark:text-white">{product.name}</p>
               <p className="mt-1 text-sm text-slate-500">Product image asset</p>
@@ -460,15 +604,89 @@ function SettingsAdmin() {
 
 function AdminPanel({ title, icon: Icon, children }) {
   return (
-    <section className="rounded-[2rem] border border-slate-900/5 bg-white/50 p-6 shadow-sm backdrop-blur-md dark:border-white/5 dark:bg-white/[0.02]">
+    <section className="rounded-2xl border border-slate-900/5 bg-white/50 p-6 shadow-sm dark:border-white/5 dark:bg-white/[0.02]">
       <div className="mb-5 flex items-center gap-3">
         <span className="rounded-xl bg-slate-900/5 p-2 text-slate-900 dark:bg-white/10 dark:text-white">
           <Icon className="h-5 w-5" />
         </span>
-        <h2 className="text-xl font-medium tracking-tight text-slate-900 dark:text-white">{title}</h2>
+        <h2 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">{title}</h2>
       </div>
       {children}
     </section>
+  );
+}
+
+function ComingSoonBanner({ title, description, icon: Icon }) {
+  return (
+    <div className="rounded-2xl border border-amber-500/30 bg-amber-400/10 p-5 text-amber-900 dark:text-amber-100">
+      <div className="flex items-start gap-4">
+        <span className="rounded-xl bg-amber-500/10 p-2">
+          <Icon className="h-5 w-5" />
+        </span>
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+          <p className="mt-2 max-w-4xl text-sm leading-7 opacity-85">{description}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminInput({ label, placeholder }) {
+  return (
+    <label className="grid gap-2">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">{label}</span>
+      <input disabled placeholder={placeholder} className="w-full rounded-xl border border-slate-900/10 bg-white/40 px-4 py-3 text-sm font-medium text-slate-700 placeholder:text-slate-400 disabled:cursor-not-allowed disabled:opacity-70 dark:border-white/10 dark:bg-white/[0.02] dark:text-slate-300" />
+    </label>
+  );
+}
+
+function AdminSelect({ label, options }) {
+  return (
+    <label className="grid gap-2">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">{label}</span>
+      <select disabled className="w-full rounded-xl border border-slate-900/10 bg-white/40 px-4 py-3 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-70 dark:border-white/10 dark:bg-white/[0.02] dark:text-slate-300">
+        {options.map((option) => (
+          <option key={option}>{option}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function ToggleRow({ icon: Icon, title, description, enabled }) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-xl border border-slate-900/5 bg-white/40 p-4 dark:border-white/5 dark:bg-white/[0.02]">
+      <div className="flex gap-3">
+        <Icon className="mt-1 h-4 w-4 text-slate-500 dark:text-slate-400" />
+        <div>
+          <p className="font-medium text-slate-900 dark:text-white">{title}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
+        </div>
+      </div>
+      <span className={`h-6 w-11 shrink-0 rounded-full p-1 ${enabled ? "bg-slate-900 dark:bg-white" : "bg-slate-200 dark:bg-white/10"}`}>
+        <span className={`block h-4 w-4 rounded-full bg-white ${enabled ? "translate-x-5 dark:bg-slate-900" : ""}`} />
+      </span>
+    </div>
+  );
+}
+
+function ActionPill({ icon: Icon, label, tone = "default" }) {
+  const toneClass = tone === "danger" ? "text-red-700 dark:text-red-300" : "text-slate-700 dark:text-slate-300";
+  return (
+    <button type="button" disabled className={`inline-flex items-center gap-2 rounded-full border border-slate-900/10 bg-white/50 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] opacity-75 dark:border-white/10 dark:bg-white/[0.03] ${toneClass}`}>
+      <Icon className="h-3.5 w-3.5" />
+      {label}
+    </button>
+  );
+}
+
+function DetailBlock({ label, value }) {
+  return (
+    <div className="rounded-xl border border-slate-900/5 bg-white/40 p-4 dark:border-white/5 dark:bg-white/[0.02]">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">{label}</p>
+      <p className="mt-2 text-sm font-medium text-slate-900 dark:text-white">{value}</p>
+    </div>
   );
 }
 
@@ -479,7 +697,7 @@ function AdminTable({ columns, rows }) {
         <thead>
           <tr>
             {columns.map((column) => (
-              <th key={column} className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{column}</th>
+              <th key={column} className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">{column}</th>
             ))}
           </tr>
         </thead>
@@ -527,23 +745,36 @@ function AdminList({ items }) {
 
 function AdminToolbar({ primary, secondary }) {
   return (
-    <div className="flex flex-col justify-between gap-4 rounded-[1.5rem] border border-slate-900/5 bg-white/50 p-5 backdrop-blur-md md:flex-row md:items-center dark:border-white/5 dark:bg-white/[0.02]">
+    <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-900/5 bg-white/50 p-5 md:flex-row md:items-center dark:border-white/5 dark:bg-white/[0.02]">
       <p className="text-sm font-medium text-slate-500">Changes are staged in admin architecture and ready for secure backend persistence.</p>
       <div className="flex gap-3">
-        <AdminButton href="#">{secondary}</AdminButton>
-        <AdminButton href="#" tone="solid">{primary}</AdminButton>
+        <AdminDisabledButton>{secondary}</AdminDisabledButton>
+        <AdminDisabledButton tone="solid">{primary}</AdminDisabledButton>
       </div>
     </div>
+  );
+}
+
+function AdminDisabledButton({ children, tone = "ghost" }) {
+  const className =
+    tone === "solid"
+      ? "inline-flex min-h-[44px] items-center justify-center rounded-full bg-slate-900 px-6 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white opacity-60 dark:bg-white dark:text-slate-900"
+      : "inline-flex min-h-[44px] items-center justify-center rounded-full border border-slate-900/10 bg-transparent px-6 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-900 opacity-60 dark:border-white/10 dark:text-white";
+
+  return (
+    <button type="button" disabled className={className}>
+      {children}
+    </button>
   );
 }
 
 function AdminButton({ href, children, tone = "ghost" }) {
   const className =
     tone === "solid"
-      ? "inline-flex min-h-[44px] items-center justify-center rounded-full bg-slate-900 px-6 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white transition-transform hover:scale-105 dark:bg-white dark:text-slate-900"
-      : "inline-flex min-h-[44px] items-center justify-center rounded-full border border-slate-900/10 bg-transparent px-6 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-900 transition-colors hover:bg-slate-900/5 dark:border-white/10 dark:text-white dark:hover:bg-white/5";
+        ? "inline-flex min-h-[44px] items-center justify-center rounded-full bg-slate-900 px-6 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white transition-all duration-500 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.15)] dark:bg-white dark:text-slate-900 dark:shadow-[0_0_20px_rgba(255,255,255,0.1)] dark:hover:shadow-[0_0_32px_rgba(255,255,255,0.2)]"
+        : "inline-flex min-h-[44px] items-center justify-center rounded-full border border-slate-900/10 bg-transparent px-6 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-900 transition-all duration-500 hover:-translate-y-0.5 hover:bg-slate-900/5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.05)] dark:border-white/10 dark:text-white dark:hover:bg-white/5 dark:hover:shadow-[0_8px_24px_rgba(255,255,255,0.05)]";
 
-  return <a href={href} className={className}>{children}</a>;
+  return <Link to={href} className={className}>{children}</Link>;
 }
 
 function StatusPill({ status }) {
@@ -559,4 +790,3 @@ function StatusPill({ status }) {
 }
 
 export { adminNav };
-
