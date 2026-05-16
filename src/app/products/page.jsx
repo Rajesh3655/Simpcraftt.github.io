@@ -5,16 +5,17 @@ export default function ProductsPage() {
 
   return (
     <CommerceShell
-      eyebrow="Product Catalogue"
-      title="Engineered products, marketplace ready."
-      description="Explore Simpcraftt devices by category, collection, rating, and price. Direct checkout is reserved for the next commerce phase."
+      eyebrow="Catalogue"
+      title="A curated portfolio of modern listening tools."
+      description="Each product is presented as a premium object with calm storytelling, technical clarity, and marketplace-ready purchase access."
     >
-      <section className="px-5 pb-24">
+      <section className="lux-divider px-4 pb-24 sm:px-5">
         <div className="mx-auto max-w-7xl">
           <ProductFilters {...filterState} />
-          <ProductGrid items={filterState.filteredProducts} />
+          <ProductGrid items={filterState.filteredProducts} columns="featured" />
         </div>
       </section>
     </CommerceShell>
   );
 }
+

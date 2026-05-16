@@ -2,17 +2,21 @@ import { CommerceShell, EcommerceStepper, FutureCommerceNotice } from "../compon
 
 export default function CheckoutPage() {
   return (
-    <CommerceShell eyebrow="Checkout" title="Checkout flow staged for activation." description="Address, coupon, payment, and order confirmation screens are planned into the platform.">
-      <section className="px-5 pb-24">
+    <CommerceShell eyebrow="Checkout" title="Checkout architecture, quietly prepared." description="Addressing, payment, coupon logic, and order confirmation are designed and staged for future activation.">
+      <section className="px-4 pb-24 sm:px-5">
         <div className="mx-auto max-w-7xl space-y-8">
           <EcommerceStepper current={1} />
-          <FutureCommerceNotice />
+          <FutureCommerceNotice title="Checkout modules are visually ready, activation pending" />
           <div className="grid gap-5 lg:grid-cols-3">
-            {["Shipping address", "Coupon code", "Payment method"].map((item) => (
-              <div key={item} className="rounded-lg border border-black/10 bg-white/70 p-6 dark:border-white/10 dark:bg-white/[0.045]">
-                <h2 className="text-xl font-black">{item}</h2>
-                <p className="mt-3 text-sm leading-6 text-black/62 dark:text-white/62">This module is visually prepared and will connect to backend services when direct ecommerce launches.</p>
-              </div>
+            {[
+              ["Shipping address", "Saved addresses, pincode checks, and delivery timelines."],
+              ["Coupon & offers", "Selective discounts and campaign-level eligibility logic."],
+              ["Payment routing", "Secure UPI, cards, wallets, and post-purchase confirmation."],
+            ].map(([title, copy]) => (
+              <article key={title} className="lux-panel rounded-2xl p-6 sm:p-7">
+                <h2 className="text-xl font-black">{title}</h2>
+                <p className="mt-3 text-sm leading-7 text-black/66 dark:text-white/70">{copy}</p>
+              </article>
             ))}
           </div>
         </div>
@@ -20,3 +24,4 @@ export default function CheckoutPage() {
     </CommerceShell>
   );
 }
+

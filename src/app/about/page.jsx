@@ -1,15 +1,19 @@
-import { CommerceShell, FeatureBand } from "../components/commerce/CommerceLayout";
+import { CommerceShell } from "../components/commerce/CommerceLayout";
 
 export default function AboutPage() {
   return (
-    <CommerceShell eyebrow="About" title="A premium product house for modern device culture." description="Simpcraftt is building a marketplace-first launch platform that can evolve into direct ecommerce, service, warranty, and customer ownership.">
-      <section className="px-5 pb-24">
-        <div className="mx-auto max-w-7xl space-y-12">
-          <FeatureBand />
-          <div className="rounded-lg border border-black/10 bg-white/70 p-8 dark:border-white/10 dark:bg-white/[0.045]">
-            <h2 className="text-3xl font-black">Brand system</h2>
-            <p className="mt-4 max-w-3xl leading-8 text-black/64 dark:text-white/64">
-              The platform is designed around cinematic product storytelling, modular commerce flows, marketplace redirects, service ownership, and future admin control.
+    <CommerceShell
+      eyebrow="About"
+      title="A premium product house for modern device culture."
+      description="Simpcraftt designs a cinematic product ecosystem: launch-ready marketplace commerce today, direct ownership and service infrastructure tomorrow."
+    >
+      <section className="px-6 pb-32 lg:px-24">
+        <div className="mx-auto max-w-[1400px] space-y-12">
+          <div className="rounded-[2.5rem] bg-white/50 p-10 shadow-[0_4px_24px_rgba(0,0,0,0.02)] backdrop-blur-xl dark:bg-white/[0.02] border border-white/60 dark:border-white/5 sm:p-16 lg:p-24">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">Brand story</p>
+            <h2 className="mt-8 text-4xl font-medium tracking-tight text-slate-900 sm:text-5xl lg:text-6xl dark:text-white">We build technology objects, <br className="hidden sm:block"/> not crowded storefronts.</h2>
+            <p className="mt-10 max-w-3xl text-lg font-light leading-relaxed text-slate-600 dark:text-slate-400 sm:text-xl">
+              Our visual language is calm, technical, and emotionally precise. Every product narrative balances sensory design with engineered restraint. We prioritize silence in an era of noise.
             </p>
           </div>
         </div>

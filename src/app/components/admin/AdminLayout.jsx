@@ -100,19 +100,19 @@ export function AdminShell({ title = "Admin Command Center", description, childr
   const [navOpen, setNavOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#f3f5f2] text-[#111714] dark:bg-[#050607] dark:text-white">
-      <div className="fixed inset-0 pointer-events-none bg-[linear-gradient(rgba(17,23,20,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(17,23,20,0.05)_1px,transparent_1px)] bg-[size:40px_40px] dark:bg-[linear-gradient(rgba(255,255,255,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.045)_1px,transparent_1px)]" />
+    <div className="min-h-screen font-sans selection:bg-slate-900 selection:text-white dark:selection:bg-white dark:selection:text-slate-900 bg-[#F8F7F5] dark:bg-[#0A0A0C]">
+      <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(circle_at_8%_0%,rgba(220,210,195,0.4),transparent_30%),radial-gradient(circle_at_92%_8%,rgba(195,205,215,0.4),transparent_32%)] dark:bg-[radial-gradient(circle_at_8%_0%,rgba(30,35,45,0.4),transparent_30%),radial-gradient(circle_at_92%_8%,rgba(20,25,35,0.5),transparent_32%)]" />
 
-      <aside className={`fixed inset-y-0 left-0 z-50 w-72 border-r border-black/10 bg-white/88 p-4 backdrop-blur-2xl transition-transform lg:translate-x-0 dark:border-white/10 dark:bg-[#080a0b]/92 ${navOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-72 border-r border-slate-900/5 bg-white/80 p-4 backdrop-blur-2xl transition-transform lg:translate-x-0 dark:border-white/5 dark:bg-black/50 ${navOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex items-center justify-between gap-3 px-2 py-3">
           <a href="/admin" className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#111714] text-lg font-black italic text-white dark:bg-white dark:text-[#111714]">S</span>
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-[15px] font-medium text-white dark:bg-white dark:text-slate-900">S</span>
             <span>
-              <span className="block text-sm font-black uppercase tracking-[0.16em]">Simpcraftt</span>
-              <span className="text-xs font-bold text-black/46 dark:text-white/46">Admin OS</span>
+              <span className="block text-sm font-semibold tracking-wide text-slate-900 dark:text-white">Simpcraftt</span>
+              <span className="text-xs font-medium text-slate-500">Admin OS</span>
             </span>
           </a>
-          <button className="rounded-lg border border-black/10 p-2 lg:hidden dark:border-white/10" onClick={() => setNavOpen(false)} aria-label="Close admin navigation">
+          <button className="rounded-xl border border-slate-900/10 p-2 text-slate-500 lg:hidden dark:border-white/10 dark:text-slate-400" onClick={() => setNavOpen(false)} aria-label="Close admin navigation">
             <SlidersHorizontal className="h-4 w-4" />
           </button>
         </div>
@@ -121,7 +121,7 @@ export function AdminShell({ title = "Admin Command Center", description, childr
           {adminNav.map((item) => {
             const Icon = item.icon;
             return (
-              <a key={item.href} href={item.href} className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold text-black/62 transition hover:bg-black/5 hover:text-black dark:text-white/62 dark:hover:bg-white/10 dark:hover:text-white">
+              <a key={item.href} href={item.href} className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-900/5 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white">
                 <Icon className="h-4 w-4" />
                 {item.label}
               </a>
@@ -129,48 +129,48 @@ export function AdminShell({ title = "Admin Command Center", description, childr
           })}
         </nav>
 
-        <div className="absolute inset-x-4 bottom-4 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4">
+        <div className="absolute inset-x-4 bottom-4 rounded-2xl border border-slate-900/10 bg-white/50 p-4 dark:border-white/10 dark:bg-white/5">
           <div className="flex items-center gap-3">
-            <LockKeyhole className="h-5 w-5 text-emerald-700 dark:text-emerald-300" />
+            <LockKeyhole className="h-5 w-5 text-slate-900 dark:text-white" />
             <div>
-              <p className="text-sm font-black">Protected Admin</p>
-              <p className="text-xs text-black/56 dark:text-white/56">JWT/session layer planned</p>
+              <p className="text-sm font-medium text-slate-900 dark:text-white">Protected Admin</p>
+              <p className="text-xs text-slate-500">JWT/session layer planned</p>
             </div>
           </div>
         </div>
       </aside>
 
       <div className="relative z-10 lg:pl-72">
-        <header className="sticky top-0 z-40 border-b border-black/10 bg-[#f3f5f2]/84 px-5 py-4 backdrop-blur-2xl dark:border-white/10 dark:bg-[#050607]/84">
+        <header className="sticky top-0 z-40 border-b border-slate-900/5 bg-[#F8F7F5]/80 px-6 py-4 backdrop-blur-2xl dark:border-white/5 dark:bg-[#0A0A0C]/80">
           <div className="flex items-center justify-between gap-4">
-            <button className="rounded-lg border border-black/10 p-3 lg:hidden dark:border-white/10" onClick={() => setNavOpen(true)} aria-label="Open admin navigation">
+            <button className="rounded-xl border border-slate-900/10 p-3 text-slate-500 lg:hidden dark:border-white/10 dark:text-slate-400" onClick={() => setNavOpen(true)} aria-label="Open admin navigation">
               <LayoutDashboard className="h-5 w-5" />
             </button>
-            <label className="hidden min-h-11 w-full max-w-lg items-center gap-3 rounded-lg border border-black/10 bg-white/68 px-4 md:flex dark:border-white/10 dark:bg-white/[0.045]">
-              <Search className="h-4 w-4 text-black/40 dark:text-white/40" />
-              <input className="w-full bg-transparent text-sm font-semibold" placeholder="Search products, claims, customers, tickets" />
+            <label className="hidden min-h-[44px] w-full max-w-lg items-center gap-3 rounded-full border border-slate-900/10 bg-white/50 px-5 md:flex dark:border-white/10 dark:bg-white/5">
+              <Search className="h-4 w-4 text-slate-400" />
+              <input className="w-full bg-transparent text-sm font-medium focus:outline-none dark:text-white placeholder:text-slate-400" placeholder="Search products, claims, customers, tickets" />
             </label>
             <div className="ml-auto flex items-center gap-3">
-              <button className="relative rounded-lg border border-black/10 bg-white/68 p-3 dark:border-white/10 dark:bg-white/[0.045]" aria-label="Admin alerts">
+              <button className="relative rounded-full border border-slate-900/10 bg-white/50 p-3 dark:border-white/10 dark:bg-white/5 dark:text-white" aria-label="Admin alerts">
                 <Bell className="h-4 w-4" />
-                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-emerald-500" />
+                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-slate-900 dark:bg-white" />
               </button>
               <ThemeToggle />
-              <div className="hidden rounded-lg border border-black/10 bg-white/68 px-4 py-2 md:block dark:border-white/10 dark:bg-white/[0.045]">
-                <p className="text-sm font-black">{adminUser.name}</p>
-                <p className="text-xs text-black/46 dark:text-white/46">{adminUser.role}</p>
+              <div className="hidden rounded-full border border-slate-900/10 bg-white/50 px-5 py-2 md:block dark:border-white/10 dark:bg-white/5">
+                <p className="text-sm font-medium text-slate-900 dark:text-white">{adminUser.name}</p>
+                <p className="text-xs text-slate-500">{adminUser.role}</p>
               </div>
             </div>
           </div>
         </header>
 
-        <main className="px-5 py-8">
+        <main className="px-6 py-10">
           <div className="mx-auto max-w-7xl">
             <div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end">
               <div>
-                <p className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">Enterprise Management</p>
-                <h1 className="luxury-title text-4xl md:text-6xl">{title}</h1>
-                {description && <p className="mt-4 max-w-3xl leading-7 text-black/60 dark:text-white/60">{description}</p>}
+                <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">Enterprise Management</p>
+                <h1 className="text-4xl font-medium tracking-tight text-slate-900 sm:text-5xl dark:text-white">{title}</h1>
+                {description && <p className="mt-5 max-w-3xl text-lg font-light leading-relaxed text-slate-600 dark:text-slate-400">{description}</p>}
               </div>
               <div className="flex gap-3">
                 <AdminButton href="/products">View Storefront</AdminButton>
@@ -197,7 +197,7 @@ export function AdminOverview() {
           <AdminPanel title="Recent Activity" icon={Activity}>
             <div className="grid gap-3">
               {activityLog.map((item) => (
-                <div key={item} className="rounded-lg bg-black/[0.035] p-4 text-sm font-semibold dark:bg-white/[0.05]">{item}</div>
+                <div key={item} className="rounded-xl border border-slate-900/5 bg-white/40 p-4 text-sm font-medium text-slate-600 dark:border-white/5 dark:bg-white/[0.02] dark:text-slate-400">{item}</div>
               ))}
             </div>
           </AdminPanel>
@@ -238,12 +238,12 @@ function MetricGrid() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {adminStats.map((stat) => (
-        <div key={stat.label} className="rounded-lg border border-black/10 bg-white/74 p-5 shadow-[0_24px_80px_rgba(17,23,20,0.06)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045]">
+        <div key={stat.label} className="rounded-[1.5rem] border border-slate-900/5 bg-white/50 p-6 shadow-sm backdrop-blur-md dark:border-white/5 dark:bg-white/[0.02]">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-black/44 dark:text-white/44">{stat.label}</p>
-              <p className="mt-4 text-3xl font-black">{stat.value}</p>
-              <p className="mt-2 text-sm font-semibold text-black/56 dark:text-white/56">{stat.trend}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{stat.label}</p>
+              <p className="mt-4 text-3xl font-medium tracking-tight text-slate-900 dark:text-white">{stat.value}</p>
+              <p className="mt-2 text-sm font-medium text-slate-500">{stat.trend}</p>
             </div>
             <StatusPill status={stat.status} />
           </div>
@@ -392,10 +392,10 @@ function AnalyticsAdmin() {
       <div className="grid gap-6 lg:grid-cols-3">
         {["Product views", "Marketplace redirects", "Warranty registrations", "Newsletter performance", "Traffic overview", "Customer engagement"].map((item, index) => (
           <AdminPanel key={item} title={item} icon={BarChart3}>
-            <div className="h-40 rounded-lg bg-[linear-gradient(180deg,rgba(16,185,129,0.2),rgba(16,185,129,0.02))] p-4">
+            <div className="h-40 rounded-xl border border-slate-900/5 bg-slate-50 p-4 dark:border-white/5 dark:bg-white/[0.02]">
               <div className="flex h-full items-end gap-2">
                 {[42, 64, 38, 80, 56, 92, 71].map((height, barIndex) => (
-                  <div key={`${item}-${barIndex}`} className="flex-1 rounded-t bg-emerald-500/70" style={{ height: `${Math.max(20, height - index * 4)}%` }} />
+                  <div key={`${item}-${barIndex}`} className="flex-1 rounded-t bg-slate-900/20 dark:bg-white/20" style={{ height: `${Math.max(20, height - index * 4)}%` }} />
                 ))}
               </div>
             </div>
@@ -412,11 +412,11 @@ function MediaAdmin() {
       <AdminToolbar primary="Upload Media" secondary="Optimize Assets" />
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         {products.slice(0, 4).map((product) => (
-          <div key={product.slug} className="overflow-hidden rounded-lg border border-black/10 bg-white/74 dark:border-white/10 dark:bg-white/[0.045]">
+          <div key={product.slug} className="overflow-hidden rounded-[1.5rem] border border-slate-900/5 bg-white/50 dark:border-white/5 dark:bg-white/[0.02]">
             <img src={product.image} alt={product.name} className="aspect-[4/3] w-full object-cover" />
             <div className="p-4">
-              <p className="font-black">{product.name}</p>
-              <p className="mt-1 text-sm text-black/52 dark:text-white/52">Product image asset</p>
+              <p className="font-medium text-slate-900 dark:text-white">{product.name}</p>
+              <p className="mt-1 text-sm text-slate-500">Product image asset</p>
             </div>
           </div>
         ))}
@@ -434,13 +434,13 @@ function SettingsAdmin() {
       <AdminPanel title="Feature Toggles" icon={ToggleLeft}>
         <div className="grid gap-3">
           {featureToggles.map((toggle) => (
-            <div key={toggle.key} className="flex items-center justify-between gap-5 rounded-lg bg-black/[0.035] p-4 dark:bg-white/[0.05]">
+            <div key={toggle.key} className="flex items-center justify-between gap-5 rounded-xl border border-slate-900/5 bg-white/40 p-4 dark:border-white/5 dark:bg-white/[0.02]">
               <div>
-                <p className="font-black">{toggle.label}</p>
-                <p className="text-sm text-black/52 dark:text-white/52">{toggle.enabled ? "Enabled" : "Disabled"}</p>
+                <p className="font-medium text-slate-900 dark:text-white">{toggle.label}</p>
+                <p className="text-sm text-slate-500">{toggle.enabled ? "Enabled" : "Disabled"}</p>
               </div>
-              <span className={`h-7 w-12 rounded-full p-1 ${toggle.enabled ? "bg-emerald-500" : "bg-black/20 dark:bg-white/20"}`}>
-                <span className={`block h-5 w-5 rounded-full bg-white transition ${toggle.enabled ? "translate-x-5" : ""}`} />
+              <span className={`h-7 w-12 rounded-full p-1 transition-colors ${toggle.enabled ? "bg-slate-900 dark:bg-white" : "bg-slate-200 dark:bg-white/10"}`}>
+                <span className={`block h-5 w-5 rounded-full bg-white transition-transform ${toggle.enabled ? "translate-x-5 dark:bg-slate-900" : ""}`} />
               </span>
             </div>
           ))}
@@ -460,12 +460,12 @@ function SettingsAdmin() {
 
 function AdminPanel({ title, icon: Icon, children }) {
   return (
-    <section className="rounded-lg border border-black/10 bg-white/74 p-5 shadow-[0_24px_80px_rgba(17,23,20,0.06)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045]">
+    <section className="rounded-[2rem] border border-slate-900/5 bg-white/50 p-6 shadow-sm backdrop-blur-md dark:border-white/5 dark:bg-white/[0.02]">
       <div className="mb-5 flex items-center gap-3">
-        <span className="rounded-lg bg-emerald-500/12 p-2 text-emerald-700 dark:text-emerald-300">
+        <span className="rounded-xl bg-slate-900/5 p-2 text-slate-900 dark:bg-white/10 dark:text-white">
           <Icon className="h-5 w-5" />
         </span>
-        <h2 className="text-xl font-black">{title}</h2>
+        <h2 className="text-xl font-medium tracking-tight text-slate-900 dark:text-white">{title}</h2>
       </div>
       {children}
     </section>
@@ -479,16 +479,16 @@ function AdminTable({ columns, rows }) {
         <thead>
           <tr>
             {columns.map((column) => (
-              <th key={column} className="px-4 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-black/44 dark:text-white/44">{column}</th>
+              <th key={column} className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{column}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((row, rowIndex) => (
-            <tr key={rowIndex} className="bg-black/[0.035] dark:bg-white/[0.05]">
+            <tr key={rowIndex} className="border-b border-slate-900/5 transition-colors hover:bg-slate-900/5 dark:border-white/5 dark:hover:bg-white/5">
               {row.map((cell, cellIndex) => (
-                <td key={`${rowIndex}-${cellIndex}`} className="px-4 py-4 first:rounded-l-lg last:rounded-r-lg">
-                  {cellIndex === row.length - 1 && typeof cell === "string" ? <StatusPill status={cell} /> : <span className="font-semibold">{cell}</span>}
+                <td key={`${rowIndex}-${cellIndex}`} className="px-4 py-4 text-sm text-slate-700 dark:text-slate-300">
+                  {cellIndex === row.length - 1 && typeof cell === "string" ? <StatusPill status={cell} /> : <span className="font-medium">{cell}</span>}
                 </td>
               ))}
             </tr>
@@ -503,12 +503,12 @@ function ModuleGrid({ modules }) {
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {modules.map((module) => (
-        <div key={module.name} className="rounded-lg bg-black/[0.035] p-5 dark:bg-white/[0.05]">
+        <div key={module.name} className="rounded-2xl border border-slate-900/5 bg-white/40 p-6 dark:border-white/5 dark:bg-white/[0.02]">
           <div className="mb-4 flex items-center justify-between gap-4">
-            <h3 className="font-black">{module.name}</h3>
+            <h3 className="font-medium text-slate-900 dark:text-white">{module.name}</h3>
             <StatusPill status={module.enabled ? "Enabled" : "Disabled"} />
           </div>
-          <p className="text-sm leading-6 text-black/58 dark:text-white/58">{module.description}</p>
+          <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{module.description}</p>
         </div>
       ))}
     </div>
@@ -519,7 +519,7 @@ function AdminList({ items }) {
   return (
     <div className="grid gap-2">
       {items.map((item) => (
-        <div key={item} className="rounded-lg bg-black/[0.035] px-4 py-3 text-sm font-semibold dark:bg-white/[0.05]">{item}</div>
+        <div key={item} className="rounded-xl border border-slate-900/5 bg-white/40 px-4 py-3 text-sm font-medium text-slate-600 dark:border-white/5 dark:bg-white/[0.02] dark:text-slate-400">{item}</div>
       ))}
     </div>
   );
@@ -527,8 +527,8 @@ function AdminList({ items }) {
 
 function AdminToolbar({ primary, secondary }) {
   return (
-    <div className="flex flex-col justify-between gap-3 rounded-lg border border-black/10 bg-white/74 p-4 md:flex-row md:items-center dark:border-white/10 dark:bg-white/[0.045]">
-      <p className="text-sm font-bold text-black/58 dark:text-white/58">Changes are staged in admin architecture and ready for secure backend persistence.</p>
+    <div className="flex flex-col justify-between gap-4 rounded-[1.5rem] border border-slate-900/5 bg-white/50 p-5 backdrop-blur-md md:flex-row md:items-center dark:border-white/5 dark:bg-white/[0.02]">
+      <p className="text-sm font-medium text-slate-500">Changes are staged in admin architecture and ready for secure backend persistence.</p>
       <div className="flex gap-3">
         <AdminButton href="#">{secondary}</AdminButton>
         <AdminButton href="#" tone="solid">{primary}</AdminButton>
@@ -540,8 +540,8 @@ function AdminToolbar({ primary, secondary }) {
 function AdminButton({ href, children, tone = "ghost" }) {
   const className =
     tone === "solid"
-      ? "inline-flex min-h-11 items-center justify-center rounded-lg bg-[#111714] px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-white dark:bg-white dark:text-black"
-      : "inline-flex min-h-11 items-center justify-center rounded-lg border border-black/10 bg-white/70 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] dark:border-white/10 dark:bg-white/[0.045]";
+      ? "inline-flex min-h-[44px] items-center justify-center rounded-full bg-slate-900 px-6 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white transition-transform hover:scale-105 dark:bg-white dark:text-slate-900"
+      : "inline-flex min-h-[44px] items-center justify-center rounded-full border border-slate-900/10 bg-transparent px-6 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-900 transition-colors hover:bg-slate-900/5 dark:border-white/10 dark:text-white dark:hover:bg-white/5";
 
   return <a href={href} className={className}>{children}</a>;
 }
@@ -550,12 +550,13 @@ function StatusPill({ status }) {
   const normalized = String(status).toLowerCase();
   const tone =
     normalized.includes("enabled") || normalized.includes("active") || normalized.includes("published") || normalized.includes("approved") || normalized.includes("live") || normalized.includes("growth")
-      ? "bg-emerald-500/14 text-emerald-800 dark:text-emerald-200"
+      ? "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
       : normalized.includes("disabled") || normalized.includes("paused") || normalized.includes("inactive")
-        ? "bg-zinc-500/14 text-zinc-700 dark:text-zinc-200"
-        : "bg-amber-500/14 text-amber-800 dark:text-amber-200";
+        ? "bg-slate-500/10 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300"
+        : "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300";
 
-  return <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${tone}`}>{status}</span>;
+  return <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${tone}`}>{status}</span>;
 }
 
 export { adminNav };
+
