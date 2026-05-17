@@ -291,18 +291,15 @@ export function CommerceShell({
             </IconLink>
           </div>
 
-          <div
-            className="fixed z-[60] flex shrink-0 items-center gap-2 lg:hidden"
-            style={{ right: 16, top: 12 }}
-          >
+          <div className="relative z-[60] flex shrink-0 items-center gap-2 lg:hidden">
             <Link
               to="/cart"
               prefetch="intent"
               aria-label="Cart"
-              className="relative flex h-11 w-11 items-center justify-center rounded-full border border-slate-900/10 bg-white/35 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-transform duration-200 active:scale-95 sm:h-14 sm:w-14"
+              className="relative flex h-11 w-11 items-center justify-center rounded-full border border-slate-900/10 bg-white/55 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-transform duration-200 active:scale-95 sm:h-12 sm:w-12"
             >
-              <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={1.9} />
-              <span className="absolute right-1.5 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-950 px-1 text-[10px] font-bold leading-none text-white sm:right-2.5 sm:top-2">
+              <ShoppingCart className="h-5 w-5 sm:h-5.5 sm:w-5.5" strokeWidth={1.9} />
+              <span className="absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-950 px-1 text-[10px] font-bold leading-none text-white">
                 2
               </span>
             </Link>
@@ -310,9 +307,9 @@ export function CommerceShell({
               to="/profile"
               prefetch="intent"
               aria-label="Profile"
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-900/10 bg-white/35 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-transform duration-200 active:scale-95 sm:h-14 sm:w-14"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-900/10 bg-white/55 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-transform duration-200 active:scale-95 sm:h-12 sm:w-12"
             >
-              <UserRound className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={1.9} />
+              <UserRound className="h-5 w-5 sm:h-5.5 sm:w-5.5" strokeWidth={1.9} />
             </Link>
           </div>
         </div>
@@ -345,7 +342,7 @@ function MobileBottomNav({ pathname }) {
               key={item.href}
               to={item.href}
               prefetch="intent"
-              className={`relative flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-semibold transition-colors duration-200 sm:min-h-[62px] sm:text-[11px] ${
+              className={`relative flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-semibold no-underline transition-colors duration-200 sm:min-h-[62px] sm:text-[11px] ${
                 isActive
                   ? "text-slate-950"
                   : "text-slate-500 active:text-slate-900"
@@ -359,9 +356,8 @@ function MobileBottomNav({ pathname }) {
                 />
               )}
               <Icon
-                className="relative z-10 h-5 w-5 sm:h-[22px] sm:w-[22px]"
+                className="relative z-10 h-5 w-5 shrink-0 sm:h-[22px] sm:w-[22px]"
                 strokeWidth={isActive ? 2.25 : 1.8}
-                fill={isActive && item.href === "/" ? "currentColor" : "none"}
               />
               <span className="relative z-10 leading-none">{item.label}</span>
             </NavLink>
@@ -407,7 +403,7 @@ export function PageHero({ eyebrow, title, description, action }) {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }} className="max-w-5xl">
           <p className="mb-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 sm:mb-7 sm:text-[11px] dark:text-slate-300">{eyebrow}</p>
           {crumbs.length > 1 && <Breadcrumbs items={crumbs} />}
-          <h1 className={`font-medium leading-[0.94] tracking-tighter text-slate-900 dark:text-white lg:leading-[0.92] ${isHome ? "text-4xl sm:text-5xl lg:text-[6.5rem]" : "max-w-4xl text-4xl sm:text-5xl lg:text-[5.5rem]"}`}>
+          <h1 className={`font-medium text-slate-900 dark:text-white ${isHome ? "leading-[0.94] tracking-tighter lg:leading-[0.92] text-4xl sm:text-5xl lg:text-[6.5rem]" : "max-w-4xl text-[2.7rem] leading-[1.04] tracking-[-0.022em] sm:text-5xl sm:leading-[0.98] lg:text-[5.5rem] lg:leading-[0.94]"}`}>
             {title}
           </h1>
           {description && <p className={`mt-5 max-w-3xl font-light leading-relaxed text-slate-500 sm:mt-6 dark:text-slate-400 ${isHome ? "text-base sm:text-lg lg:text-xl" : "text-base sm:text-lg lg:text-[1.45rem]"}`}>{description}</p>}
@@ -497,6 +493,33 @@ export function ProductGrid({ items = products, columns = "default" }) {
         <ProductCard key={product.slug} product={product} />
       ))}
     </motion.div>
+  );
+}
+
+export function ProductGridSkeleton({ count = 6, columns = "default" }) {
+  const columnClass = columns === "featured" ? "lg:grid-cols-2 xl:grid-cols-3" : "lg:grid-cols-3 xl:grid-cols-4";
+  const rows = Array.from({ length: count });
+
+  return (
+    <div className={`grid grid-cols-2 gap-3 sm:gap-5 ${columnClass}`}>
+      {rows.map((_, index) => (
+        <article
+          key={`product-skeleton-${index}`}
+          className="animate-pulse overflow-hidden rounded-xl border border-black/5 bg-slate-50/85 p-1.5 dark:border-white/5 dark:bg-white/[0.02] sm:rounded-2xl sm:p-2"
+        >
+          <div className="aspect-[1/1] rounded-lg bg-slate-200 dark:bg-slate-700/60 sm:aspect-[4/4.7] sm:rounded-xl" />
+          <div className="space-y-2.5 p-3 sm:space-y-4 sm:p-6">
+            <div className="h-2.5 w-20 rounded bg-slate-200 dark:bg-slate-700" />
+            <div className="h-5 w-4/5 rounded bg-slate-200 dark:bg-slate-700 sm:h-7" />
+            <div className="h-3.5 w-full rounded bg-slate-200 dark:bg-slate-700" />
+            <div className="h-3.5 w-2/3 rounded bg-slate-200 dark:bg-slate-700" />
+            <div className="pt-1.5 sm:pt-2">
+              <div className="h-5 w-24 rounded bg-slate-300 dark:bg-slate-600 sm:h-6" />
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
   );
 }
 

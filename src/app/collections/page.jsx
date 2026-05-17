@@ -1,13 +1,27 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Layers, LayoutGrid, Sparkles } from "lucide-react";
-import { useState } from "react";
-import { CommerceShell, MotionSection, ProductGrid } from "../components/commerce/CommerceLayout";
+import { useEffect, useState } from "react";
+import { CommerceShell, MotionSection, ProductGrid, ProductGridSkeleton } from "../components/commerce/CommerceLayout";
 import { collections, products } from "../data/commerce";
 
 export default function CollectionsPage() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isPreparing, setIsPreparing] = useState(true);
+  const [isSwitching, setIsSwitching] = useState(false);
   const activeCollection = collections[activeIndex];
   const collectionProducts = products.filter(p => activeCollection.productSlugs.includes(p.slug));
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setIsPreparing(false), 520);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (isPreparing) return;
+    setIsSwitching(true);
+    const timer = window.setTimeout(() => setIsSwitching(false), 260);
+    return () => window.clearTimeout(timer);
+  }, [activeIndex, isPreparing]);
 
   return (
     <CommerceShell 
@@ -83,7 +97,7 @@ export default function CollectionsPage() {
                   </div>
                 </div>
                 
-                <ProductGrid items={collectionProducts} />
+                {isPreparing || isSwitching ? <ProductGridSkeleton count={4} /> : <ProductGrid items={collectionProducts} />}
               </motion.div>
             </AnimatePresence>
           </div>

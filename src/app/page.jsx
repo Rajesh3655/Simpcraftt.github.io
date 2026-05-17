@@ -14,6 +14,10 @@ import {
 } from "./components/commerce/CommerceLayout";
 import { categories, products } from "./data/commerce";
 
+const sectionKickerClass = "mb-6 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300";
+const sectionHeadingClass = "luxury-title text-[2.25rem] font-semibold leading-[0.98] tracking-[-0.02em] text-slate-900 sm:text-[3rem] md:text-[3.7rem] lg:text-[4.6rem] dark:text-white";
+const sectionHeadingAccentClass = "mt-1.5 block font-luxury text-[0.9em] italic font-normal tracking-[0.01em] text-slate-500 dark:text-slate-400";
+
 export default function HomePage() {
   return (
     <CommerceShell
@@ -182,8 +186,9 @@ export default function HomePage() {
       <MotionSection className="py-10 md:py-16 lg:py-20">
         <div className="mx-auto w-full max-w-[1400px] px-6 md:px-8 lg:px-12">
            <div className="mb-6 text-center md:mb-12">
-              <h2 className="text-3xl font-medium leading-none tracking-tighter text-slate-900 sm:text-4xl md:text-5xl dark:text-white">
-                Instruments of <span className="font-luxury italic text-slate-500 dark:text-slate-400">Clarity</span>
+              <h2 className={`${sectionHeadingClass} text-center`}>
+                Instruments of
+                <span className={sectionHeadingAccentClass}>Clarity</span>
               </h2>
            </div>
            
@@ -216,15 +221,23 @@ export default function HomePage() {
         <div className="mx-auto w-full max-w-[1400px] px-6 md:px-8 lg:px-12">
           <div className="mb-6 flex flex-col items-start justify-between gap-6 md:mb-12 lg:flex-row lg:items-end">
             <div className="max-w-3xl">
-              <p className="mb-6 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
+              <p className={sectionKickerClass}>
                 Signature Objects
               </p>
-              <h2 className="text-3xl sm:text-4xl font-medium leading-[1.05] tracking-tighter text-slate-900 md:text-5xl lg:text-6xl dark:text-white">
-                Engineered for <br />
-                <span className="font-luxury italic text-slate-500">modern silence.</span>
+              <h2 className={sectionHeadingClass}>
+                Engineered for
+                <span className={sectionHeadingAccentClass}>
+                  modern silence.
+                </span>
               </h2>
             </div>
-            <SecondaryButton href="/products">View all products</SecondaryButton>
+            <Link
+              to="/products"
+              prefetch="intent"
+              className="group inline-flex min-h-[54px] items-center justify-center rounded-full border border-slate-900/18 bg-white/70 px-7 py-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-900 shadow-[0_10px_24px_rgba(15,23,42,0.07)] transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-900/35 hover:bg-white hover:shadow-[0_16px_36px_rgba(15,23,42,0.12)] dark:border-white/25 dark:bg-white/[0.04] dark:text-white dark:hover:border-white/45 dark:hover:bg-white/[0.09]"
+            >
+              View All Products
+            </Link>
           </div>
           <ProductGrid items={products.slice(0, 3)} />
         </div>
@@ -234,12 +247,14 @@ export default function HomePage() {
       <MotionSection className="py-10 md:py-16 lg:py-20">
         <div className="mx-auto grid w-full max-w-[1400px] gap-8 px-6 md:gap-12 md:px-8 lg:grid-cols-[1fr_1fr] lg:items-start lg:gap-16 lg:px-12">
           <div className="sticky top-40">
-            <p className="mb-6 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
+            <p className={sectionKickerClass}>
               Platform Architecture
             </p>
-            <h2 className="text-3xl sm:text-4xl font-medium leading-[1.05] tracking-tighter text-slate-900 md:text-5xl lg:text-6xl dark:text-white">
-              A foundation <br />
-              <span className="font-luxury italic text-slate-500">built for ownership.</span>
+            <h2 className={sectionHeadingClass}>
+              A foundation
+              <span className={sectionHeadingAccentClass}>
+                built for ownership.
+              </span>
             </h2>
             <p className="mt-8 max-w-md text-lg font-light leading-relaxed text-slate-600 dark:text-slate-400">
               Our ecosystem bridges the gap between third-party marketplaces and direct relationships. Register your product, claim warranty, and prepare for a unified checkout experience.
@@ -270,12 +285,14 @@ export default function HomePage() {
       <MotionSection className="py-10 md:py-16 lg:py-20">
         <div className="mx-auto w-full max-w-[1400px] px-6 md:px-8 lg:px-12">
           <div className="mb-6 text-center md:mb-12">
-            <p className="mb-6 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
+            <p className={sectionKickerClass}>
               Curated Sets
             </p>
-            <h2 className="text-3xl sm:text-4xl font-medium leading-[1.05] tracking-tighter text-slate-900 md:text-5xl lg:text-6xl dark:text-white">
-              Ecosystems for <br />
-              <span className="font-luxury italic text-slate-500">creative professionals.</span>
+            <h2 className={sectionHeadingClass}>
+              Ecosystems for
+              <span className={sectionHeadingAccentClass}>
+                creative professionals.
+              </span>
             </h2>
           </div>
           <CollectionGrid />
@@ -286,12 +303,17 @@ export default function HomePage() {
       <MotionSection className="border-t border-slate-100 py-10 dark:border-white/5 md:py-16 lg:py-20">
         <div className="mx-auto grid w-full max-w-[1400px] gap-8 px-6 md:gap-12 md:px-8 lg:grid-cols-[1fr_1.5fr] lg:items-start lg:gap-16 lg:px-12">
           <div className="sticky top-40">
-            <p className="mb-6 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">
+            <p className={sectionKickerClass}>
               Assistance
             </p>
-            <h2 className="text-3xl sm:text-4xl font-medium leading-[1.05] tracking-tighter text-slate-900 md:text-5xl lg:text-6xl dark:text-white">
-              Common <br />
-              <span className="font-luxury italic text-slate-500">queries</span> answered.
+            <h2 className={sectionHeadingClass}>
+              Common
+              <span className="mt-1.5 block">
+                <span className={sectionHeadingAccentClass.replace("mt-1.5 block ", "")}>
+                  queries
+                </span>{" "}
+                answered.
+              </span>
             </h2>
             <p className="mt-8 max-w-sm text-lg font-light leading-relaxed text-slate-600 dark:text-slate-400">
               We believe in transparent policies, clear warranty terms, and accessible customer care.
