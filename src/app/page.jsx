@@ -7,20 +7,16 @@ import {
   ChevronDown,
   ChevronRight,
   Cpu,
-  Facebook,
-  Instagram,
   Mail,
   Menu,
-  MessageCircle,
   Send,
   Shield,
   Star,
-  Twitter,
   X,
   Zap
 } from "lucide-react";
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast, Toaster } from "sonner";
 import BrandLogo from "./BrandLogo";
 import ThemeToggle from "./ThemeToggle";
@@ -63,26 +59,26 @@ const FAQ_DATA = [
 
 const PRODUCTS_TEASER = [
   {
-    title: "Aura Audio Pro",
-    category: "Audio",
-    description: "Immersive soundscapes with hybrid active noise cancellation.",
+    title: "INFIBOLT Desk Audio Kit",
+    category: "Workspace Audio",
+    description: "A focused desktop setup with branded audio, keyboard, and mouse essentials.",
     image:
       "/branding/products/product1.png",
     accent: "text-blue-600 dark:text-blue-400",
   },
   {
-    title: "Nova Watch X",
-    category: "Wearables",
-    description: "Futuristic health tracking meets aerospace-grade titanium.",
+    title: "INFIBOLT Power Dock",
+    category: "Charging Dock",
+    description: "A compact wireless charging stand for phones and everyday smart devices.",
     image:
       "/branding/products/product2.png",
-    accent: "text-purple-600 dark:text-purple-400",
+    accent: "text-blue-600 dark:text-blue-400",
   },
   {
-    title: "Echo Charge Max",
-    category: "Charging",
+    title: "INFIBOLT Power Bank",
+    category: "Portable Power",
     description:
-      "The fastest wireless charging ecosystem for your smart devices.",
+      "Slim portable backup power for travel, work, and daily charging needs.",
     image:
       "/branding/products/product3.png",
     accent: "text-emerald-600 dark:text-emerald-400",
@@ -124,13 +120,13 @@ const TESTIMONIALS = [
 ];
 
 const MARQUEE_BRANDS = [
-  "TechCrunch",
-  "Wired",
-  "The Verge",
-  "Forbes",
-  "Gizmodo",
-  "Engadget",
-  "Mashable",
+  "INFIBOLT Labs",
+  "INFIBOLT Design",
+  "INFIBOLT Audio",
+  "INFIBOLT Power",
+  "INFIBOLT Launch",
+  "INFIBOLT Support",
+  "INFIBOLT Future",
 ];
 
 // --- Components ---
@@ -1184,21 +1180,15 @@ export default function LandingPage() {
 
                   <div className="flex items-start gap-6">
                     <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-600/20 rounded-2xl flex items-center justify-center transition-colors">
-                      <MessageCircle className="w-6 h-6 text-emerald-500" />
+                      <ChevronRight className="w-6 h-6 text-emerald-500" />
                     </div>
                     <div>
                       <h4 className="text-lg font-bold mb-1">
-                        WhatsApp Quick Chat
+                        Launch Enquiries
                       </h4>
-                      <p className="text-gray-600 dark:text-gray-400 transition-colors">Response within 24 hours</p>
-                      <a
-                        href="https://wa.me/1234567890"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-2 text-emerald-400 font-black uppercase tracking-widest text-xs hover:gap-3 transition-all"
-                      >
-                        Start Chat <ChevronRight className="w-4 h-4" />
-                      </a>
+                      <p className="text-gray-600 dark:text-gray-400 transition-colors">
+                        Product updates, partnership queries, and early access requests.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1234,14 +1224,14 @@ export default function LandingPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label htmlFor="whatsapp" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 transition-colors ml-2">
-                      WhatsApp (Optional)
+                    <label htmlFor="phone" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 transition-colors ml-2">
+                      Phone (Optional)
                     </label>
                     <input
-                      id="whatsapp"
-                      name="whatsapp"
+                      id="phone"
+                      name="phone"
                       className="w-full bg-gray-50/50 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-2xl px-6 py-4 focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition-colors text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
-                      placeholder="+1 (234) 567-890"
+                      placeholder="+91 98765 43210"
                     />
                   </div>
                   <div className="space-y-2">
@@ -1282,21 +1272,13 @@ export default function LandingPage() {
                 Reimagining lifestyle through the lens of futuristic technology
                 and premium craft. The era of INFIBOLT is just beginning.
               </p>
-              <div className="flex items-center gap-4">
-                {[
-                  { icon: <Instagram />, href: "#" },
-                  { icon: <Facebook />, href: "#" },
-                  { icon: <Twitter />, href: "#" },
-                ].map((social, idx) => (
-                  <a
-                    key={idx}
-                    href={social.href}
-                    className="w-12 h-12 rounded-full bg-white dark:bg-[#111] border border-gray-200/50 dark:border-white/5 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:text-gray-900 hover:scale-110 dark:hover:text-white transition-all shadow-sm"
-                  >
-                    {React.cloneElement(social.icon, { size: 20 })}
-                  </a>
-                ))}
-              </div>
+              <a
+                href="mailto:hello@infibolt.com"
+                className="inline-flex items-center gap-2 rounded-full bg-gray-900 px-5 py-3 text-xs font-black uppercase tracking-[0.18em] text-white transition hover:bg-gray-700 dark:bg-white dark:text-black dark:hover:bg-gray-200"
+              >
+                Contact INFIBOLT
+                <ArrowRight className="h-4 w-4" />
+              </a>
             </div>
 
             <div>
@@ -1375,19 +1357,6 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
-
-      {/* Floating WhatsApp Button */}
-      <a
-        href="https://wa.me/1234567890"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-8 right-8 z-[100] w-14 h-14 bg-white dark:bg-[#111] border border-gray-200/50 dark:border-white/10 text-emerald-500 rounded-full flex items-center justify-center shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:scale-110 active:scale-95 transition-all group"
-      >
-        <MessageCircle className="w-6 h-6" />
-        <span className="absolute right-full mr-4 bg-white dark:bg-[#111] border border-gray-200/50 dark:border-white/10 text-gray-900 dark:text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-lg">
-          Chat on WhatsApp
-        </span>
-      </a>
 
       {/* Styles are handled globally in layout.jsx */}
     </div>

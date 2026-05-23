@@ -437,7 +437,7 @@ export function Layout({ children }: { children: ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>INFIBOLT | Premium Tech Coming Soon</title>
+        <title>INFIBOLT | Official Website</title>
         <meta
           name="description"
           content="INFIBOLT crafts premium futuristic electronics and lifestyle products. Join the launch waitlist for early access."
@@ -468,9 +468,9 @@ export function Layout({ children }: { children: ReactNode }) {
         <Meta />
         <Links />
         <script type="module" src="/src/__create/dev-error-overlay.js"></script>
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png?v=3" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=3" />
+        <link rel="icon" type="image/png" href="/branding/logo/infibolt-dark.png?v=6" />
+        <link rel="shortcut icon" type="image/png" href="/branding/logo/infibolt-dark.png?v=6" />
+        <link rel="apple-touch-icon" href="/branding/logo/infibolt-light.png?v=6" />
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
