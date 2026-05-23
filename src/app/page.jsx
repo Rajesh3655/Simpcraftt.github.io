@@ -59,11 +59,11 @@ const FAQ_DATA = [
 
 const PRODUCTS_TEASER = [
   {
-    title: "INFIBOLT Desk Audio Kit",
-    category: "Workspace Audio",
-    description: "A focused desktop setup with branded audio, keyboard, and mouse essentials.",
+    title: "INFIBOLT Audio Headset",
+    category: "Premium Audio",
+    description: "A clean wireless headset concept for focused listening and everyday comfort.",
     image:
-      "/branding/products/product1.png",
+      "/branding/products/hero-sec.png",
     accent: "text-blue-600 dark:text-blue-400",
   },
   {
@@ -392,13 +392,13 @@ const ProductCard = ({ product, idx, isMobile }) => {
           rotateY: isMobile ? 0 : rotateY,
           transformPerspective: 1000,
         }}
-        className="relative h-full lux-panel rounded-[2.5rem] p-6 md:p-8 hover:bg-gray-50/80 dark:hover:bg-white/[0.08] transition-colors duration-200 cursor-pointer"
+        className="relative h-full lux-panel rounded-[1.75rem] md:rounded-[2rem] p-4 sm:p-5 md:p-6 hover:bg-gray-50/80 dark:hover:bg-white/[0.08] transition-colors duration-200 cursor-pointer"
       >
         <motion.div style={{ x: isMobile ? 0 : translateX, y: isMobile ? 0 : translateY }} className="flex flex-col h-full pointer-events-none">
-          <div className="mb-6 md:mb-8 aspect-[4/3] rounded-[2rem] overflow-hidden relative shadow-lg">
+          <div className="mb-5 md:mb-6 aspect-[4/3] rounded-[1.35rem] md:rounded-[1.6rem] overflow-hidden relative shadow-lg">
             <img
               src={product.image}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300 ease-out"
+              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300 ease-out"
               alt={product.title}
             />
             <div className="absolute top-4 left-4">
@@ -407,7 +407,7 @@ const ProductCard = ({ product, idx, isMobile }) => {
               </span>
             </div>
           </div>
-          <h3 className="text-2xl md:text-3xl luxury-title mb-3">{product.title}</h3>
+          <h3 className="text-2xl md:text-[1.7rem] luxury-title mb-3">{product.title}</h3>
           <p className="text-gray-600 dark:text-gray-400 text-sm mb-6 leading-relaxed transition-colors flex-1">
             {product.description}
           </p>
@@ -740,7 +740,7 @@ export default function LandingPage() {
         transition={{ duration: 0.45, ease: "easeOut" }}
       >
         {/* Hero Section */}
-        <section className="relative pt-28 pb-20 md:pt-36 md:pb-28 px-6 overflow-hidden min-h-screen flex flex-col justify-center">
+        <section className="relative pt-28 pb-16 md:pt-36 md:pb-24 px-4 sm:px-6 overflow-hidden min-h-screen flex flex-col justify-center">
           {/* Parallax Background Layer */}
           <motion.div 
             style={prefersReducedMotion || isMobileViewport ? undefined : { y: heroBgY }} 
@@ -758,7 +758,7 @@ export default function LandingPage() {
             style={prefersReducedMotion || isMobileViewport ? undefined : { y: heroTextY }}
             className="container mx-auto relative z-20"
           >
-            <div className="grid lg:grid-cols-[1.04fr_0.96fr] gap-8 md:gap-14 xl:gap-20 items-start">
+            <div className="grid lg:grid-cols-[1.04fr_0.96fr] gap-8 md:gap-12 xl:gap-16 items-center">
               <motion.div
                 className="text-left"
                 initial="hidden"
@@ -877,14 +877,14 @@ export default function LandingPage() {
         <BrandMarquee />
 
         {/* Brand Intro */}
-        <motion.section id="preview" className="py-24 md:py-32 px-6 transition-colors scroll-reveal" {...revealProps(0.02, 0.8, 20)}>
-          <div className="container mx-auto">
-            <div className="grid md:grid-cols-2 gap-16 items-center">
+        <motion.section id="preview" className="py-16 md:py-24 px-4 sm:px-6 transition-colors scroll-reveal" {...revealProps(0.02, 0.8, 20)}>
+          <div className="container mx-auto max-w-7xl">
+            <div className="grid lg:grid-cols-[0.95fr_1.05fr] gap-10 md:gap-12 lg:gap-16 items-center">
               <div>
                 <span className="text-blue-500 font-black tracking-widest uppercase text-sm mb-4 block">
                   About INFIBOLT
                 </span>
-                <h2 className="text-4xl sm:text-5xl md:text-6xl luxury-title mb-8">
+                <h2 className="text-4xl sm:text-5xl md:text-6xl luxury-title mb-6 md:mb-8">
                   Where Innovation <br /> Meets Craftsmanship
                 </h2>
                 <p className="text-lg text-gray-600 dark:text-gray-400 mb-6 leading-relaxed transition-colors">
@@ -907,13 +907,13 @@ export default function LandingPage() {
                   ))}
                 </div>
               </div>
-              <div className="lux-panel rounded-[2.5rem] p-4 md:p-6 overflow-hidden">
+              <div className="lux-panel rounded-[1.75rem] md:rounded-[2.25rem] p-3 md:p-5 overflow-hidden w-full max-w-[42rem] mx-auto lg:mx-0">
                 <img
-                  src="/branding/products/hero-sec.png"
+                  src="/branding/products/product3.png"
                   loading="lazy"
                   decoding="async"
-                  className="w-full aspect-[4/5] md:aspect-[5/4] object-cover rounded-[2rem]"
-                  alt="INFIBOLT product preview"
+                  className="w-full aspect-[4/3] object-cover object-center rounded-[1.4rem] md:rounded-[1.8rem]"
+                  alt="INFIBOLT portable power product"
                 />
               </div>
             </div>
@@ -921,9 +921,9 @@ export default function LandingPage() {
         </motion.section>
 
     {/* Product Teaser Showcase */}
-    <motion.section className="py-24 md:py-32 px-6 scroll-reveal" {...revealProps(0.02, 0.8, 20)}>
-      <div className="container mx-auto">
-        <div className="mb-16 md:mb-20 max-w-3xl">
+    <motion.section className="py-16 md:py-24 px-4 sm:px-6 scroll-reveal" {...revealProps(0.02, 0.8, 20)}>
+      <div className="container mx-auto max-w-7xl">
+        <div className="mb-10 md:mb-14 max-w-3xl">
           <h2 className="text-4xl sm:text-5xl md:text-7xl luxury-title mb-5">
             Upcoming Lineup
           </h2>
@@ -933,7 +933,7 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
           {PRODUCTS_TEASER.map((product, idx) => (
             <ProductCard key={product.title} product={product} idx={idx} isMobile={isMobileViewport} />
           ))}
