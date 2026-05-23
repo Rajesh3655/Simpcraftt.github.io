@@ -468,9 +468,10 @@ export function Layout({ children }: { children: ReactNode }) {
         <Meta />
         <Links />
         <script type="module" src="/src/__create/dev-error-overlay.js"></script>
-        <link rel="icon" type="image/png" href="/branding/logo/infibolt-dark.png?v=6" />
-        <link rel="shortcut icon" type="image/png" href="/branding/logo/infibolt-dark.png?v=6" />
-        <link rel="apple-touch-icon" href="/branding/logo/infibolt-light.png?v=6" />
+        <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64.png?v=10" />
+        <link rel="icon" type="image/png" href="/favicon.png?v=10" />
+        <link rel="shortcut icon" href="/favicon.ico?v=10" />
+        <link rel="apple-touch-icon" href="/favicon.png?v=10" />
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
