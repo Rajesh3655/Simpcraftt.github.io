@@ -22,6 +22,7 @@ import {
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform } from "motion/react";
 import React, { useEffect, useState } from "react";
 import { toast, Toaster } from "sonner";
+import BrandLogo from "./BrandLogo";
 import ThemeToggle from "./ThemeToggle";
 
 const REVEAL_EASE = [0.16, 1, 0.3, 1];
@@ -39,9 +40,9 @@ const HERO_STAGGER = {
 // --- Data ---
 const FAQ_DATA = [
   {
-    question: "What is Simpcraftt?",
+    question: "What is INFIBOLT?",
     answer:
-      "Simpcraftt is a premium lifestyle and electronics brand dedicated to crafting high-quality, futuristic products that blend technology with elegance.",
+      "INFIBOLT is a premium lifestyle and electronics brand crafting high-quality, futuristic products that blend technology with elegance.",
   },
   {
     question: "When is the official launch?",
@@ -66,7 +67,7 @@ const PRODUCTS_TEASER = [
     category: "Audio",
     description: "Immersive soundscapes with hybrid active noise cancellation.",
     image:
-      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=800",
+      "/branding/products/product1.png",
     accent: "text-blue-600 dark:text-blue-400",
   },
   {
@@ -74,7 +75,7 @@ const PRODUCTS_TEASER = [
     category: "Wearables",
     description: "Futuristic health tracking meets aerospace-grade titanium.",
     image:
-      "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=800",
+      "/branding/products/product2.png",
     accent: "text-purple-600 dark:text-purple-400",
   },
   {
@@ -83,7 +84,7 @@ const PRODUCTS_TEASER = [
     description:
       "The fastest wireless charging ecosystem for your smart devices.",
     image:
-      "https://images.unsplash.com/photo-1615526675159-e248c3021d3f?auto=format&fit=crop&q=80&w=800",
+      "/branding/products/product3.png",
     accent: "text-emerald-600 dark:text-emerald-400",
   },
 ];
@@ -111,7 +112,7 @@ const TESTIMONIALS = [
   {
     name: "Alex Rivera",
     role: "Tech Enthusiast",
-    text: "Simpcraftt is bringing a level of detail back to electronics that I haven't seen in years. Can't wait for the drop!",
+    text: "INFIBOLT is bringing a level of detail back to electronics that I haven't seen in years. Can't wait for the drop!",
     avatar: "AR",
   },
   {
@@ -177,9 +178,8 @@ const CountdownTimer = () => {
   });
 
   useEffect(() => {
-    // Launch target: 30th of this month (local time)
-    const now = new Date();
-    const launchDate = new Date(now.getFullYear(), now.getMonth(), 30, 0, 0, 0, 0);
+    // Launch target: July 1, 2026 (local time)
+    const launchDate = new Date(2026, 6, 1, 0, 0, 0, 0);
 
     const timer = setInterval(() => {
       const now = new Date().getTime();
@@ -439,13 +439,8 @@ const LoadingScreen = () => {
         transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
         className="flex flex-col items-center"
       >
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 bg-gray-900 dark:bg-white rounded-xl flex items-center justify-center font-bold text-2xl italic text-white dark:text-black shadow-2xl">
-            S
-          </div>
-          <span className="text-3xl md:text-4xl luxury-brand text-gray-900 dark:text-white">
-            Simpcraftt
-          </span>
+        <div className="mb-8">
+          <BrandLogo className="scale-125 origin-center" />
         </div>
         
         <div className="w-48 h-[2px] bg-gray-300 dark:bg-gray-800 overflow-hidden relative rounded-full">
@@ -481,7 +476,7 @@ export default function LandingPage() {
   }, [isLoading]);
 
   useEffect(() => {
-    const loaderSeen = sessionStorage.getItem("simpcraftt_loader_seen") === "1";
+    const loaderSeen = sessionStorage.getItem("INFIBOLT_loader_seen") === "1";
     if (loaderSeen) {
       setIsLoading(false);
       return;
@@ -497,7 +492,7 @@ export default function LandingPage() {
     });
 
     Promise.all([minLoadTime, windowLoad]).then(() => {
-      sessionStorage.setItem("simpcraftt_loader_seen", "1");
+      sessionStorage.setItem("INFIBOLT_loader_seen", "1");
       setIsLoading(false);
     });
   }, []);
@@ -671,14 +666,7 @@ export default function LandingPage() {
         }`}
       >
         <div className="container mx-auto px-6 h-full flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-lg flex items-center justify-center font-bold text-xl italic">
-              S
-            </div>
-            <span className="text-2xl md:text-4xl luxury-brand text-black dark:text-white">
-              Simpcraftt
-            </span>
-          </div>
+          <BrandLogo />
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium tracking-wide text-gray-600 dark:text-gray-400">
             {["Preview", "Features", "Community", "FAQ", "Contact"].map(
@@ -810,7 +798,7 @@ export default function LandingPage() {
                   variants={revealItem(0.62, 14)}
                   className="text-lg md:text-xl text-gray-700 dark:text-gray-300 max-w-[48ch] mb-10 md:mb-12 leading-relaxed"
                 >
-                  Simpcraftt blends precision electronics with cinematic material language.
+                  INFIBOLT blends precision electronics with cinematic material language.
                   Sculpted hardware, atmospheric interfaces, and a premium ecosystem built for the
                   next decade of everyday life.
                 </motion.p>
@@ -851,8 +839,8 @@ export default function LandingPage() {
                   <div className="lux-panel rounded-[2rem] md:rounded-[2.5rem] p-3 md:p-5 relative overflow-hidden min-h-[300px] sm:min-h-[360px] md:min-h-[560px]">
                     <div className="absolute inset-0 bg-gradient-to-b from-white/35 to-transparent dark:from-white/10 dark:to-transparent pointer-events-none" />
                     <img
-                      src="https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?auto=format&fit=crop&q=80&w=1600"
-                      alt="Simpcraftt Premium Device"
+                      src="/branding/products/hero-sec.png"
+                      alt="INFIBOLT product preview"
                       loading="eager"
                       decoding="async"
                       className="w-full h-full object-cover rounded-[1.5rem] md:rounded-[2rem] transition-transform duration-500 ease-out hover:scale-[1.02]"
@@ -898,13 +886,13 @@ export default function LandingPage() {
             <div className="grid md:grid-cols-2 gap-16 items-center">
               <div>
                 <span className="text-blue-500 font-black tracking-widest uppercase text-sm mb-4 block">
-                  About Simpcraftt
+                  About INFIBOLT
                 </span>
                 <h2 className="text-4xl sm:text-5xl md:text-6xl luxury-title mb-8">
                   Where Innovation <br /> Meets Craftsmanship
                 </h2>
                 <p className="text-lg text-gray-600 dark:text-gray-400 mb-6 leading-relaxed transition-colors">
-                  Founded on the principles of simplicity and craft, Simpcraftt
+                  Founded on the principles of simplicity and craft, INFIBOLT
                   aims to bridge the gap between high-end electronics and
                   artistic design. Every product we conceive is a testament to
                   our obsession with detail.
@@ -923,41 +911,14 @@ export default function LandingPage() {
                   ))}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-4 pt-12">
-                  <div className="aspect-square rounded-3xl overflow-hidden">
-                    <img
-                      src="https://images.unsplash.com/photo-1550009158-9ebf69173e03?auto=format&fit=crop&q=80&w=600"
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover"
-                      alt="Detail 1"
-                    />
-                  </div>
-                  <div className="aspect-[3/4] rounded-3xl overflow-hidden bg-blue-100 dark:bg-blue-600/20 flex items-center justify-center p-8 transition-colors">
-                    <Star className="w-16 h-16 text-blue-500" />
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div className="aspect-[3/4] rounded-3xl overflow-hidden">
-                    <img
-                      src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=600"
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover"
-                      alt="Detail 2"
-                    />
-                  </div>
-                  <div className="aspect-square rounded-3xl overflow-hidden">
-                    <img
-                      src="https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80&w=600"
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover"
-                      alt="Detail 3"
-                    />
-                  </div>
-                </div>
+              <div className="lux-panel rounded-[2.5rem] p-4 md:p-6 overflow-hidden">
+                <img
+                  src="/branding/products/hero-sec.png"
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full aspect-[4/5] md:aspect-[5/4] object-cover rounded-[2rem]"
+                  alt="INFIBOLT product preview"
+                />
               </div>
             </div>
           </div>
@@ -991,7 +952,7 @@ export default function LandingPage() {
               <RotatingGridBackground />
               <div className="max-w-full lg:max-w-[55%] xl:max-w-3xl relative z-10">
                 <h2 className="text-4xl sm:text-5xl md:text-7xl luxury-title mb-12">
-                  The Simpcraftt <br /> Advantage
+                  The INFIBOLT <br /> Advantage
                 </h2>
                 <motion.div
                   initial="hidden"
@@ -1074,7 +1035,7 @@ export default function LandingPage() {
                 Community Hype
               </h2>
               <p className="text-gray-600 dark:text-gray-400 transition-colors">
-                Join thousands of others waiting for the Simpcraftt era.
+                Join thousands of others waiting for the INFIBOLT era.
               </p>
             </div>
             <div className="grid md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto">
@@ -1217,7 +1178,7 @@ export default function LandingPage() {
                     </div>
                     <div>
                       <h4 className="text-lg font-bold mb-1">Email Support</h4>
-                      <p className="text-gray-600 dark:text-gray-400 transition-colors">hello@simpcraftt.com</p>
+                      <p className="text-gray-600 dark:text-gray-400 transition-colors">hello@infibolt.com</p>
                     </div>
                   </div>
 
@@ -1314,17 +1275,12 @@ export default function LandingPage() {
         <div className="container mx-auto max-w-7xl">
           <div className="grid md:grid-cols-4 gap-12 mb-20">
             <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-8 h-8 bg-gray-900 dark:bg-white rounded-lg flex items-center justify-center font-bold text-xl italic text-white dark:text-black shadow-lg">
-                  S
-                </div>
-                <span className="text-2xl md:text-4xl luxury-brand text-gray-900 dark:text-white transition-colors">
-                  Simpcraftt
-                </span>
+              <div className="mb-8">
+                <BrandLogo />
               </div>
               <p className="text-gray-600 dark:text-gray-400 max-w-sm mb-10 leading-relaxed transition-colors text-lg">
                 Reimagining lifestyle through the lens of futuristic technology
-                and premium craft. The era of Simpcraftt is just beginning.
+                and premium craft. The era of INFIBOLT is just beginning.
               </p>
               <div className="flex items-center gap-4">
                 {[
@@ -1406,11 +1362,16 @@ export default function LandingPage() {
 
           <div className="pt-8 border-t border-gray-200/50 dark:border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 transition-colors">
             <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">
-              &copy; 2026 Simpcraftt. All rights reserved.
+              &copy; 2026 INFIBOLT. All rights reserved.
             </p>
-            <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">
-              Simpcraftt.com - Coming Soon
-            </p>
+            <a
+              href="https://www.softsitesolution.in"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-gray-500 hover:text-gray-900 dark:hover:text-white uppercase tracking-[0.2em] font-bold transition-colors"
+            >
+              Developed by SoftSiteSolutions
+            </a>
           </div>
         </div>
       </footer>

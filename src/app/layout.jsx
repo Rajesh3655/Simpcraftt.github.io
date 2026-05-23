@@ -13,9 +13,9 @@ const queryClient = new QueryClient({
 });
 
 export const metadata = {
-  title: "Simpcraftt – Coming Soon",
+  title: "INFIBOLT",
   description:
-    "Simpcraftt is launching soon. A new era of premium futuristic electronics and lifestyle products. Get notified at launch.",
+    "Infibolt is launching soon. A new era of premium futuristic electronics and lifestyle products. Get notified at launch.",
 };
 
 export default function RootLayout({ children }) {
@@ -30,12 +30,32 @@ export default function RootLayout({ children }) {
         />
         <link
           href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&f[]=satoshi@400,500,700,900&display=swap"
-          rel="stylesheet"
+          rel="preload"
+          as="style"
+          onLoad={(e) => {
+            e.currentTarget.onload = null;
+            e.currentTarget.rel = "stylesheet";
+          }}
         />
         <link
           href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap"
-          rel="stylesheet"
+          rel="preload"
+          as="style"
+          onLoad={(e) => {
+            e.currentTarget.onload = null;
+            e.currentTarget.rel = "stylesheet";
+          }}
         />
+        <noscript>
+          <link
+            href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&f[]=satoshi@400,500,700,900&display=swap"
+            rel="stylesheet"
+          />
+          <link
+            href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap"
+            rel="stylesheet"
+          />
+        </noscript>
         <style>{`
           *, *::before, *::after { box-sizing: border-box; }
           html, body {
@@ -81,3 +101,4 @@ export default function RootLayout({ children }) {
     </>
   );
 }
+

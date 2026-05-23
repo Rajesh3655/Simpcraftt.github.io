@@ -5,6 +5,10 @@ dev-server*.log
 /bun.lock
 /.vitest/
 /.wrangler/
+*.zip
+/hostinger-runtime-deploy/
+/Simpcraftt.github.io-main/
+/github-push-worktree/
 
 # React Router
 /.react-router/
