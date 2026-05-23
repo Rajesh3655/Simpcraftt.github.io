@@ -627,7 +627,7 @@ export default function LandingPage() {
     const target = document.getElementById(targetId);
     if (!target) return;
 
-    const navOffset = window.innerWidth < 768 ? 88 : 96;
+    const navOffset = window.innerWidth < 768 ? 76 : 96;
     const targetTop = target.getBoundingClientRect().top + window.scrollY - navOffset;
     window.scrollTo({ top: targetTop, behavior: "smooth" });
     setMobileMenuOpen(false);
@@ -655,13 +655,13 @@ export default function LandingPage() {
         initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: prefersReducedMotion ? 0.01 : 0.55, ease: "easeOut" }}
-        className={`navbar-shell fixed top-0 left-0 right-0 z-50 h-[88px] transition-colors duration-200 ease-out ${
+        className={`navbar-shell fixed top-0 left-0 right-0 z-50 h-[76px] md:h-[88px] transition-colors duration-200 ease-out ${
           scrolled
             ? "bg-white/55 dark:bg-[#0a0c10]/70 backdrop-blur-xl border-b border-white/30 dark:border-white/10"
             : "bg-transparent border-b border-transparent backdrop-blur-xl"
         }`}
       >
-        <div className="container mx-auto px-6 h-full flex items-center justify-between">
+        <div className="container mx-auto px-4 sm:px-6 h-full flex items-center justify-between">
           <BrandLogo />
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium tracking-wide text-gray-600 dark:text-gray-400">
@@ -740,7 +740,7 @@ export default function LandingPage() {
         transition={{ duration: 0.45, ease: "easeOut" }}
       >
         {/* Hero Section */}
-        <section className="relative pt-28 pb-16 md:pt-36 md:pb-24 px-4 sm:px-6 overflow-hidden min-h-screen flex flex-col justify-center">
+        <section className="relative pt-24 pb-14 md:pt-32 md:pb-20 lg:pt-36 lg:pb-24 px-4 sm:px-6 overflow-hidden lg:min-h-screen flex flex-col justify-center">
           {/* Parallax Background Layer */}
           <motion.div 
             style={prefersReducedMotion || isMobileViewport ? undefined : { y: heroBgY }} 
@@ -756,9 +756,9 @@ export default function LandingPage() {
 
           <motion.div
             style={prefersReducedMotion || isMobileViewport ? undefined : { y: heroTextY }}
-            className="container mx-auto relative z-20"
+            className="container mx-auto max-w-7xl relative z-20"
           >
-            <div className="grid lg:grid-cols-[1.04fr_0.96fr] gap-8 md:gap-12 xl:gap-16 items-center">
+            <div className="grid xl:grid-cols-[1.04fr_0.96fr] gap-8 md:gap-10 xl:gap-16 items-center">
               <motion.div
                 className="text-left"
                 initial="hidden"
@@ -767,7 +767,7 @@ export default function LandingPage() {
               >
                 <motion.div
                   variants={revealItem(0.62, 14)}
-                  className="lux-panel rounded-[2rem] px-6 py-5 md:px-8 md:py-6 mb-8 md:mb-10 max-w-[34rem]"
+                  className="lux-panel rounded-[1.5rem] md:rounded-[2rem] px-4 py-4 sm:px-5 md:px-8 md:py-6 mb-6 md:mb-10 max-w-[34rem]"
                 >
                   <p className="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 uppercase tracking-[0.18em] mb-4 font-bold">
                     Launch Countdown
@@ -785,14 +785,14 @@ export default function LandingPage() {
 
                 <motion.h1
                   variants={revealItem(0.72, 16)}
-                  className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl luxury-heading mb-7 md:mb-9 lg:max-w-[12ch] break-words"
+                  className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl luxury-heading mb-6 md:mb-9 xl:max-w-[12ch] break-words"
                 >
                   Technology For The <span className="heading-highlight">Quiet Future</span>
                 </motion.h1>
 
                 <motion.p
                   variants={revealItem(0.62, 14)}
-                  className="text-lg md:text-xl text-gray-700 dark:text-gray-300 max-w-[48ch] mb-10 md:mb-12 leading-relaxed"
+                  className="text-base sm:text-lg md:text-xl text-gray-700 dark:text-gray-300 max-w-[48ch] mb-8 md:mb-12 leading-relaxed"
                 >
                   INFIBOLT blends precision electronics with cinematic material language.
                   Sculpted hardware, atmospheric interfaces, and a premium ecosystem built for the
@@ -819,7 +819,7 @@ export default function LandingPage() {
                 </motion.div>
               </motion.div>
 
-              <motion.div style={prefersReducedMotion || isMobileViewport ? undefined : { y: heroImageY }} className="relative lg:pt-2 w-full max-w-[36rem] mx-auto lg:max-w-none">
+              <motion.div style={prefersReducedMotion || isMobileViewport ? undefined : { y: heroImageY }} className="relative lg:pt-2 w-full max-w-[32rem] md:max-w-[36rem] mx-auto xl:max-w-none">
                 <motion.div
                   initial={{ opacity: prefersReducedMotion ? 1 : 0.82, y: prefersReducedMotion ? 0 : 26, scale: prefersReducedMotion ? 1 : 0.985 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -832,14 +832,14 @@ export default function LandingPage() {
                     transition={{ duration: prefersReducedMotion ? 0.01 : 0.8, ease: "easeOut" }}
                     className="absolute inset-2 md:inset-0 bg-gradient-to-tr from-[#f2d8bb]/40 via-[#c4d4ea]/24 to-transparent dark:from-[#283344]/34 dark:via-[#334056]/24 blur-[56px] md:blur-[90px] -z-10 rounded-[3rem]"
                   />
-                  <div className="lux-panel rounded-[2rem] md:rounded-[2.5rem] p-3 md:p-5 relative overflow-hidden min-h-[300px] sm:min-h-[360px] md:min-h-[560px]">
+                  <div className="lux-panel rounded-[1.5rem] md:rounded-[2.5rem] p-3 md:p-5 relative overflow-hidden h-[340px] sm:h-[420px] md:h-[520px] xl:h-[560px]">
                     <div className="absolute inset-0 bg-gradient-to-b from-white/35 to-transparent dark:from-white/10 dark:to-transparent pointer-events-none" />
                     <img
                       src="/branding/products/hero-sec.png"
                       alt="INFIBOLT product preview"
                       loading="eager"
                       decoding="async"
-                      className="w-full h-full object-cover rounded-[1.5rem] md:rounded-[2rem] transition-transform duration-500 ease-out hover:scale-[1.02]"
+                      className="w-full h-full object-cover object-center rounded-[1.2rem] md:rounded-[2rem] transition-transform duration-500 ease-out hover:scale-[1.02]"
                     />
                     <motion.div
                       animate={{ y: [-4, 6, -4] }}
@@ -879,7 +879,7 @@ export default function LandingPage() {
         {/* Brand Intro */}
         <motion.section id="preview" className="py-16 md:py-24 px-4 sm:px-6 transition-colors scroll-reveal" {...revealProps(0.02, 0.8, 20)}>
           <div className="container mx-auto max-w-7xl">
-            <div className="grid lg:grid-cols-[0.95fr_1.05fr] gap-10 md:gap-12 lg:gap-16 items-center">
+            <div className="grid xl:grid-cols-[0.95fr_1.05fr] gap-10 md:gap-12 lg:gap-16 items-center">
               <div>
                 <span className="text-blue-500 font-black tracking-widest uppercase text-sm mb-4 block">
                   About INFIBOLT
@@ -887,7 +887,7 @@ export default function LandingPage() {
                 <h2 className="text-4xl sm:text-5xl md:text-6xl luxury-title mb-6 md:mb-8">
                   Where Innovation <br /> Meets Craftsmanship
                 </h2>
-                <p className="text-lg text-gray-600 dark:text-gray-400 mb-6 leading-relaxed transition-colors">
+                <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 mb-6 leading-relaxed transition-colors">
                   Founded on the principles of simplicity and craft, INFIBOLT
                   aims to bridge the gap between high-end electronics and
                   artistic design. Every product we conceive is a testament to
@@ -907,7 +907,7 @@ export default function LandingPage() {
                   ))}
                 </div>
               </div>
-              <div className="lux-panel rounded-[1.75rem] md:rounded-[2.25rem] p-3 md:p-5 overflow-hidden w-full max-w-[42rem] mx-auto lg:mx-0">
+              <div className="lux-panel rounded-[1.75rem] md:rounded-[2.25rem] p-3 md:p-5 overflow-hidden w-full max-w-[42rem] mx-auto xl:mx-0">
                 <img
                   src="/branding/products/product3.png"
                   loading="lazy"
@@ -924,7 +924,7 @@ export default function LandingPage() {
     <motion.section className="py-16 md:py-24 px-4 sm:px-6 scroll-reveal" {...revealProps(0.02, 0.8, 20)}>
       <div className="container mx-auto max-w-7xl">
         <div className="mb-10 md:mb-14 max-w-3xl">
-          <h2 className="text-4xl sm:text-5xl md:text-7xl luxury-title mb-5">
+          <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl luxury-title mb-5">
             Upcoming Lineup
           </h2>
           <p className="text-gray-600 dark:text-gray-400 max-w-xl transition-colors">
@@ -933,7 +933,7 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5 md:gap-6">
           {PRODUCTS_TEASER.map((product, idx) => (
             <ProductCard key={product.title} product={product} idx={idx} isMobile={isMobileViewport} />
           ))}
@@ -942,12 +942,12 @@ export default function LandingPage() {
     </motion.section>
 
         {/* Features / Why Choose Us */}
-        <motion.section id="features" className="py-24 md:py-32 px-6 relative overflow-hidden scroll-reveal" {...revealProps(0.02, 0.8, 20)}>
-          <div className="container mx-auto">
-            <div className="lux-panel rounded-[2rem] md:rounded-[3rem] p-8 md:p-12 lg:p-24 relative transition-colors">
+        <motion.section id="features" className="py-16 md:py-24 px-4 sm:px-6 relative overflow-hidden scroll-reveal" {...revealProps(0.02, 0.8, 20)}>
+          <div className="container mx-auto max-w-7xl">
+            <div className="lux-panel rounded-[1.75rem] md:rounded-[2.5rem] p-5 sm:p-8 md:p-12 lg:p-16 xl:p-20 relative transition-colors">
               <RotatingGridBackground />
               <div className="max-w-full lg:max-w-[55%] xl:max-w-3xl relative z-10">
-                <h2 className="text-4xl sm:text-5xl md:text-7xl luxury-title mb-12">
+                <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl luxury-title mb-8 md:mb-12">
                   The INFIBOLT <br /> Advantage
                 </h2>
                 <motion.div
@@ -958,7 +958,7 @@ export default function LandingPage() {
                     visible: { transition: { staggerChildren: 0.08 } },
                     hidden: {},
                   }}
-                  className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12 scroll-reveal"
+                  className="grid md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-10 scroll-reveal"
                 >
                   {FEATURES.map((feature) => (
                     <motion.div
@@ -1024,17 +1024,17 @@ export default function LandingPage() {
         </motion.section>
 
         {/* Testimonials Section */}
-        <motion.section id="community" className="py-24 md:py-32 px-6 relative overflow-hidden scroll-reveal" {...revealProps(0.02, 0.8, 20)}>
-          <div className="container mx-auto">
+        <motion.section id="community" className="py-16 md:py-24 px-4 sm:px-6 relative overflow-hidden scroll-reveal" {...revealProps(0.02, 0.8, 20)}>
+          <div className="container mx-auto max-w-7xl">
             <div className="text-center mb-16">
-              <h2 className="text-4xl sm:text-5xl md:text-7xl luxury-title mb-5">
+              <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl luxury-title mb-5">
                 Community Hype
               </h2>
               <p className="text-gray-600 dark:text-gray-400 transition-colors">
                 Join thousands of others waiting for the INFIBOLT era.
               </p>
             </div>
-            <div className="grid md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto">
+            <div className="grid lg:grid-cols-2 gap-5 md:gap-8 max-w-4xl mx-auto">
               {TESTIMONIALS.map((t, idx) => (
                 <motion.div
                   key={idx}
@@ -1073,7 +1073,7 @@ export default function LandingPage() {
         {/* FAQ Section */}
         <motion.section
           id="faq"
-          className="py-24 md:py-32 px-6 transition-colors scroll-reveal"
+          className="py-16 md:py-24 px-4 sm:px-6 transition-colors scroll-reveal"
           initial={{ opacity: 0.75, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.1, margin: "0px 0px -12% 0px" }}
@@ -1099,24 +1099,24 @@ export default function LandingPage() {
         {/* Newsletter Section */}
         <motion.section
           id="notify"
-          className="py-24 md:py-32 px-6 scroll-reveal"
+          className="py-16 md:py-24 px-4 sm:px-6 scroll-reveal"
           initial={{ opacity: 0.75, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.1, margin: "0px 0px -12% 0px" }}
           transition={{ duration: 0.8, ease: REVEAL_EASE }}
         >
           <div className="container mx-auto max-w-5xl">
-            <div className="bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-600 dark:to-purple-600 rounded-[2rem] md:rounded-[3rem] p-8 sm:p-12 md:p-20 text-center relative overflow-hidden shadow-2xl shadow-blue-500/20 dark:shadow-none transition-colors">
+            <div className="bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-600 dark:to-purple-600 rounded-[1.75rem] md:rounded-[2.5rem] p-6 sm:p-10 md:p-16 lg:p-20 text-center relative overflow-hidden shadow-2xl shadow-blue-500/20 dark:shadow-none transition-colors">
               <div className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none">
                 <div className="absolute top-10 left-10 w-20 h-20 bg-white blur-3xl rounded-full" />
                 <div className="absolute bottom-10 right-10 w-20 h-20 bg-white blur-3xl rounded-full" />
               </div>
 
-              <h2 className="text-3xl sm:text-4xl md:text-7xl luxury-title mb-6 break-words">
+              <h2 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl luxury-title mb-6 break-words">
                 Stay <span className="heading-highlight ml-2">Ahead</span> of <br className="hidden sm:block" />
                 the <span className="heading-highlight ml-2">Curve</span>
               </h2>
-              <p className="text-xl text-white/90 dark:text-white/80 mb-10 max-w-xl mx-auto transition-colors">
+              <p className="text-base sm:text-lg md:text-xl text-white/90 dark:text-white/80 mb-8 md:mb-10 max-w-xl mx-auto transition-colors">
                 Join our inner circle and be the first to know when we launch
                 our flagship products.
               </p>
@@ -1149,19 +1149,19 @@ export default function LandingPage() {
         {/* Contact/Lead Section */}
         <motion.section
           id="contact"
-          className="py-24 md:py-32 px-6 transition-colors scroll-reveal"
+          className="py-16 md:py-24 px-4 sm:px-6 transition-colors scroll-reveal"
           initial={{ opacity: 0.75, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.1, margin: "0px 0px -12% 0px" }}
           transition={{ duration: 0.8, ease: REVEAL_EASE }}
         >
-          <div className="container mx-auto">
-            <div className="grid md:grid-cols-2 gap-16">
+          <div className="container mx-auto max-w-7xl">
+            <div className="grid lg:grid-cols-2 gap-10 md:gap-14 xl:gap-16">
               <div>
-                <h2 className="text-4xl sm:text-5xl md:text-7xl luxury-title mb-8">
+                <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl luxury-title mb-6 md:mb-8">
                   Get In Touch
                 </h2>
-                <p className="text-lg text-gray-600 dark:text-gray-400 mb-12 leading-relaxed transition-colors">
+                <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 mb-8 md:mb-12 leading-relaxed transition-colors">
                   Have questions about our technology or want to partner with
                   us? Our team is ready to connect with visionaries and early
                   adopters.
@@ -1194,9 +1194,9 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div className="lux-panel rounded-[2rem] md:rounded-[3rem] p-6 sm:p-8 md:p-12 transition-colors">
+              <div className="lux-panel rounded-[1.75rem] md:rounded-[2.5rem] p-5 sm:p-8 md:p-10 lg:p-12 transition-colors">
                 <form onSubmit={handleLeadSubmit} className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
+                  <div className="grid md:grid-cols-2 gap-5 md:gap-6">
                     <div className="space-y-2">
                       <label htmlFor="name" className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 transition-colors ml-2">
                         Name
@@ -1205,7 +1205,7 @@ export default function LandingPage() {
                         id="name"
                         name="name"
                         required
-                        className="w-full bg-gray-50/50 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-2xl px-6 py-4 focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition-colors text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
+                        className="w-full bg-gray-50/50 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-2xl px-5 py-4 md:px-6 focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition-colors text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
                         placeholder="John Doe"
                       />
                     </div>
@@ -1218,7 +1218,7 @@ export default function LandingPage() {
                         name="email"
                         type="email"
                         required
-                        className="w-full bg-gray-50/50 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-2xl px-6 py-4 focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition-colors text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
+                        className="w-full bg-gray-50/50 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-2xl px-5 py-4 md:px-6 focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition-colors text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
                         placeholder="john@example.com"
                       />
                     </div>
@@ -1230,7 +1230,7 @@ export default function LandingPage() {
                     <input
                       id="phone"
                       name="phone"
-                      className="w-full bg-gray-50/50 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-2xl px-6 py-4 focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition-colors text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
+                      className="w-full bg-gray-50/50 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-2xl px-5 py-4 md:px-6 focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition-colors text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
                       placeholder="+91 98765 43210"
                     />
                   </div>
@@ -1242,7 +1242,7 @@ export default function LandingPage() {
                       id="message"
                       name="message"
                       rows="4"
-                      className="w-full bg-gray-50/50 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-2xl px-6 py-4 focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition-colors resize-none text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
+                      className="w-full bg-gray-50/50 dark:bg-white/[0.02] border border-gray-200/50 dark:border-white/5 rounded-2xl px-5 py-4 md:px-6 focus:outline-none focus:border-gray-400 dark:focus:border-white/20 transition-colors resize-none text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
                       placeholder="How can we help?"
                     ></textarea>
                   </div>
@@ -1261,14 +1261,14 @@ export default function LandingPage() {
       </motion.main>
 
       {/* Footer */}
-      <footer className="py-20 px-6 border-t border-gray-200/50 dark:border-white/5 transition-colors relative z-10 bg-white/30 dark:bg-[#030305]/30 backdrop-blur-3xl">
+      <footer className="py-14 md:py-20 px-4 sm:px-6 border-t border-gray-200/50 dark:border-white/5 transition-colors relative z-10 bg-white/30 dark:bg-[#030305]/30 backdrop-blur-3xl">
         <div className="container mx-auto max-w-7xl">
-          <div className="grid md:grid-cols-4 gap-12 mb-20">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-10 md:gap-12 mb-12 md:mb-20">
             <div className="col-span-1 md:col-span-2">
               <div className="mb-8">
                 <BrandLogo />
               </div>
-              <p className="text-gray-600 dark:text-gray-400 max-w-sm mb-10 leading-relaxed transition-colors text-lg">
+              <p className="text-gray-600 dark:text-gray-400 max-w-sm mb-8 md:mb-10 leading-relaxed transition-colors text-base md:text-lg">
                 Reimagining lifestyle through the lens of futuristic technology
                 and premium craft. The era of INFIBOLT is just beginning.
               </p>
@@ -1342,15 +1342,15 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="pt-8 border-t border-gray-200/50 dark:border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 transition-colors">
-            <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] font-bold">
+          <div className="pt-8 border-t border-gray-200/50 dark:border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6 text-center md:text-left transition-colors">
+            <p className="text-[10px] text-gray-500 uppercase tracking-[0.16em] md:tracking-[0.2em] font-bold">
               &copy; 2026 INFIBOLT. All rights reserved.
             </p>
             <a
               href="https://www.softsitesolution.in"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[10px] text-gray-500 hover:text-gray-900 dark:hover:text-white uppercase tracking-[0.2em] font-bold transition-colors"
+              className="text-[10px] text-gray-500 hover:text-gray-900 dark:hover:text-white uppercase tracking-[0.16em] md:tracking-[0.2em] font-bold transition-colors"
             >
               Developed by SoftSiteSolutions
             </a>
