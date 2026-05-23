@@ -485,7 +485,7 @@ export function Layout({ children }: { children: ReactNode }) {
         {LoadFontsSSR ? <LoadFontsSSR /> : null}
       </head>
       <body>
-        <ClientOnly loader={() => children} />
+        <ErrorBoundaryWrapper>{children}</ErrorBoundaryWrapper>
         <Toaster position={isMobile ? 'top-center' : 'bottom-right'} />
         <ScrollRestoration />
         <Scripts />

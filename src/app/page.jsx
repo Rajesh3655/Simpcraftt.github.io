@@ -664,7 +664,7 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 sm:px-6 h-full flex items-center justify-between">
           <BrandLogo />
 
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium tracking-wide text-gray-600 dark:text-gray-400">
+          <div className="hidden lg:flex items-center gap-6 xl:gap-8 text-sm font-medium tracking-wide text-gray-600 dark:text-gray-400">
             {["Preview", "Features", "Community", "FAQ", "Contact"].map(
               (item) => (
                 <a
@@ -679,7 +679,7 @@ export default function LandingPage() {
             )}
           </div>
 
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden lg:flex items-center gap-5 xl:gap-6">
             <ThemeToggle />
             <a
               href="#notify"
@@ -690,7 +690,7 @@ export default function LandingPage() {
             </a>
           </div>
 
-          <div className="flex md:hidden items-center gap-4">
+          <div className="flex lg:hidden items-center gap-3 sm:gap-4">
             <ThemeToggle />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -708,7 +708,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="absolute top-full left-0 right-0 bg-white/95 dark:bg-[#050505]/95 backdrop-blur-xl border-b border-black/10 dark:border-white/10 p-6 md:hidden flex flex-col gap-4 shadow-2xl"
+              className="absolute top-full left-0 right-0 bg-white/95 dark:bg-[#050505]/95 backdrop-blur-xl border-b border-black/10 dark:border-white/10 p-6 lg:hidden flex flex-col gap-4 shadow-2xl"
             >
               {["Preview", "Features", "Community", "FAQ", "Contact"].map(
                 (item) => (
