@@ -5,7 +5,9 @@ const fallbackSecret = "replace-this-local-development-secret-only";
 const defaultCorsOrigins = [
   process.env.FRONTEND_ORIGIN || "http://localhost:3000",
   process.env.ADMIN_ORIGIN || "http://localhost:3001",
-  ...(!production ? ["http://127.0.0.1:3000", "http://127.0.0.1:3001"] : []),
+  ...(!production
+    ? ["http://localhost:3002", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:3002"]
+    : []),
 ];
 
 export const env = {
@@ -20,7 +22,7 @@ export const env = {
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean)
-    .concat(!production ? ["http://127.0.0.1:3000", "http://127.0.0.1:3001"] : [])
+    .concat(!production ? ["http://localhost:3002", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:3002"] : [])
     .filter((origin, index, origins) => origins.indexOf(origin) === index),
   mongoUri: process.env.MONGODB_URI || "mongodb://127.0.0.1:27017",
   mongoDb: process.env.MONGODB_DB || "infibolt_dev",
