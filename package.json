@@ -3,14 +3,14 @@
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
-	"main": "server.cjs",
+	"main": "app.js",
 	"engines": {
 		"node": ">=20"
 	},
 	"scripts": {
 		"build": "react-router build",
 		"dev": "react-router dev",
-		"start": "node server.cjs",
+		"start": "node app.js",
 		"preview": "wrangler dev",
 		"deploy": "npm run build && wrangler deploy",
 		"typecheck": "react-router typegen && tsc --noEmit"

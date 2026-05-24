@@ -9,7 +9,7 @@ Use these settings for `app.infibolt.com` in Hostinger Node.js hosting.
 - Install command: `npm ci`
 - Build command: `npm run build`
 - Start command: `npm start`
-- Entry file: `server.cjs`
+- Entry file: `app.js`
 - Port: `3000` if Hostinger asks for one
 
 ## Environment Variables
@@ -34,4 +34,4 @@ If Hostinger provides its own `PORT`, use Hostinger's value instead of `3000`.
 4. Restart the Node.js app after changing environment variables.
 5. Open `https://app.infibolt.com`.
 
-`npm run build` only creates the production files. The app is served only after `npm start` runs `server.cjs`.
+`npm run build` only creates the production files. The app is served only after `npm start` runs `app.js`.

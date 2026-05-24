@@ -1,7 +1,7 @@
 'use client';
 
 import { signIn } from '@auth/create/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 
 const isDev = import.meta.env.DEV;
@@ -22,12 +22,17 @@ export default function SocialDevShimPage() {
 		}
 	}, [navigate]);
 
-	const params =
-		typeof window !== 'undefined'
-			? new URLSearchParams(window.location.search)
-			: new URLSearchParams();
-	const provider = params.get('provider') || 'google';
-	const callbackUrl = params.get('callbackUrl') || '/';
+	const { provider, callbackUrl } = useMemo(() => {
+		const params =
+			typeof window !== 'undefined'
+				? new URLSearchParams(window.location.search)
+				: new URLSearchParams();
+
+		return {
+			provider: params.get('provider') || 'google',
+			callbackUrl: params.get('callbackUrl') || '/',
+		};
+	}, []);
 	const label = PROVIDER_LABELS[provider] || provider;
 
 	const [email, setEmail] = useState('');
