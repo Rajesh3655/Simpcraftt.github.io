@@ -5,7 +5,7 @@ Use these settings for `app.infibolt.com` in Hostinger Node.js hosting.
 ## App Settings
 
 - Domain: `app.infibolt.com`
-- Runtime: Node.js `20` or newer
+- Runtime: Node.js `22` or newer
 - Install command: `npm ci`
 - Build command: `npm run build`
 - Start command: `npm start`

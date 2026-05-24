@@ -5,7 +5,7 @@
 	"type": "module",
 	"main": "app.js",
 	"engines": {
-		"node": ">=20"
+		"node": ">=22"
 	},
 	"scripts": {
 		"build": "react-router build",
