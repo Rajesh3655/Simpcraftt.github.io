@@ -9,14 +9,23 @@ import { getHTMLForErrorPage } from './get-html-for-error-page';
 const app = new Hono();
 
 const requiredEnv = ['NODE_ENV', 'AUTH_URL'];
+const recommendedEnv = ['AUTH_SECRET'];
 const missingEnv = requiredEnv.filter((key) => !process.env[key]);
+const missingRecommendedEnv = recommendedEnv.filter((key) => !process.env[key]);
 
 if (missingEnv.length > 0) {
-  console.warn(`[infibolt] Missing environment variables: ${missingEnv.join(', ')}`);
+  console.log(`[infibolt] Missing environment variables: ${missingEnv.join(', ')}`);
+}
+
+if (missingRecommendedEnv.length > 0) {
+  console.log(`[infibolt] Missing recommended environment variables: ${missingRecommendedEnv.join(', ')}`);
 }
 
 console.log(`[infibolt] Runtime: node ${process.version}`);
+console.log(`[infibolt] Host: ${process.env.HOST || '0.0.0.0'}`);
 console.log(`[infibolt] Port: ${process.env.PORT || '3000'}`);
+console.log(`[infibolt] Auth URL configured: ${process.env.AUTH_URL ? 'yes' : 'no'}`);
+console.log(`[infibolt] CORS origins configured: ${process.env.CORS_ORIGINS ? 'yes' : 'no'}`);
 
 app.use('*', requestId());
 
