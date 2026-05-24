@@ -8,6 +8,16 @@ import { getHTMLForErrorPage } from './get-html-for-error-page';
 
 const app = new Hono();
 
+const requiredEnv = ['NODE_ENV', 'AUTH_URL'];
+const missingEnv = requiredEnv.filter((key) => !process.env[key]);
+
+if (missingEnv.length > 0) {
+  console.warn(`[infibolt] Missing environment variables: ${missingEnv.join(', ')}`);
+}
+
+console.log(`[infibolt] Runtime: node ${process.version}`);
+console.log(`[infibolt] Port: ${process.env.PORT || '3000'}`);
+
 app.use('*', requestId());
 
 app.onError((err, c) => {
