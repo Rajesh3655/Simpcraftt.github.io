@@ -1,11 +1,24 @@
 .DS_Store
 .env
+.env.*
+!.env.example
+!**/.env.example
 dev-server*.log
+*.log
+*.zip
 /node_modules/
+**/node_modules/
 /bun.lock
 /.vitest/
 /.wrangler/
+**/.wrangler/
 
 # React Router
 /.react-router/
 /build/
+**/.react-router/
+**/build/
+infibolt-backend/uploads/**
+!infibolt-backend/uploads/
+!infibolt-backend/uploads/**/
+!infibolt-backend/uploads/**/.gitkeep
