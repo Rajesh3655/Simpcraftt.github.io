@@ -1,5 +1,3 @@
-"use client";
-
 import { CheckCircle2, Clock3, Lock, Mail, Phone, UserRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { CommerceShell, MotionSection, SecondaryButton } from "../components/commerce/CommerceLayout";

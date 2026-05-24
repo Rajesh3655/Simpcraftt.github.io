@@ -1,7 +1,4 @@
-"use client";
-
 import {
-  Activity,
   BarChart3,
   Bell,
   Boxes,
@@ -14,7 +11,6 @@ import {
   Globe,
   Images,
   LayoutDashboard,
-  Link as LinkIcon,
   LockKeyhole,
   Megaphone,
   MessageSquare,
@@ -22,7 +18,6 @@ import {
   Pencil,
   Plus,
   Search,
-  Settings,
   ShieldCheck,
   ShoppingCart,
   SlidersHorizontal,

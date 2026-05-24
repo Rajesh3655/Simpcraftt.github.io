@@ -1,5 +1,3 @@
-'use client';
-
 import { signIn } from '@auth/create/react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';

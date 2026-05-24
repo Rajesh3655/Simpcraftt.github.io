@@ -51,7 +51,10 @@ export function layoutWrapperPlugin(userOpts: HierarchicalLayoutOptions = {}): P
         opts.pagePattern.test(id) &&
         !id.includes(NO_LAYOUT_QUERY) // avoid wrapping the already wrapped page
       ) {
-        return buildWrapper.call(this, id);
+        return {
+          code: buildWrapper.call(this, id),
+          map: { mappings: '' },
+        };
       }
       return null;
     },
