@@ -270,6 +270,9 @@ export function CommerceShell({
 
   return (
     <div className="flex min-h-screen w-full max-w-full flex-col overflow-x-hidden font-sans selection:bg-slate-900 selection:text-white">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-slate-950 focus:px-5 focus:py-3 focus:text-sm focus:font-semibold focus:text-white">
+        Skip to content
+      </a>
       <SEOHead
         title={seoTitle ?? title}
         description={seoDescription ?? description}
@@ -367,7 +370,7 @@ export function CommerceShell({
 
       <div className={`flex flex-col flex-1 pt-[65px] lg:pt-[73px] ${hideMobileBottomNav ? "pb-0" : "pb-24 lg:pb-0"}`}>
         {title && <PageHero eyebrow={eyebrow} title={title} description={description} />}
-        <main className="relative z-10 flex-1">{children}</main>
+        <main id="main-content" className="relative z-10 flex-1">{children}</main>
         <CommerceFooter />
       </div>
     </div>
@@ -764,8 +767,8 @@ export function ProductGallery({ product }) {
         <img src={active} alt={product.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
       </div>
       <div className="mt-4 grid grid-cols-4 gap-4">
-        {(product.gallery ?? [product.image]).map((image) => (
-          <button key={image} type="button" onClick={() => setActive(image)} className={`aspect-square overflow-hidden rounded-2xl border transition-all duration-300 ${active === image ? "border-slate-900 dark:border-white" : "border-transparent hover:border-slate-900/20 dark:hover:border-white/20"}`}>
+        {(product.gallery ?? [product.image]).map((image, index) => (
+          <button key={image} type="button" onClick={() => setActive(image)} aria-label={`View ${product.name} image ${index + 1}`} className={`aspect-square overflow-hidden rounded-2xl border transition-all duration-300 ${active === image ? "border-slate-900 dark:border-white" : "border-transparent hover:border-slate-900/20 dark:hover:border-white/20"}`}>
             <img src={image} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
           </button>
         ))}

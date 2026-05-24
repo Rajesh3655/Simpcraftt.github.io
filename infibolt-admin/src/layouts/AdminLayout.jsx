@@ -128,6 +128,9 @@ export function AdminShell({ title = "Admin Command Center", description, childr
   return (
     <AdminProtectedRoute>
     <div className="min-h-screen bg-[#F7F5F0] font-sans selection:bg-slate-900 selection:text-white dark:bg-[#090A0D] dark:selection:bg-white dark:selection:text-slate-900">
+      <a href="#admin-main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-slate-950 focus:px-5 focus:py-3 focus:text-sm focus:font-semibold focus:text-white dark:bg-white dark:text-slate-950">
+        Skip to content
+      </a>
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/5 dark:to-white/5" />
         <div className="absolute inset-0 opacity-[0.025] dark:opacity-[0.04] mix-blend-overlay" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }} />
@@ -207,7 +210,7 @@ export function AdminShell({ title = "Admin Command Center", description, childr
           </div>
         </header>
 
-        <main className="px-4 pb-10 pt-24 sm:px-6 md:px-8 lg:px-12">
+        <main id="admin-main-content" className="px-4 pb-10 pt-24 sm:px-6 md:px-8 lg:px-12">
           <div className="mx-auto w-full max-w-[1400px]">
             <div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end">
               <div>

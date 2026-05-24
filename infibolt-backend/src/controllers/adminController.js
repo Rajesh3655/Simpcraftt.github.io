@@ -39,7 +39,7 @@ export async function adminRefresh(req, res) {
   const refreshToken = req.signedCookies?.infibolt_refresh;
   if (!refreshToken) throw createHttpError(401, "Refresh token missing.");
   const payload = verifyRefreshToken(refreshToken);
-  if (payload.role !== "admin") throw createHttpError(403, "Invalid session role.");
+  if (!["admin", "super-admin"].includes(payload.role)) throw createHttpError(403, "Invalid session role.");
   const user = await AdminUser.findById(payload.sub).select("+refreshTokenHash");
   if (!user || user.refreshTokenHash !== hashToken(refreshToken)) throw createHttpError(401, "Refresh token has been invalidated.");
   await rotateRefreshSession(req, res, user, refreshToken);

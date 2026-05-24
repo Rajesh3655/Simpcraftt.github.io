@@ -1,6 +1,6 @@
 process.env.NODE_ENV = 'production';
 process.env.HOST = '0.0.0.0';
-process.env.PORT = process.env.PORT || '3000';
+process.env.PORT = process.env.PORT || '3001';
 
 console.log('Starting Infibolt SSR server...');
 

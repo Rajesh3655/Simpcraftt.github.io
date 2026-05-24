@@ -1,6 +1,9 @@
 import { request } from "./api";
 
 export const supportService = {
-  listTickets: () => request.get("/support-tickets"),
-  createTicket: (payload) => request.post("/support-tickets", payload),
+  listTickets: (config) => request.get("/support-tickets", config),
+  createTicket: (payload) => request.post("/support-tickets", {
+    ...payload,
+    customer: payload.customer || payload.name,
+  }),
 };

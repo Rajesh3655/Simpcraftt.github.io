@@ -37,6 +37,7 @@ export const env = {
   uploadProvider: process.env.UPLOAD_PROVIDER || "local",
   uploadBasePath: process.env.UPLOAD_BASE_PATH || "uploads",
   otpProvider: process.env.OTP_PROVIDER || "local",
+  allowLocalOtp: process.env.ALLOW_LOCAL_OTP === "true",
   otpTtlMinutes: Number(process.env.OTP_TTL_MINUTES || 10),
   otpResendCooldownSeconds: Number(process.env.OTP_RESEND_COOLDOWN_SECONDS || 60),
   otpMaxRequestsPerHour: Number(process.env.OTP_MAX_REQUESTS_PER_HOUR || 5),

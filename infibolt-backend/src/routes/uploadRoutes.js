@@ -51,6 +51,6 @@ uploadRoutes.get("/:folder/:filename", requireAuth(["customer", "admin", "super-
   res.sendFile(target);
 }));
 
-uploadRoutes.delete("/:folder/:filename", requireAuth(["customer", "admin", "super-admin"]), asyncHandler(async (req, res) => {
+uploadRoutes.delete("/:folder/:filename", requireAuth(["admin", "super-admin"]), asyncHandler(async (req, res) => {
   res.json(await deleteLocalUpload(req.params.folder, req.params.filename));
 }));

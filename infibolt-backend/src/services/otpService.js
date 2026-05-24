@@ -24,6 +24,9 @@ function generateOtp() {
 async function deliverOtp({ target, purpose, otp, req }) {
   await new Promise((resolve) => setTimeout(resolve, env.nodeEnv === "test" ? 0 : 350));
   if (env.otpProvider === "local") {
+    if (env.isProduction && !env.allowLocalOtp) {
+      return { status: "failed", provider: "local", reason: "Local OTP delivery is disabled in production." };
+    }
     if (!env.isProduction) {
       console.info(`[otp:local] ${purposeLabels[purpose] || purpose} for ${target}: ${otp} requestId=${req?.id || "n/a"}`);
     }

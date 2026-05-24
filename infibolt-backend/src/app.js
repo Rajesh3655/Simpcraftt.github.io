@@ -38,7 +38,7 @@ app.use(
         "script-src": ["'self'"],
         "style-src": ["'self'", "'unsafe-inline'"],
         "img-src": ["'self'", "data:", "blob:", "https://images.unsplash.com"],
-        "connect-src": ["'self'", env.frontendOrigin, env.adminOrigin, env.apiOrigin],
+        "connect-src": ["'self'", env.frontendOrigin, env.adminOrigin, env.apiOrigin, ...env.corsOrigins],
         "frame-ancestors": ["'none'"],
         "object-src": ["'none'"],
       },

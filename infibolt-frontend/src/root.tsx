@@ -5,6 +5,28 @@ import './styles/global.css';
 
 initializeMonitoring();
 
+const siteUrl = 'https://app.infibolt.com';
+const defaultTitle = 'INFIBOLT | Premium Electronics for Focused Living';
+const defaultDescription =
+  'INFIBOLT builds premium electronics for focused work, cinematic sound, and long-term ownership care.';
+
+export const meta = () => [
+  { title: defaultTitle },
+  { name: 'description', content: defaultDescription },
+  { name: 'theme-color', content: '#f7f5f0' },
+  { name: 'robots', content: 'index,follow,max-image-preview:large' },
+  { property: 'og:site_name', content: 'INFIBOLT' },
+  { property: 'og:title', content: defaultTitle },
+  { property: 'og:description', content: defaultDescription },
+  { property: 'og:type', content: 'website' },
+  { property: 'og:url', content: siteUrl },
+  { property: 'og:image', content: `${siteUrl}/images/Litemood-hero.png` },
+  { name: 'twitter:card', content: 'summary_large_image' },
+  { name: 'twitter:title', content: defaultTitle },
+  { name: 'twitter:description', content: defaultDescription },
+  { name: 'twitter:image', content: `${siteUrl}/images/Litemood-hero.png` },
+];
+
 export const links = () => [
   { rel: 'manifest', href: '/manifest.webmanifest' },
   { rel: 'icon', href: '/images/favicon-tab.ico' },
@@ -21,6 +43,20 @@ export function Layout({ children }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
+        <script
+          type="application/ld+json"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'INFIBOLT',
+              url: siteUrl,
+              logo: `${siteUrl}/images/apple-touch-icon.png`,
+              sameAs: ['https://www.infibolt.com'],
+            }),
+          }}
+        />
       </head>
       <body>
         {children}

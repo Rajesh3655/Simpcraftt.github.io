@@ -5,6 +5,13 @@ import './styles/global.css';
 
 initializeMonitoring();
 
+export const meta = () => [
+  { title: 'INFIBOLT Admin OS' },
+  { name: 'description', content: 'Protected INFIBOLT operations console for products, care, warranty, media, and analytics.' },
+  { name: 'robots', content: 'noindex,nofollow' },
+  { name: 'theme-color', content: '#090A0D' },
+];
+
 export const links = () => [
   { rel: 'manifest', href: '/manifest.webmanifest' },
   { rel: 'icon', href: '/images/favicon-tab.ico' },

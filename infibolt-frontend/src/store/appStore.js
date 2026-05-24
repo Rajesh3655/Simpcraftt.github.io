@@ -77,9 +77,13 @@ export const useAppStore = create((set, get) => ({
   loadSupportTickets: async () => {
     set((state) => ({ support: { ...state.support, status: "loading", error: null } }));
     try {
-      const result = await supportService.listTickets();
+      const result = await supportService.listTickets({ skipGlobalErrorToast: true });
       set({ support: { tickets: result.items || [], status: "success", error: null } });
     } catch (error) {
+      if (error.status === 401) {
+        set({ support: { tickets: [], status: "success", error: null } });
+        return;
+      }
       set((state) => ({ support: { ...state.support, status: "error", error: error.message || "Unable to load support tickets." } }));
     }
   },
@@ -91,9 +95,13 @@ export const useAppStore = create((set, get) => ({
   loadWarrantyClaims: async () => {
     set((state) => ({ warranty: { ...state.warranty, status: "loading", error: null } }));
     try {
-      const result = await warrantyService.listClaims();
+      const result = await warrantyService.listClaims({ skipGlobalErrorToast: true });
       set({ warranty: { claims: result.items || [], status: "success", error: null } });
     } catch (error) {
+      if (error.status === 401) {
+        set({ warranty: { claims: [], status: "success", error: null } });
+        return;
+      }
       set((state) => ({ warranty: { ...state.warranty, status: "error", error: error.message || "Unable to load warranty claims." } }));
     }
   },

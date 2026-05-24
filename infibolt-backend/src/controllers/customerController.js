@@ -197,7 +197,11 @@ export async function listProducts(_req, res) {
 }
 
 export async function getProduct(req, res) {
-  const product = await Product.findOne({ slug: req.params.slug }).lean();
+  const product = await Product.findOne({
+    slug: req.params.slug,
+    status: { $in: ["Ready", "Published", "Preview", "Prototype"] },
+    $or: [{ visibility: "public" }, { visibility: { $exists: false } }],
+  }).lean();
   if (!product) throw createHttpError(404, "Product not found.");
   return ok(res, productDetails(product));
 }
