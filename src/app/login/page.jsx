@@ -24,7 +24,7 @@ export default function LoginPage() {
   };
 
   return (
-    <CommerceShell eyebrow="Customer Access" title="Login to your Simpcraftt account." description="Account access is prepared for profiles, saved addresses, warranty records, and future orders.">
+    <CommerceShell eyebrow="Customer Access" title="Login to your INFIBOLT account." description="Account access is prepared for profiles, saved addresses, warranty records, and future orders.">
       <MotionSection className="px-6 pb-16 md:px-8 md:pb-24">
         <div className="mx-auto grid w-full max-w-[1100px] gap-6 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="rounded-2xl border border-slate-900/10 bg-slate-50 p-6 dark:border-white/10 dark:bg-white/[0.02] sm:p-8">

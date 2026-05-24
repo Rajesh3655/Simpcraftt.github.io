@@ -187,10 +187,10 @@ function applyOrCreateMeta(selector, attributes) {
 function SEOHead({ title, description, pathname }) {
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const baseTitle = "Simpcraftt";
-    const fullTitle = title ? `${title} | ${baseTitle}` : `${baseTitle} | Premium Electronics`;
+    const baseTitle = "INFIBOLT";
+    const fullTitle = title ? `${baseTitle} | ${title}` : `${baseTitle} | Official Website`;
     const fallbackDescription =
-      "Simpcraftt builds premium electronics with cinematic design, refined performance, and modern ownership support.";
+      "INFIBOLT builds premium electronics with cinematic design, refined performance, and modern ownership support.";
     const metaDescription = description || fallbackDescription;
     const canonical = `${window.location.origin}${pathname || "/"}`;
 
@@ -218,19 +218,44 @@ function SEOHead({ title, description, pathname }) {
 
 export function CommerceShell({
   children,
-  eyebrow = "Simpcraftt Commerce",
+  eyebrow = "INFIBOLT Commerce",
   title,
   description,
   seoTitle,
   seoDescription,
 }) {
   const { pathname } = useLocation();
+  const hideMobileBottomNav = ["/login", "/register"].some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  const [showMobileBottomNav, setShowMobileBottomNav] = useState(true);
 
   useEffect(() => {
     document.documentElement.classList.remove("dark");
     document.documentElement.style.colorScheme = "light";
     localStorage.setItem("theme", "light");
   }, []);
+
+  useEffect(() => {
+    setShowMobileBottomNav(true);
+
+    if (typeof window === "undefined") return undefined;
+    if (window.innerWidth >= 1024 || hideMobileBottomNav) return undefined;
+
+    let previousY = window.scrollY;
+    const onScroll = () => {
+      const currentY = window.scrollY;
+      if (currentY <= 10) {
+        setShowMobileBottomNav(true);
+      } else if (currentY > previousY + 6) {
+        setShowMobileBottomNav(false);
+      } else if (currentY < previousY - 6) {
+        setShowMobileBottomNav(true);
+      }
+      previousY = currentY;
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [pathname, hideMobileBottomNav]);
 
   return (
     <div className="flex min-h-screen w-full max-w-full flex-col overflow-x-hidden font-sans selection:bg-slate-900 selection:text-white">
@@ -251,11 +276,15 @@ export function CommerceShell({
 
       <header className="fixed left-0 right-0 top-0 z-50 border-b border-black/[0.04] bg-surface/92 backdrop-blur-xl transition-colors duration-200 lg:dark:border-white/[0.03] lg:dark:bg-surface-dark/90">
         <div className="mx-auto flex w-screen max-w-none items-center justify-between gap-3 overflow-hidden px-4 py-3 sm:px-6 lg:w-full lg:max-w-[1400px] lg:px-12 lg:py-4">
-          <Link to="/" className="group flex min-w-0 items-center gap-3">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900 text-[13px] font-medium text-white shadow-sm lg:rounded-none lg:dark:bg-white lg:dark:text-slate-900">
-              S
+          <Link to="/" className="group flex min-w-0 items-center gap-2">
+            <img
+              src="/images/favicon.svg"
+              alt="INFIBOLT logo"
+              className="h-[22px] w-[22px] shrink-0 object-contain dark:invert"
+            />
+            <span className="truncate text-[13px] font-bold uppercase leading-none tracking-[0.22em] text-[#111827] dark:text-white">
+              INFIBOLT
             </span>
-            <span className="truncate text-sm font-semibold uppercase tracking-[0.17em] text-slate-900 min-[380px]:text-base sm:text-lg lg:font-medium lg:dark:text-white">Simpcraftt</span>
           </Link>
 
           <nav className="hidden items-center gap-8 lg:flex">
@@ -280,13 +309,13 @@ export function CommerceShell({
           </nav>
 
           <div className="hidden items-center gap-2.5 lg:flex">
-            <IconLink href="/wishlist" label="Wishlist">
+            <IconLink href="/wishlist" label="Wishlist" active={pathname.startsWith("/wishlist")}>
               <Heart className="h-4 w-4" />
             </IconLink>
-            <IconLink href="/cart" label="Cart">
+            <IconLink href="/cart" label="Cart" active={pathname.startsWith("/cart") || pathname.startsWith("/checkout")}>
               <ShoppingBag className="h-4 w-4" />
             </IconLink>
-            <IconLink href="/profile" label="Profile">
+            <IconLink href="/profile" label="Profile" active={pathname.startsWith("/profile") || pathname.startsWith("/login") || pathname.startsWith("/register")}>
               <User className="h-4 w-4" />
             </IconLink>
           </div>
@@ -296,7 +325,11 @@ export function CommerceShell({
               to="/cart"
               prefetch="intent"
               aria-label="Cart"
-              className="relative flex h-11 w-11 items-center justify-center rounded-full border border-slate-900/10 bg-white/55 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-transform duration-200 active:scale-95 sm:h-12 sm:w-12"
+              className={`relative flex h-11 w-11 items-center justify-center rounded-full border shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-transform duration-200 active:scale-95 sm:h-12 sm:w-12 ${
+                pathname.startsWith("/cart") || pathname.startsWith("/checkout")
+                  ? "border-slate-900/25 bg-slate-900 text-white"
+                  : "border-slate-900/10 bg-white/55 text-slate-950"
+              }`}
             >
               <ShoppingCart className="h-5 w-5 sm:h-5.5 sm:w-5.5" strokeWidth={1.9} />
               <span className="absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-950 px-1 text-[10px] font-bold leading-none text-white">
@@ -307,7 +340,11 @@ export function CommerceShell({
               to="/profile"
               prefetch="intent"
               aria-label="Profile"
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-900/10 bg-white/55 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-transform duration-200 active:scale-95 sm:h-12 sm:w-12"
+              className={`flex h-11 w-11 items-center justify-center rounded-full border shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-transform duration-200 active:scale-95 sm:h-12 sm:w-12 ${
+                pathname.startsWith("/profile") || pathname.startsWith("/login") || pathname.startsWith("/register")
+                  ? "border-slate-900/25 bg-slate-900 text-white"
+                  : "border-slate-900/10 bg-white/55 text-slate-950"
+              }`}
             >
               <UserRound className="h-5 w-5 sm:h-5.5 sm:w-5.5" strokeWidth={1.9} />
             </Link>
@@ -315,9 +352,9 @@ export function CommerceShell({
         </div>
       </header>
 
-      <MobileBottomNav pathname={pathname} />
+      {!hideMobileBottomNav && <MobileBottomNav pathname={pathname} visible={showMobileBottomNav} />}
 
-      <div className="flex flex-col flex-1 pb-24 pt-[65px] lg:pb-0 lg:pt-[73px]">
+      <div className={`flex flex-col flex-1 pt-[65px] lg:pt-[73px] ${hideMobileBottomNav ? "pb-0" : "pb-24 lg:pb-0"}`}>
         {title && <PageHero eyebrow={eyebrow} title={title} description={description} />}
         <main className="relative z-10 flex-1">{children}</main>
         <CommerceFooter />
@@ -326,11 +363,13 @@ export function CommerceShell({
   );
 }
 
-function MobileBottomNav({ pathname }) {
+function MobileBottomNav({ pathname, visible = true }) {
   return (
     <nav
       aria-label="Primary mobile navigation"
-      className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(0.55rem+env(safe-area-inset-bottom))] lg:hidden"
+      className={`fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(0.55rem+env(safe-area-inset-bottom))] transition-transform duration-300 lg:hidden ${
+        visible ? "translate-y-0" : "translate-y-[120%]"
+      }`}
     >
       <div className="mx-auto grid w-full max-w-[720px] grid-cols-5 rounded-[1.35rem] border border-white/70 bg-white/86 p-1.5 shadow-[0_18px_60px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
         {bottomNavItems.map((item) => {
@@ -368,9 +407,19 @@ function MobileBottomNav({ pathname }) {
   );
 }
 
-function IconLink({ href, label, children }) {
+function IconLink({ href, label, children, active = false }) {
   return (
-    <Link to={href} prefetch="intent" aria-label={label} title={label} className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-all duration-500 hover:bg-slate-900/5 hover:text-slate-900 lg:dark:text-slate-400 lg:dark:hover:bg-white/10 lg:dark:hover:text-white">
+    <Link
+      to={href}
+      prefetch="intent"
+      aria-label={label}
+      title={label}
+      className={`flex h-10 w-10 items-center justify-center rounded-full transition-all duration-500 ${
+        active
+          ? "bg-slate-900 text-white shadow-[0_12px_28px_rgba(15,23,42,0.18)]"
+          : "text-slate-500 hover:bg-slate-900/5 hover:text-slate-900 lg:dark:text-slate-400 lg:dark:hover:bg-white/10 lg:dark:hover:text-white"
+      }`}
+    >
       {children}
     </Link>
   );
@@ -403,10 +452,10 @@ export function PageHero({ eyebrow, title, description, action }) {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }} className="max-w-5xl">
           <p className="mb-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 sm:mb-7 sm:text-[11px] dark:text-slate-300">{eyebrow}</p>
           {crumbs.length > 1 && <Breadcrumbs items={crumbs} />}
-          <h1 className={`font-medium text-slate-900 dark:text-white ${isHome ? "leading-[0.94] tracking-tighter lg:leading-[0.92] text-4xl sm:text-5xl lg:text-[6.5rem]" : "max-w-4xl text-[2.7rem] leading-[1.04] tracking-[-0.022em] sm:text-5xl sm:leading-[0.98] lg:text-[5.5rem] lg:leading-[0.94]"}`}>
+          <h1 className={`font-medium text-slate-900 dark:text-white ${isHome ? "text-4xl leading-[0.98] sm:text-5xl lg:text-[5.25rem] lg:leading-[0.94]" : "max-w-4xl text-[2.35rem] leading-[1.06] sm:text-[3.2rem] sm:leading-[1] lg:text-[4.35rem] lg:leading-[0.96]"}`}>
             {title}
           </h1>
-          {description && <p className={`mt-5 max-w-3xl font-light leading-relaxed text-slate-500 sm:mt-6 dark:text-slate-400 ${isHome ? "text-base sm:text-lg lg:text-xl" : "text-base sm:text-lg lg:text-[1.45rem]"}`}>{description}</p>}
+          {description && <p className={`mt-5 max-w-3xl font-light leading-relaxed text-slate-500 sm:mt-6 dark:text-slate-400 ${isHome ? "text-base sm:text-lg lg:text-xl" : "text-base sm:text-lg lg:text-[1.18rem]"}`}>{description}</p>}
           {action && <div className="mt-8 flex flex-wrap items-center gap-3 sm:gap-4 lg:mt-16 lg:gap-6">{action}</div>}
         </motion.div>
       </div>
@@ -549,10 +598,10 @@ export function ProductCard({ product }) {
               {product.rating} <Star className="h-3 w-3 fill-current text-amber-400 sm:h-3.5 sm:w-3.5" />
             </span>
           </div>
-          <h3 className="line-clamp-2 text-[1.02rem] font-semibold leading-tight tracking-tight text-slate-900 transition-colors duration-200 group-hover:text-slate-700 sm:text-[1.45rem] md:text-[1.55rem] dark:text-white dark:group-hover:text-slate-200">{product.name}</h3>
-          <p className="mt-1.5 line-clamp-2 min-h-[2.25rem] text-[0.74rem] leading-5 text-slate-600 dark:text-slate-400 sm:mt-2.5 sm:min-h-[3.2rem] sm:text-[0.92rem] sm:leading-relaxed">{product.summary}</p>
+          <h3 className="line-clamp-2 text-[1.02rem] font-semibold leading-tight tracking-tight text-slate-900 transition-colors duration-200 group-hover:text-slate-700 sm:text-[1.16rem] md:text-[1.25rem] dark:text-white dark:group-hover:text-slate-200">{product.name}</h3>
+          <p className="mt-1.5 line-clamp-2 min-h-[2.25rem] text-[0.74rem] leading-5 text-slate-600 dark:text-slate-400 sm:mt-2.5 sm:min-h-[3rem] sm:text-[0.88rem] sm:leading-relaxed">{product.summary}</p>
           <div className="mt-3 flex items-center justify-between sm:mt-6">
-            <span className="text-[0.95rem] font-semibold tracking-tight text-slate-900 dark:text-white sm:text-[1.28rem]">{formatPrice(product.price)}</span>
+            <span className="text-[0.95rem] font-semibold tracking-tight text-slate-900 dark:text-white sm:text-[1.08rem]">{formatPrice(product.price)}</span>
             <span className="inline-flex items-center gap-2 text-[0] font-bold uppercase tracking-widest text-slate-900 transition-colors duration-300 dark:text-white sm:gap-3 sm:text-[11px]">
               <span className="hidden sm:inline">Explore</span>
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/5 transition-colors duration-300 group-hover:bg-slate-900 group-hover:text-white dark:bg-white/10 dark:group-hover:bg-white dark:group-hover:text-slate-900 sm:h-8 sm:w-8">
@@ -1093,9 +1142,16 @@ function CommerceFooter() {
     <footer className="relative z-10 mt-12 border-t border-slate-900/5 py-8 md:mt-24 md:py-20 dark:border-white/5">
       <div className="mx-auto grid w-full max-w-[1400px] grid-cols-2 gap-x-6 gap-y-8 px-5 md:grid-cols-[1.4fr_1fr_1fr_1fr] md:px-8 lg:px-12">
         <div className="col-span-2 md:col-span-1">
-          <p className="text-xl font-bold tracking-tighter text-slate-900 md:text-2xl dark:text-white">
-            Simpcraftt
-          </p>
+          <Link to="/" className="inline-flex items-center gap-2">
+            <img
+              src="/images/favicon.svg"
+              alt="INFIBOLT logo"
+              className="h-7 w-7 shrink-0 object-contain dark:invert"
+            />
+            <span className="text-sm font-bold uppercase tracking-[0.22em] text-slate-900 dark:text-white">
+              INFIBOLT
+            </span>
+          </Link>
 
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-500 md:mt-6 dark:text-slate-400">
             A premium product ecosystem moving from marketplace-first
@@ -1136,7 +1192,7 @@ function CommerceFooter() {
       
       <div className="mx-auto mt-8 flex w-full max-w-[1400px] flex-col items-start justify-between gap-2 border-t border-slate-900/5 px-5 pt-5 md:mt-20 md:flex-row md:items-center md:gap-4 md:px-8 md:pt-8 lg:px-12 dark:border-white/5">
         <p className="text-xs text-slate-500 md:text-sm dark:text-slate-400">
-          &copy; {new Date().getFullYear()} Simpcraftt. All rights reserved.
+          &copy; {new Date().getFullYear()} INFIBOLT. All rights reserved.
         </p>
         <p className="text-xs text-slate-500 md:text-sm dark:text-slate-400">
           Developed by <a href="https://www.softsitesolution.in" target="_blank" rel="noopener noreferrer" className="font-medium text-slate-900 hover:underline dark:text-white transition-colors">SoftSiteSolutions</a>

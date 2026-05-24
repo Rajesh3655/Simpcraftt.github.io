@@ -69,7 +69,7 @@ export default function CollectionsPage() {
                     <p className="mb-2 text-[8px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300 sm:mb-3 sm:text-[10px] sm:tracking-[0.2em]">
                       {collection.productSlugs.length} products
                     </p>
-                    <h3 className={`text-sm font-bold leading-tight tracking-tight transition-colors duration-300 sm:text-xl md:text-2xl ${
+                    <h3 className={`text-sm font-bold leading-tight tracking-tight transition-colors duration-300 sm:text-lg md:text-xl ${
                       isActive ? "text-slate-900 dark:text-white" : "text-slate-700 dark:text-slate-400"
                     }`}>
                       {collection.name}
@@ -92,8 +92,8 @@ export default function CollectionsPage() {
               >
                 <div className="mb-8 flex flex-col items-start justify-between gap-6 md:mb-12 md:flex-row md:items-end rounded-2xl bg-slate-50 p-6 md:p-8 dark:bg-white/[0.02] border border-black/5 dark:border-white/10">
                   <div className="max-w-2xl">
-                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight md:text-3xl text-slate-900 dark:text-white">{activeCollection.name}</h2>
-                    <p className="mt-4 text-lg leading-relaxed text-slate-600 dark:text-slate-400">{activeCollection.description}</p>
+                    <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-white">{activeCollection.name}</h2>
+                    <p className="mt-4 text-base leading-relaxed text-slate-600 dark:text-slate-400">{activeCollection.description}</p>
                   </div>
                 </div>
                 

@@ -34,7 +34,9 @@ import type { Route } from './+types/root';
 
 export const links = () => [
   { rel: 'manifest', href: '/manifest.webmanifest' },
-  { rel: 'apple-touch-icon', href: '/src/__create/favicon.png' },
+  { rel: 'icon', href: '/images/favicon-tab.ico' },
+  { rel: 'icon', type: 'image/png', href: '/images/favicon-tab.png' },
+  { rel: 'apple-touch-icon', href: '/images/apple-touch-icon.png' },
 ];
 
 if (globalThis.window && globalThis.window !== undefined) {
@@ -407,17 +409,17 @@ export function Layout({ children }: { children: ReactNode }) {
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index,follow,max-image-preview:large" />
-        <meta property="og:site_name" content="Simpcraftt" />
+        <meta property="og:site_name" content="INFIBOLT" />
         <meta name="theme-color" content="#f4f1ea" />
         <meta name="color-scheme" content="light" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-title" content="Simpcraftt" />
+        <meta name="apple-mobile-web-app-title" content="INFIBOLT" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <Meta />
         <Links />
         <script type="module" src="/src/__create/dev-error-overlay.js"></script>
-        <link rel="icon" href="/src/__create/favicon.png" />
+        <link rel="icon" href="/images/favicon-tab.ico" />
         <link rel="preconnect" href="https://ka-p.fontawesome.com" crossOrigin="anonymous" />
         <link rel="stylesheet" href="https://ka-p.fontawesome.com/releases/v6.3.0/css/pro.min.css?token=2c15cc0cc7" crossOrigin="anonymous" />
         {LoadFontsSSR ? <LoadFontsSSR /> : null}
@@ -429,6 +431,8 @@ export function Layout({ children }: { children: ReactNode }) {
           toastOptions={{
             classNames: {
               toast: 'bg-white dark:bg-[#18191B] border border-slate-900/10 dark:border-[#2C2D2F] text-slate-900 dark:text-[#F2F2F2] rounded-[12px] shadow-[0_4px_12px_rgba(0,0,0,0.1)] px-4 py-3 font-sans',
+              success: 'bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-[14px] shadow-[0_14px_34px_rgba(16,185,129,0.16)] px-4 py-3 font-sans',
+              error: 'bg-red-50 border border-red-200 text-red-900 rounded-[14px] shadow-[0_14px_34px_rgba(239,68,68,0.14)] px-4 py-3 font-sans',
               title: 'text-[13px] font-medium',
               description: 'text-xs text-slate-500 dark:text-slate-400 mt-1',
             }

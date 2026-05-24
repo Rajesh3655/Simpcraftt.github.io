@@ -35,7 +35,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import { useState } from "react";
-import { Link, NavLink } from "react-router";
+import { Link, NavLink, useLocation } from "react-router";
 import ThemeToggle from "../../ThemeToggle";
 import {
   activityLog,
@@ -53,23 +53,17 @@ import {
 import { categories, collections, formatPrice, products } from "../../data/commerce";
 
 const adminNav = [
-  { label: "Overview", href: "/admin", icon: LayoutDashboard },
-  { label: "Products", href: "/admin/products", icon: Package },
-  { label: "Marketplace", href: "/admin/marketplace", icon: LinkIcon },
-  { label: "Warranty", href: "/admin/warranty", icon: ShieldCheck },
-  { label: "Customers", href: "/admin/customers", icon: Users },
-  { label: "Ecommerce", href: "/admin/ecommerce", icon: ShoppingCart },
-  { label: "CMS", href: "/admin/cms", icon: FileText },
-  { label: "Support", href: "/admin/support", icon: TicketCheck },
-  { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
-  { label: "Media", href: "/admin/media", icon: Images },
-  { label: "Settings", href: "/admin/settings", icon: Settings },
+  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { label: "Manage Products", href: "/admin/products", icon: Package },
+  { label: "Warranty Claims", href: "/admin/warranty", icon: ShieldCheck },
+  { label: "Complaints", href: "/admin/support", icon: MessageSquare },
+  { label: "Future Orders", href: "/admin/ecommerce", icon: ShoppingCart },
 ];
 
 const sectionCopy = {
   products: {
-    title: "Product Management",
-    description: "Create and govern launch products, categories, collections, stock states, SEO fields, image galleries, variants, specs, tags, and visibility.",
+    title: "Manage Products",
+    description: "Add, edit, feature, hide, and prepare launch products with the fields needed for the storefront.",
   },
   marketplace: {
     title: "Marketplace Redirects",
@@ -77,23 +71,23 @@ const sectionCopy = {
   },
   warranty: {
     title: "Warranty Claims",
-    description: "Review registrations, verify serial numbers, inspect invoices, approve or reject claims, and update claim statuses.",
+    description: "Review warranty requests, verify invoices and serial numbers, and update claim status.",
   },
   customers: {
     title: "Customer Management",
     description: "View users, profiles, registered products, activity, support tickets, newsletter status, and future order history.",
   },
   ecommerce: {
-    title: "Future Ecommerce Control",
-    description: "Prepare orders, payments, coupons, shipping, inventory, cart analytics, and checkout activation without enabling public direct purchase yet.",
+    title: "Future Cart & Orders",
+    description: "Cart, checkout, payments, and order handling are planned for later. Keep this area disabled until ecommerce launches.",
   },
   cms: {
     title: "Content Management",
     description: "Manage homepage banners, hero copy, product highlights, testimonials, FAQs, collections, promotions, social links, and footer content.",
   },
   support: {
-    title: "Support & Communication",
-    description: "Manage contact enquiries, support tickets, WhatsApp handoff, announcements, newsletters, and customer updates.",
+    title: "Complaints & Support",
+    description: "Handle customer complaints, support tickets, reply notes, and escalation status.",
   },
   analytics: {
     title: "Analytics",
@@ -111,6 +105,11 @@ const sectionCopy = {
 
 export function AdminShell({ title = "Admin Command Center", description, children }) {
   const [navOpen, setNavOpen] = useState(false);
+  const { pathname } = useLocation();
+  const isAdminDashboard = pathname === "/admin";
+  const primaryAction = isAdminDashboard
+    ? { href: "/admin/products", label: "Manage Products" }
+    : { href: "/admin", label: "Dashboard" };
 
   return (
     <div className="min-h-screen font-sans selection:bg-slate-900 selection:text-white dark:selection:bg-white dark:selection:text-slate-900 bg-[#F8F7F5] dark:bg-[#0A0A0C]">
@@ -121,10 +120,14 @@ export function AdminShell({ title = "Admin Command Center", description, childr
 
       <aside className={`fixed inset-y-0 left-0 z-50 w-72 border-r border-slate-900/5 bg-white/80 p-4 backdrop-blur-2xl transition-transform lg:translate-x-0 dark:border-white/5 dark:bg-black/50 ${navOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex items-center justify-between gap-3 px-2 py-3">
-          <Link to="/admin" className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-[15px] font-medium text-white dark:bg-white dark:text-slate-900">S</span>
+          <Link to="/admin" className="flex items-center gap-2">
+            <img
+              src="/images/favicon.svg"
+              alt="INFIBOLT logo"
+              className="h-6 w-6 shrink-0 object-contain dark:invert"
+            />
             <span>
-              <span className="block text-sm font-semibold tracking-wide text-slate-900 dark:text-white">Simpcraftt</span>
+              <span className="block text-[13px] font-bold uppercase leading-none tracking-[0.22em] text-slate-900 dark:text-white">INFIBOLT</span>
               <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Admin OS</span>
             </span>
           </Link>
@@ -164,7 +167,7 @@ export function AdminShell({ title = "Admin Command Center", description, childr
             </button>
             <label className="hidden min-h-[44px] w-full max-w-lg items-center gap-3 rounded-full border border-slate-900/10 bg-white/50 px-5 md:flex dark:border-white/10 dark:bg-white/5">
               <Search className="h-4 w-4 text-slate-400" />
-              <input className="w-full bg-transparent text-sm font-medium focus:outline-none dark:text-white placeholder:text-slate-400" placeholder="Search products, claims, customers, tickets" />
+              <input className="w-full bg-transparent text-sm font-medium focus:outline-none dark:text-white placeholder:text-slate-400" placeholder="Search products, warranty claims, complaints" />
             </label>
             <div className="ml-auto flex items-center gap-3">
               <button className="relative rounded-full border border-slate-900/10 bg-white/50 p-3 dark:border-white/10 dark:bg-white/5 dark:text-white" aria-label="Admin alerts">
@@ -184,13 +187,13 @@ export function AdminShell({ title = "Admin Command Center", description, childr
           <div className="mx-auto w-full max-w-[1400px]">
             <div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end">
               <div>
-                <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-300">Enterprise Management</p>
-                <h1 className="text-3xl sm:text-4xl font-bold tracking-tighter text-slate-900 sm:text-5xl dark:text-white">{title}</h1>
-                {description && <p className="mt-5 max-w-3xl text-lg font-light leading-relaxed text-slate-600 dark:text-slate-400">{description}</p>}
+                <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-300">Admin Operations</p>
+                <h1 className="text-3xl font-bold leading-tight text-slate-900 sm:text-[2.5rem] lg:text-[3rem] dark:text-white">{title}</h1>
+                {description && <p className="mt-5 max-w-3xl text-base font-light leading-relaxed text-slate-600 dark:text-slate-400 sm:text-lg">{description}</p>}
               </div>
               <div className="flex gap-3">
                 <AdminButton href="/products">View Storefront</AdminButton>
-                <AdminButton href="/admin/settings" tone="solid">Feature Toggles</AdminButton>
+                <AdminButton href={primaryAction.href} tone="solid">{primaryAction.label}</AdminButton>
               </div>
             </div>
             {children}
@@ -203,24 +206,32 @@ export function AdminShell({ title = "Admin Command Center", description, childr
 
 export function AdminOverview() {
   return (
-    <AdminShell description="A central operations layer for products, marketplace redirects, warranty claims, customer engagement, future ecommerce controls, CMS, support, analytics, media, and settings.">
+    <AdminShell
+      title="Admin Dashboard"
+      description="A focused control panel for products, warranty claims, customer complaints, and future cart/order readiness."
+    >
       <div className="space-y-8">
         <MetricGrid />
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <AdminPanel title="Marketplace Performance" icon={Globe}>
-            <AdminTable columns={["Product", "Preferred", "Clicks", "Enabled"]} rows={marketplaceRows.slice(0, 5).map((row) => [row.product, row.preferred, row.clicks, row.enabled ? "Active" : "Off"])} />
+          <AdminPanel title="Product Queue" icon={Package}>
+            <AdminTable columns={["Product", "Category", "Status", "Price"]} rows={products.slice(0, 5).map((product) => [product.name, getProductCategoryName(product.category), product.status, formatPrice(product.price)])} />
           </AdminPanel>
-          <AdminPanel title="Recent Activity" icon={Activity}>
-            <div className="grid gap-3">
-              {activityLog.map((item) => (
-                <div key={item} className="rounded-xl border border-slate-900/5 bg-white/40 p-4 text-sm font-medium text-slate-600 dark:border-white/5 dark:bg-white/[0.02] dark:text-slate-400">{item}</div>
-              ))}
-            </div>
+          <AdminPanel title="Warranty Queue" icon={ShieldCheck}>
+            <AdminTable columns={["Claim", "Customer", "Product", "Status"]} rows={warrantyClaims.map((claim) => [claim.id, claim.customer, claim.product, claim.status])} />
           </AdminPanel>
         </div>
-        <AdminPanel title="Future Commerce Readiness" icon={ShoppingCart}>
-          <ModuleGrid modules={ecommerceModules} />
-        </AdminPanel>
+        <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
+          <AdminPanel title="Complaints" icon={MessageSquare}>
+            <AdminTable columns={["Ticket", "Customer", "Topic", "Status"]} rows={supportTickets.map((ticket) => [ticket.id, ticket.customer, ticket.topic, ticket.status])} />
+          </AdminPanel>
+          <AdminPanel title="Future Cart & Orders" icon={ShoppingCart}>
+            <ComingSoonBanner
+              title="Cart and order handling will be enabled later"
+              description="Checkout, payments, customer orders, invoices, refunds, and shipping controls are intentionally paused until direct ecommerce launches."
+              icon={ShoppingCart}
+            />
+          </AdminPanel>
+        </div>
       </div>
     </AdminShell>
   );
@@ -248,6 +259,10 @@ function AdminSectionContent({ section }) {
   if (section === "media") return <MediaAdmin />;
   if (section === "settings") return <SettingsAdmin />;
   return <ProductsAdmin />;
+}
+
+function getProductCategoryName(categoryId) {
+  return categories.find((category) => category.id === categoryId)?.name ?? "Product";
 }
 
 function MetricGrid() {
@@ -281,52 +296,19 @@ function ProductsAdmin() {
   return (
     <div className="space-y-6">
       <ComingSoonBanner
-        title="Admin product management coming soon"
-        description="Create, edit, delete, upload, feature, and visibility workflows are designed below and ready for persistence once backend product APIs are connected."
+        title="Product management backend coming soon"
+        description="The admin UX is prepared for product creation and updates. Data is still static until product APIs and storage are connected."
         icon={Package}
       />
-      <AdminToolbar primary="Add Product" secondary="Import CSV" />
-      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <AdminPanel title="Add / Edit Product" icon={Pencil}>
-          <div className="grid gap-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <AdminInput label="Product name" placeholder="Aura Audio Pro" />
-              <AdminInput label="SKU / slug" placeholder="aura-audio-pro" />
-            </div>
-            <div className="grid gap-4 md:grid-cols-3">
-              <AdminInput label="Price" placeholder="7999" />
-              <AdminSelect label="Category" options={categories.map((category) => category.name)} />
-              <AdminSelect label="Stock status" options={["Coming Soon", "Preview", "Prototype", "Live"]} />
-            </div>
-            <AdminInput label="Short summary" placeholder="Premium product summary for cards and detail pages" />
-            <div className="grid gap-4 md:grid-cols-2">
-              <ToggleRow icon={CheckCircle2} title="Featured product" description="Highlight in homepage and collection modules." enabled />
-              <ToggleRow icon={Eye} title="Visible on storefront" description="Publish product to public catalogue." enabled />
-            </div>
-            <button type="button" disabled className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white opacity-60 dark:bg-white dark:text-slate-900">
-              <Plus className="h-4 w-4" />
-              Save Product Soon
-            </button>
-          </div>
-        </AdminPanel>
-        <AdminPanel title="Upload Placeholders" icon={UploadCloud}>
-          <div className="grid gap-4">
-            {["Hero image", "Gallery images", "Specification PDF"].map((item) => (
-              <div key={item} className="flex min-h-[92px] items-center justify-between gap-4 rounded-xl border border-dashed border-slate-900/15 bg-white/40 p-4 dark:border-white/15 dark:bg-white/[0.02]">
-                <div>
-                  <p className="font-medium text-slate-900 dark:text-white">{item}</p>
-                  <p className="mt-1 text-sm text-slate-500">Storage connection pending.</p>
-                </div>
-                <UploadCloud className="h-5 w-5 text-slate-400" />
-              </div>
-            ))}
-          </div>
-        </AdminPanel>
+      <div className="grid gap-4 md:grid-cols-3">
+        <SimpleAdminCard icon={Plus} title="Add product" description="Create product name, price, category, images, and status." status="Coming Soon" />
+        <SimpleAdminCard icon={Pencil} title="Edit details" description="Update content, feature state, visibility, and marketplace copy." status="Coming Soon" />
+        <SimpleAdminCard icon={UploadCloud} title="Upload media" description="Add hero images, galleries, and specification files." status="Coming Soon" />
       </div>
       <AdminPanel title="Product Catalogue" icon={Package}>
         <AdminTable columns={["Product", "Category", "Price", "Stock Status", "Badge"]} rows={rows} />
       </AdminPanel>
-      <AdminPanel title="Product Row Actions" icon={Trash2}>
+      <AdminPanel title="Quick Product Actions" icon={Pencil}>
         <div className="grid gap-3">
           {products.slice(0, 3).map((product, index) => (
             <div key={product.slug} className="grid gap-3 rounded-xl border border-slate-900/5 bg-white/40 p-4 dark:border-white/5 dark:bg-white/[0.02] md:grid-cols-[1fr_auto] md:items-center">
@@ -343,17 +325,6 @@ function ProductsAdmin() {
           ))}
         </div>
       </AdminPanel>
-      <div className="grid gap-6 lg:grid-cols-3">
-        <AdminPanel title="Categories" icon={Boxes}>
-          <AdminList items={categories.map((category) => `${category.name} - ${category.description}`)} />
-        </AdminPanel>
-        <AdminPanel title="Collections" icon={Package}>
-          <AdminList items={collections.map((collection) => `${collection.name} - ${collection.productSlugs.length} products`)} />
-        </AdminPanel>
-        <AdminPanel title="SEO & Product Fields" icon={FileText}>
-          <AdminList items={["Meta title", "Meta description", "Open Graph image", "Structured data", "Product tags"]} />
-        </AdminPanel>
-      </div>
     </div>
   );
 }
@@ -380,11 +351,15 @@ function WarrantyAdmin() {
   return (
     <div className="space-y-6">
       <ComingSoonBanner
-        title="Warranty management system coming soon"
-        description="Claims, invoice previews, serial checks, customer details, and approval states are staged for backend verification."
+        title="Warranty handling backend coming soon"
+        description="Use this screen as the planned workflow for reviewing claims. Invoice upload, serial checks, and status updates will become active after backend connection."
         icon={ShieldCheck}
       />
-      <AdminToolbar primary="Review Claim" secondary="Verify Serial" />
+      <div className="grid gap-4 md:grid-cols-3">
+        <SimpleAdminCard icon={FileSearch} title="Review claim" description="Open claim details, customer info, product, and submitted invoice." status="Planned" />
+        <SimpleAdminCard icon={ShieldCheck} title="Verify serial" description="Check product serial number and invoice before approval." status="Planned" />
+        <SimpleAdminCard icon={TicketCheck} title="Update status" description="Move claim through pending, approved, rejected, or resolved." status="Planned" />
+      </div>
       <AdminPanel title="Warranty Claim Queue" icon={ShieldCheck}>
         <AdminTable columns={["Claim ID", "Customer", "Product", "Serial", "Status", "Priority"]} rows={warrantyClaims.map((claim) => [claim.id, claim.customer, claim.product, claim.serial, claim.status, claim.priority])} />
       </AdminPanel>
@@ -420,9 +395,6 @@ function WarrantyAdmin() {
           </div>
         </AdminPanel>
       </div>
-      <AdminPanel title="Claim Workflow" icon={TicketCheck}>
-        <AdminList items={["Invoice upload review", "Serial number verification", "Approve/reject claim", "Send customer update", "Generate claim ticket history"]} />
-      </AdminPanel>
     </div>
   );
 }
@@ -449,18 +421,25 @@ function CustomersAdmin() {
 function EcommerceAdmin() {
   return (
     <div className="space-y-6">
-      <AdminToolbar primary="Review Roadmap" secondary="Export Schema" />
-      <AdminPanel title="Future Ecommerce Modules" icon={ShoppingCart}>
-        <ModuleGrid modules={ecommerceModules} />
-      </AdminPanel>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <AdminPanel title="Payment Architecture" icon={WalletCards}>
-          <AdminList items={["Gateway status disabled", "Payment reconciliation collection prepared", "Refund flow placeholder", "Invoice generation placeholder"]} />
-        </AdminPanel>
-        <AdminPanel title="Order Operations" icon={CreditCard}>
-          <AdminList items={["Cart analytics", "Order lifecycle", "Coupon eligibility", "Shipping partners", "Inventory reservations"]} />
-        </AdminPanel>
+      <ComingSoonBanner
+        title="Future Cart & Orders coming soon"
+        description="This section is intentionally not implemented yet. It is reserved for cart, direct booking, checkout, payments, and order management when INFIBOLT starts direct ecommerce."
+        icon={ShoppingCart}
+      />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <SimpleAdminCard icon={ShoppingCart} title="Cart management" description="View carts, abandoned carts, reserved stock, and customer cart activity." status="Coming Soon" />
+        <SimpleAdminCard icon={CreditCard} title="Direct booking" description="Allow customers to book directly from INFIBOLT instead of marketplace-only purchase." status="Coming Soon" />
+        <SimpleAdminCard icon={WalletCards} title="Checkout & payment" description="Manage payment gateway, coupons, invoices, refunds, and payment status." status="Coming Soon" />
+        <SimpleAdminCard icon={Package} title="Order management" description="Track orders, shipping, delivery, cancellation, and customer order history." status="Coming Soon" />
       </div>
+      <AdminPanel title="Launch Roadmap" icon={ShoppingCart}>
+        <AdminList items={[
+          "Phase 1: Enable cart and direct booking UI",
+          "Phase 2: Connect payment gateway and invoice generation",
+          "Phase 3: Add order lifecycle, shipping, refunds, and cancellation",
+          "Phase 4: Show customer order history in account dashboard",
+        ]} />
+      </AdminPanel>
     </div>
   );
 }
@@ -483,11 +462,15 @@ function SupportAdmin() {
   return (
     <div className="space-y-6">
       <ComingSoonBanner
-        title="Support ticket system coming soon"
-        description="Complaint intake, ticket history, status badges, and admin reply workflows are visually ready and waiting for ticket APIs."
+        title="Complaint handling backend coming soon"
+        description="The complaint queue and reply layout are prepared. Ticket intake, reply sending, and status updates will become active after support APIs are connected."
         icon={MessageSquare}
       />
-      <AdminToolbar primary="Reply" secondary="Send Announcement" />
+      <div className="grid gap-4 md:grid-cols-3">
+        <SimpleAdminCard icon={TicketCheck} title="New complaint" description="See incoming support requests from email, forms, and WhatsApp." status="Planned" />
+        <SimpleAdminCard icon={MessageSquare} title="Reply customer" description="Send support replies and keep conversation history." status="Planned" />
+        <SimpleAdminCard icon={UserRound} title="Escalate case" description="Move warranty or product complaints to the right team." status="Planned" />
+      </div>
       <AdminPanel title="Support Tickets" icon={TicketCheck}>
         <AdminTable columns={["Ticket", "Customer", "Topic", "Status", "Channel"]} rows={supportTickets.map((ticket) => [ticket.id, ticket.customer, ticket.topic, ticket.status, ticket.channel])} />
       </AdminPanel>
@@ -518,13 +501,6 @@ function SupportAdmin() {
           </div>
         </AdminPanel>
       </div>
-      <AdminPanel title="Communication Controls" icon={Bell}>
-        <ModuleGrid modules={[
-          { name: "Email notifications", description: "Warranty, support, and announcement emails.", enabled: true },
-          { name: "WhatsApp handoff", description: "Customer support handoff and quick response.", enabled: true },
-          { name: "Newsletter campaigns", description: "Subscriber segments and launch updates.", enabled: true },
-        ]} />
-      </AdminPanel>
     </div>
   );
 }
@@ -598,6 +574,21 @@ function SettingsAdmin() {
           <AdminList items={databaseCollections} />
         </AdminPanel>
       </div>
+    </div>
+  );
+}
+
+function SimpleAdminCard({ icon: Icon, title, description, status }) {
+  return (
+    <div className="rounded-2xl border border-slate-900/5 bg-white/50 p-5 shadow-sm dark:border-white/5 dark:bg-white/[0.02]">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <span className="rounded-xl bg-slate-900/5 p-2 text-slate-900 dark:bg-white/10 dark:text-white">
+          <Icon className="h-5 w-5" />
+        </span>
+        <StatusPill status={status} />
+      </div>
+      <h3 className="text-base font-semibold text-slate-900 dark:text-white">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">{description}</p>
     </div>
   );
 }

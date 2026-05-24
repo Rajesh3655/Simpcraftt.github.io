@@ -12,9 +12,9 @@ const queryClient = new QueryClient({
 });
 
 export const metadata = {
-  title: "Simpcraftt – Coming Soon",
+  title: "INFIBOLT – Coming Soon",
   description:
-    "Simpcraftt is launching soon. A new era of premium futuristic electronics and lifestyle products. Get notified at launch.",
+    "INFIBOLT is launching soon. A new era of premium futuristic electronics and lifestyle products. Get notified at launch.",
 };
 
 export default function RootLayout({ children }) {

@@ -1,20 +1,16 @@
 import { products } from "./commerce";
 
 export const adminUser = {
-  name: "Simpcraftt Admin",
+  name: "INFIBOLT Admin",
   role: "Owner",
   permissions: ["products:write", "claims:write", "customers:read", "settings:write"],
 };
 
 export const adminStats = [
   { label: "Products", value: products.length, trend: "+5 launch SKUs", status: "live" },
-  { label: "Marketplace Clicks", value: "12.4K", trend: "+18% this week", status: "tracking" },
   { label: "Warranty Claims", value: 38, trend: "9 pending review", status: "attention" },
-  { label: "Customers", value: 1248, trend: "+146 this month", status: "growth" },
-  { label: "Subscribers", value: 3421, trend: "+8.2% conversion", status: "growth" },
-  { label: "Support Tickets", value: 26, trend: "6 high priority", status: "attention" },
+  { label: "Complaints", value: 26, trend: "6 high priority", status: "attention" },
   { label: "Future Orders", value: 0, trend: "Checkout disabled", status: "paused" },
-  { label: "Revenue", value: "N/A", trend: "Marketplace phase", status: "paused" },
 ];
 
 export const marketplaceRows = products.map((product, index) => ({
@@ -74,7 +70,7 @@ export const supportTickets = [
 ];
 
 export const ecommerceModules = [
-  { name: "Direct Checkout", description: "Native cart-to-order flow for Simpcraftt purchases.", enabled: false },
+  { name: "Direct Checkout", description: "Native cart-to-order flow for INFIBOLT purchases.", enabled: false },
   { name: "Payment Gateway", description: "Card, UPI, wallet, and payment reconciliation layer.", enabled: false },
   { name: "Orders", description: "Order lifecycle, invoices, refunds, cancellations, and tracking.", enabled: false },
   { name: "Coupons", description: "Campaign codes, limits, eligibility, and discount rules.", enabled: false },

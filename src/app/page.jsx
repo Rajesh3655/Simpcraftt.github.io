@@ -15,8 +15,8 @@ import {
 import { categories, products } from "./data/commerce";
 
 const sectionKickerClass = "mb-6 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300";
-const sectionHeadingClass = "luxury-title text-[2.25rem] font-semibold leading-[0.98] tracking-[-0.02em] text-slate-900 sm:text-[3rem] md:text-[3.7rem] lg:text-[4.6rem] dark:text-white";
-const sectionHeadingAccentClass = "mt-1.5 block font-luxury text-[0.9em] italic font-normal tracking-[0.01em] text-slate-500 dark:text-slate-400";
+const sectionHeadingClass = "luxury-title text-[2rem] font-semibold leading-[1.02] text-slate-900 sm:text-[2.65rem] md:text-[3.15rem] lg:text-[3.8rem] dark:text-white";
+const sectionHeadingAccentClass = "mt-1 block font-luxury text-[0.88em] italic font-normal tracking-[0.01em] text-slate-500 dark:text-slate-400";
 
 export default function HomePage() {
   return (
@@ -44,16 +44,16 @@ export default function HomePage() {
             className="relative z-10 flex-1"
           >
             <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-900/50 sm:text-[11px]">
-              Simpcraftt Edition 01 / Audio Object
+              INFIBOLT Edition 01 / Audio Object
             </p>
-            <h1 className="max-w-[8.8ch] text-[3.35rem] font-medium leading-[0.88] tracking-normal text-slate-950 min-[390px]:text-[3.9rem] sm:text-[5.75rem]">
+            <h1 className="max-w-[8.8ch] text-[3rem] font-medium leading-[0.94] tracking-normal text-slate-950 min-[390px]:text-[3.35rem] sm:text-[4.5rem]">
               Where Sound
               <br />
               <span className="font-luxury italic font-normal text-slate-900/58">Meets</span>
               <br />
               Stillness.
             </h1>
-            <p className="mt-5 w-full max-w-[20.5rem] text-[0.95rem] font-light leading-[1.7] text-slate-700 sm:mt-7 sm:max-w-[34rem] sm:text-lg">
+            <p className="mt-5 w-full max-w-[20.5rem] text-[0.95rem] font-light leading-[1.65] text-slate-700 sm:mt-7 sm:max-w-[34rem] sm:text-[1.05rem]">
               Premium electronics engineered for deep focus: cinematic sound, refined materials, and modern rituals shaped around silence.
             </p>
           </motion.div>
@@ -126,11 +126,11 @@ export default function HomePage() {
             <MotionStagger className="space-y-0">
               <MotionStaggerItem>
                 <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-900/52 lg:dark:text-white/78 sm:mb-6 sm:text-[11px] sm:tracking-[0.24em]">
-                  Simpcraftt Edition 01 / Audio Object
+                  INFIBOLT Edition 01 / Audio Object
                 </p>
               </MotionStaggerItem>
               <MotionStaggerItem>
-                <h1 className="max-w-[9.8ch] text-[8.6rem] font-medium leading-[0.9] tracking-normal text-slate-950 lg:dark:text-white">
+                <h1 className="max-w-[9.6ch] text-[5.7rem] font-medium leading-[0.94] tracking-normal text-slate-950 xl:text-[6.35rem] 2xl:text-[6.8rem] lg:dark:text-white">
                   Where Sound
                   <br />
                   <span className="font-luxury italic font-normal text-slate-900/62 lg:dark:text-white/86">Meets</span>
@@ -139,7 +139,7 @@ export default function HomePage() {
                 </h1>
               </MotionStaggerItem>
               <MotionStaggerItem>
-                <p className="mt-7 max-w-[31rem] text-lg font-light leading-[1.75] text-slate-800/78 lg:dark:text-white/88">
+                <p className="mt-7 max-w-[31rem] text-[1.05rem] font-light leading-[1.7] text-slate-800/78 lg:dark:text-white/88">
                   Premium electronics engineered for deep focus: cinematic sound, refined materials, and modern rituals shaped around silence.
                 </p>
               </MotionStaggerItem>
@@ -256,7 +256,7 @@ export default function HomePage() {
                 built for ownership.
               </span>
             </h2>
-            <p className="mt-8 max-w-md text-lg font-light leading-relaxed text-slate-600 dark:text-slate-400">
+            <p className="mt-8 max-w-md text-base font-light leading-relaxed text-slate-600 dark:text-slate-400">
               Our ecosystem bridges the gap between third-party marketplaces and direct relationships. Register your product, claim warranty, and prepare for a unified checkout experience.
             </p>
             <div className="mt-12">
@@ -274,7 +274,7 @@ export default function HomePage() {
               <div key={title} className="group border-t border-slate-200 pt-8 dark:border-white/10">
                 <Icon className="mb-6 h-6 w-6 text-slate-400 dark:text-slate-400" />
                 <h3 className="text-lg font-semibold tracking-tight text-slate-900 md:text-xl dark:text-white">{title}</h3>
-                <p className="mt-4 text-base font-light leading-relaxed text-slate-500 dark:text-slate-400">{text}</p>
+                <p className="mt-4 text-[0.95rem] font-light leading-relaxed text-slate-500 dark:text-slate-400">{text}</p>
               </div>
             ))}
           </div>
@@ -315,7 +315,7 @@ export default function HomePage() {
                 answered.
               </span>
             </h2>
-            <p className="mt-8 max-w-sm text-lg font-light leading-relaxed text-slate-600 dark:text-slate-400">
+            <p className="mt-8 max-w-sm text-base font-light leading-relaxed text-slate-600 dark:text-slate-400">
               We believe in transparent policies, clear warranty terms, and accessible customer care.
             </p>
             <div className="mt-12">

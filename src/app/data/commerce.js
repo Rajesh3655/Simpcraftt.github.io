@@ -64,7 +64,7 @@ export const products = [
     marketplace: {
       amazon: "https://www.amazon.in/",
       flipkart: "https://www.flipkart.com/",
-      custom: "https://simpcraftt.com/",
+      custom: "https://infibolt.com/",
     },
   },
   {
@@ -98,7 +98,7 @@ export const products = [
     marketplace: {
       amazon: "https://www.amazon.in/",
       flipkart: "https://www.flipkart.com/",
-      custom: "https://simpcraftt.com/",
+      custom: "https://infibolt.com/",
     },
   },
   {
@@ -132,7 +132,7 @@ export const products = [
     marketplace: {
       amazon: "https://www.amazon.in/",
       flipkart: "https://www.flipkart.com/",
-      custom: "https://simpcraftt.com/",
+      custom: "https://infibolt.com/",
     },
   },
   {
@@ -165,7 +165,7 @@ export const products = [
     marketplace: {
       amazon: "https://www.amazon.in/",
       flipkart: "https://www.flipkart.com/",
-      custom: "https://simpcraftt.com/",
+      custom: "https://infibolt.com/",
     },
   },
   {
@@ -198,14 +198,14 @@ export const products = [
     marketplace: {
       amazon: "https://www.amazon.in/",
       flipkart: "https://www.flipkart.com/",
-      custom: "https://simpcraftt.com/",
+      custom: "https://infibolt.com/",
     },
   },
 ];
 
 export const faqs = [
   {
-    question: "Can I buy directly from Simpcraftt?",
+    question: "Can I buy directly from INFIBOLT?",
     answer: "Direct checkout is architecturally ready but disabled for launch. Current purchases route to marketplace partners.",
   },
   {

@@ -21,7 +21,7 @@ export default function NotFoundPage({
         <p className="text-sm uppercase tracking-[0.3em] text-blue-400 mb-4">404</p>
         <h1 className="text-4xl font-black mb-4">Page not found</h1>
         <p className="text-gray-400 mb-8">
-          {missingPath ? `/${missingPath}` : 'This page'} is not available on Simpcraftt.
+          {missingPath ? `/${missingPath}` : 'This page'} is not available on INFIBOLT.
         </p>
         <button
           type="button"

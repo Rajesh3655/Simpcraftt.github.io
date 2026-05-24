@@ -12,7 +12,7 @@ export async function POST(request) {
       success: true,
       token: createSessionToken(),
       user: {
-        name: "Simpcraftt Admin",
+        name: "INFIBOLT Admin",
         email,
         role: "Owner",
         permissions: ["products:write", "claims:write", "customers:read", "settings:write"],
