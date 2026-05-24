@@ -30,7 +30,7 @@ export default function HomePage() {
           <img
             src="/images/Litemood-hero.png"
             alt="Aura Audio Pro in a bright luxury studio setting"
-            fetchpriority="high"
+            fetchPriority="high"
             loading="eager"
             decoding="async"
             className="absolute inset-0 h-full w-full scale-[1.03] object-cover object-[63%_50%] sm:object-[68%_50%]"
@@ -98,7 +98,7 @@ export default function HomePage() {
           <img
             src="/images/Litemood-hero.png"
             alt="Aura Audio Pro in a bright luxury studio setting"
-            fetchpriority="high"
+            fetchPriority="high"
             loading="eager"
             decoding="async"
             className="absolute inset-0 h-full w-full object-cover object-[68%_50%] opacity-100 transition-opacity duration-500 lg:dark:opacity-0"

@@ -35,6 +35,19 @@
     @apply outline-none;
   }
 
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   :where(input, textarea, select, button, a):focus-visible {
     box-shadow: 0 0 0 2px var(--lux-bg), 0 0 0 4px var(--lux-focus);
     border-radius: 0.5rem;
@@ -55,6 +68,7 @@
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
+    overscroll-behavior-x: none;
     font-family: "General Sans", "Satoshi", sans-serif;
     letter-spacing: 0;
     background: var(--lux-bg);
@@ -260,6 +274,7 @@
     background: var(--lux-surface-strong);
     border-radius: var(--lux-radius);
     box-shadow: var(--lux-shadow);
+    overflow-wrap: anywhere;
   }
 
   .premium-control {
@@ -267,6 +282,63 @@
     background: rgba(255, 255, 255, 0.74);
     border-radius: 0.95rem;
     transition: border-color 240ms var(--lux-ease), background-color 240ms var(--lux-ease), box-shadow 240ms var(--lux-ease);
+  }
+
+  .account-card {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(17, 24, 39, 0.085);
+    border-radius: 1.25rem;
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.62)),
+      radial-gradient(circle at 12% 0%, rgba(212, 198, 175, 0.18), transparent 36%);
+    box-shadow: 0 24px 70px rgba(17, 24, 39, 0.075);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+  }
+
+  .account-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  }
+
+  .account-input {
+    border-color: rgba(17, 24, 39, 0.085);
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.64);
+  }
+
+  .account-input:focus-within {
+    border-color: rgba(17, 24, 39, 0.2);
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 14px 34px rgba(17, 24, 39, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  }
+
+  .account-input-error {
+    border-color: rgba(190, 18, 60, 0.24);
+    background: rgba(255, 241, 242, 0.72);
+  }
+
+  .account-button {
+    box-shadow: 0 16px 38px rgba(17, 24, 39, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+
+  .account-button:hover {
+    background: #1b2230;
+    box-shadow: 0 20px 46px rgba(17, 24, 39, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  }
+
+  [data-sonner-toaster] [data-sonner-toast] {
+    border: 1px solid rgba(17, 24, 39, 0.08) !important;
+    border-radius: 1rem !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 18px 54px rgba(17, 24, 39, 0.1) !important;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
   }
 
   .premium-control:focus-within {
@@ -307,10 +379,27 @@
   }
 
   @media (min-width: 768px) {
+    input,
+    textarea,
+    select {
+      font-size: 0.875rem;
+    }
+
     .hero-title {
       letter-spacing: -0.024em;
       line-height: 0.9;
       max-width: 13ch;
+    }
+  }
+
+  @media (max-width: 767px) {
+    :root {
+      --lux-shadow: 0 12px 34px rgba(17, 24, 39, 0.07);
+      --lux-radius: 0.875rem;
+    }
+
+    .premium-button:hover {
+      transform: none;
     }
   }
 
@@ -392,7 +481,8 @@
   }
 
   .animate-float,
-  .custom-pulse {
+  .custom-pulse,
+  .premium-shimmer::after {
     animation: none !important;
   }
 

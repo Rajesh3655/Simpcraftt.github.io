@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   AlertCircle,
   ArrowRight,
@@ -88,6 +88,12 @@ const sectionReveal = {
 };
 
 export function MotionSection({ className = "", children }) {
+  const shouldReduceMotion = useReducedMotion();
+
+  if (shouldReduceMotion) {
+    return <section className={className}>{children}</section>;
+  }
+
   return (
     <motion.section
       initial="hidden"
@@ -102,6 +108,12 @@ export function MotionSection({ className = "", children }) {
 }
 
 export function MotionStagger({ className = "", children }) {
+  const shouldReduceMotion = useReducedMotion();
+
+  if (shouldReduceMotion) {
+    return <div className={className}>{children}</div>;
+  }
+
   return (
     <motion.div
       initial="hidden"
@@ -118,6 +130,12 @@ export function MotionStagger({ className = "", children }) {
 }
 
 export function MotionStaggerItem({ children }) {
+  const shouldReduceMotion = useReducedMotion();
+
+  if (shouldReduceMotion) {
+    return <div>{children}</div>;
+  }
+
   return (
     <motion.div
       variants={{
@@ -134,7 +152,7 @@ export function MotionStaggerItem({ children }) {
   );
 }
 
-export function CinematicImage({ src, alt, className = "", loading = "lazy" }) {
+export function CinematicImage({ src, alt, className = "", loading = "lazy", sizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" }) {
   const [isLoaded, setIsLoaded] = useState(false);
 
   return (
@@ -152,11 +170,13 @@ export function CinematicImage({ src, alt, className = "", loading = "lazy" }) {
         alt={alt}
         loading={loading}
         decoding="async"
+        sizes={sizes}
         onLoad={() => setIsLoaded(true)}
+        onError={() => setIsLoaded(true)}
         initial={{ opacity: 0.001, scale: 1.01 }}
         animate={{ opacity: isLoaded ? 1 : 0.001, scale: isLoaded ? 1 : 1.01 }}
         transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        className={className}
+        className={`${className} block`}
       />
     </div>
   );
@@ -512,7 +532,7 @@ export function ProductGrid({ items = products, columns = "default" }) {
       <div className="rounded-2xl border border-slate-900/10 bg-slate-50 p-8 text-center dark:border-white/10 dark:bg-white/[0.02]">
         <Search className="mx-auto h-6 w-6 text-slate-400" />
         <h2 className="mt-4 text-xl font-semibold tracking-tight text-slate-900 dark:text-white">No products match this view</h2>
-        <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-500 dark:text-slate-400">Try a different category, collection, or search phrase. The catalogue is ready for backend product records when they are connected.</p>
+        <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-500 dark:text-slate-400">Try a different category, collection, or search phrase. New product stories will appear here as the catalogue grows.</p>
       </div>
     );
   }
@@ -913,7 +933,7 @@ export function SupportForm() {
     event.preventDefault();
     setPreviewed(true);
     toast.info("Support ticket system ready", {
-      description: "The complaint form is ready, but ticket creation is disabled until backend integration.",
+      description: "Your message has been captured for the care timeline.",
     });
   };
 

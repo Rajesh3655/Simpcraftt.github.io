@@ -28,7 +28,7 @@ import {
   UserRound,
   WalletCards,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router";
 import ThemeToggle from "../components/ThemeToggle";
 import { AdminProtectedRoute } from "../components/AppStates";
@@ -108,6 +108,23 @@ export function AdminShell({ title = "Admin Command Center", description, childr
     ? { href: "/products", label: "Manage Products" }
     : { href: "/", label: "Dashboard" };
 
+  useEffect(() => {
+    setNavOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!navOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setNavOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [navOpen]);
+
   return (
     <AdminProtectedRoute>
     <div className="min-h-screen bg-[#F7F5F0] font-sans selection:bg-slate-900 selection:text-white dark:bg-[#090A0D] dark:selection:bg-white dark:selection:text-slate-900">
@@ -116,7 +133,16 @@ export function AdminShell({ title = "Admin Command Center", description, childr
         <div className="absolute inset-0 opacity-[0.025] dark:opacity-[0.04] mix-blend-overlay" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }} />
       </div>
 
-      <aside className={`fixed inset-y-0 left-0 z-50 w-72 border-r border-slate-900/5 bg-white/84 p-4 shadow-[12px_0_40px_rgba(17,24,39,0.04)] backdrop-blur-2xl transition-transform duration-300 lg:translate-x-0 dark:border-white/5 dark:bg-black/44 ${navOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      {navOpen && (
+        <button
+          type="button"
+          aria-label="Close admin navigation overlay"
+          className="fixed inset-0 z-40 bg-slate-950/28 backdrop-blur-[2px] lg:hidden"
+          onClick={() => setNavOpen(false)}
+        />
+      )}
+
+      <aside className={`fixed inset-y-0 left-0 z-50 flex w-[min(18rem,calc(100vw-1.25rem))] flex-col border-r border-slate-900/5 bg-white/92 p-4 shadow-[12px_0_40px_rgba(17,24,39,0.08)] backdrop-blur-2xl transition-transform duration-300 lg:w-72 lg:translate-x-0 dark:border-white/5 dark:bg-black/82 ${navOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex items-center justify-between gap-3 px-2 py-3">
           <Link to="/" className="flex items-center gap-2">
             <img
@@ -134,19 +160,19 @@ export function AdminShell({ title = "Admin Command Center", description, childr
           </button>
         </div>
 
-        <nav className="mt-6 grid gap-1">
+        <nav className="mt-6 grid gap-1 overflow-y-auto pb-28">
           {adminNav.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink key={item.href} to={item.href} className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-900/5 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white">
-                <Icon className="h-4 w-4" />
-                {item.label}
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="truncate">{item.label}</span>
               </NavLink>
             );
           })}
         </nav>
 
-        <div className="absolute inset-x-4 bottom-4 rounded-2xl border border-slate-900/10 bg-white/50 p-4 dark:border-white/10 dark:bg-white/5">
+        <div className="mt-auto rounded-2xl border border-slate-900/10 bg-white/50 p-4 dark:border-white/10 dark:bg-white/5">
           <div className="flex items-center gap-3">
             <LockKeyhole className="h-5 w-5 text-slate-900 dark:text-white" />
             <div>
@@ -158,7 +184,7 @@ export function AdminShell({ title = "Admin Command Center", description, childr
       </aside>
 
       <div className="relative z-10 lg:pl-72">
-        <header className="fixed left-0 right-0 top-0 z-40 border-b border-slate-900/5 bg-[#F7F5F0]/84 px-6 py-4 backdrop-blur-2xl dark:border-white/5 dark:bg-[#090A0D]/84 md:px-8 lg:left-72 lg:px-12">
+        <header className="fixed left-0 right-0 top-0 z-40 border-b border-slate-900/5 bg-[#F7F5F0]/90 px-4 py-3 backdrop-blur-2xl dark:border-white/5 dark:bg-[#090A0D]/90 md:px-8 md:py-4 lg:left-72 lg:px-12">
           <div className="flex items-center justify-between gap-4">
             <button className="rounded-xl border border-slate-900/10 p-3 text-slate-500 lg:hidden dark:border-white/10 dark:text-slate-400" onClick={() => setNavOpen(true)} aria-label="Open admin navigation">
               <LayoutDashboard className="h-5 w-5" />
@@ -181,7 +207,7 @@ export function AdminShell({ title = "Admin Command Center", description, childr
           </div>
         </header>
 
-        <main className="px-6 pb-10 pt-24 md:px-8 lg:px-12">
+        <main className="px-4 pb-10 pt-24 sm:px-6 md:px-8 lg:px-12">
           <div className="mx-auto w-full max-w-[1400px]">
             <div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end">
               <div>
@@ -189,7 +215,7 @@ export function AdminShell({ title = "Admin Command Center", description, childr
                 <h1 className="text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-[2.5rem] lg:text-[3rem] dark:text-white">{title}</h1>
                 {description && <p className="mt-5 max-w-3xl text-base font-light leading-relaxed text-slate-600 dark:text-slate-400 sm:text-lg">{description}</p>}
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <AdminButton href="/products">Product Workspace</AdminButton>
                 <AdminButton href={primaryAction.href} tone="solid">{primaryAction.label}</AdminButton>
               </div>
@@ -686,7 +712,7 @@ function DetailBlock({ label, value }) {
 
 function AdminTable({ columns, rows }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="-mx-2 overflow-x-auto overscroll-x-contain px-2 [scrollbar-gutter:stable]">
       <table className="w-full min-w-[720px] border-separate border-spacing-y-2 text-left text-sm">
         <thead>
           <tr>

@@ -59,7 +59,7 @@ export function ProtectedRoute({ children }) {
         <div className="max-w-md rounded-2xl border border-slate-900/10 bg-white/80 p-8 text-center shadow-sm">
           <LockKeyhole className="mx-auto h-8 w-8 text-slate-900" />
           <h1 className="mt-5 text-2xl font-semibold tracking-tight text-slate-900">Login required</h1>
-          <p className="mt-3 text-sm leading-7 text-slate-500">This area is protected by secure backend session validation.</p>
+          <p className="mt-3 text-sm leading-7 text-slate-500">Sign in to open your private INFIBOLT ownership space.</p>
           <Link to="/login" className="mt-6 inline-flex min-h-[44px] items-center justify-center rounded-full bg-slate-900 px-6 text-xs font-bold uppercase tracking-[0.16em] text-white">
             Login
           </Link>

@@ -47,7 +47,13 @@ export default function App() {
   return (
     <>
       {outlet}
-      <Toaster richColors position="top-right" />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3600,
+          className: "premium-toast",
+        }}
+      />
     </>
   );
 }

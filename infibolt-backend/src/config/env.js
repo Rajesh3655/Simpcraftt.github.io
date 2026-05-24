@@ -2,6 +2,7 @@ import "dotenv/config";
 
 const production = process.env.NODE_ENV === "production";
 const fallbackSecret = "replace-this-local-development-secret-only";
+const placeholderPattern = /replace|change-me|<|user:password|password@cluster/i;
 const defaultCorsOrigins = [
   process.env.FRONTEND_ORIGIN || "http://localhost:3000",
   process.env.ADMIN_ORIGIN || "http://localhost:3001",
@@ -47,10 +48,28 @@ export const env = {
   customerPassword: process.env.SEED_CUSTOMER_PASSWORD || "Customer@12345",
 };
 
-if (production && env.jwtAccessSecret.includes("replace-this")) {
-  throw new Error("Production JWT_ACCESS_SECRET must be configured.");
+function requireProductionValue(name, value, { url = false, secret = false } = {}) {
+  if (!production) return;
+  if (!value || placeholderPattern.test(String(value))) {
+    throw new Error(`Production ${name} must be configured.`);
+  }
+  if (url && !String(value).startsWith("https://")) {
+    throw new Error(`Production ${name} must use HTTPS.`);
+  }
+  if (secret && String(value).length < 48) {
+    throw new Error(`Production ${name} must be at least 48 characters.`);
+  }
 }
 
 if (production && env.uploadProvider !== "local") {
   throw new Error("Only UPLOAD_PROVIDER=local is enabled in this deployment.");
 }
+
+requireProductionValue("API_ORIGIN", env.apiOrigin, { url: true });
+requireProductionValue("FRONTEND_ORIGIN", env.frontendOrigin, { url: true });
+requireProductionValue("ADMIN_ORIGIN", env.adminOrigin, { url: true });
+requireProductionValue("MONGODB_URI", env.mongoUri);
+requireProductionValue("JWT_ACCESS_SECRET", env.jwtAccessSecret, { secret: true });
+requireProductionValue("JWT_REFRESH_SECRET", env.jwtRefreshSecret, { secret: true });
+requireProductionValue("COOKIE_SECRET", env.cookieSecret, { secret: true });
+requireProductionValue("SEED_ADMIN_PASSWORD", env.adminPassword);

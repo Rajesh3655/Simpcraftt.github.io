@@ -70,10 +70,14 @@ const staticUploadOptions = {
   dotfiles: "deny",
   fallthrough: false,
   index: false,
+  maxAge: env.isProduction ? "7d" : 0,
   setHeaders(res) {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Content-Security-Policy", "default-src 'none'; img-src 'self'; object-src 'none'; sandbox");
     res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    if (env.isProduction) {
+      res.setHeader("Cache-Control", "private, max-age=604800");
+    }
   },
 };
 

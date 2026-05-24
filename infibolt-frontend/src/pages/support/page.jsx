@@ -3,6 +3,15 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CommerceShell, FAQList, MotionSection, SecondaryButton } from "../../components/commerce/CommerceLayout";
 import { EmptyState, PageLoader } from "../../components/AppStates";
+import {
+  AccountAtmosphere,
+  AccountCard,
+  PremiumButton,
+  PremiumField,
+  PremiumNotice,
+  PremiumSelect,
+  SoftStatus,
+} from "../../components/customer/PremiumAccount";
 import { useAppStore } from "../../store/appStore";
 
 export default function SupportPage() {
@@ -19,47 +28,83 @@ export default function SupportPage() {
   const submit = async (event) => {
     event.preventDefault();
     setSubmitting(true);
-    const ticket = await createSupportTicket(form);
-    setSubmitting(false);
-    setForm({ name: "", email: "", topic: "Warranty", message: "" });
-    toast.success("Support ticket created", { description: `${ticket.id} is now in your support queue.` });
+    try {
+      const ticket = await createSupportTicket(form);
+      setForm({ name: "", email: "", topic: "Warranty", message: "" });
+      toast.success("Care request created", { description: `${ticket.id} is now in your support timeline.` });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <CommerceShell eyebrow="Support" title="Care is part of the product." description="Create a support case, keep the conversation organized, and track every update from one calm workspace.">
-      <MotionSection className="pb-10 md:pb-16 lg:pb-20">
-        <div className="mx-auto grid w-full max-w-[1400px] gap-6 px-6 md:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:px-12">
-          <form onSubmit={submit} className="premium-surface grid gap-5 p-6">
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Create support ticket</h2>
-            <Field label="Full name" value={form.name} onChange={(name) => setForm((current) => ({ ...current, name }))} required />
-            <Field label="Email" type="email" value={form.email} onChange={(email) => setForm((current) => ({ ...current, email }))} required />
-            <label className="grid gap-2"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Topic</span><select value={form.topic} onChange={(event) => setForm((current) => ({ ...current, topic: event.target.value }))} className="premium-control min-h-[48px] px-4 text-sm font-medium"><option>Warranty</option><option>Marketplace purchase</option><option>Product information</option><option>Partnership</option></select></label>
-            <Field label="Message" value={form.message} onChange={(message) => setForm((current) => ({ ...current, message }))} textarea required />
-            <button disabled={submitting} className="premium-button inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-slate-950 px-6 text-xs font-bold uppercase tracking-[0.15em] text-white shadow-[0_14px_34px_rgba(17,24,39,0.16)] disabled:opacity-60"><Send className="h-4 w-4" />{submitting ? "Submitting..." : "Submit ticket"}</button>
-          </form>
-          <div className="space-y-5">
-            <div className="premium-surface p-6">
-              <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Your ticket queue</h2>
-              <div className="mt-5 grid gap-3">
-                {status === "loading" && <PageLoader label="Loading tickets" />}
-                {status === "error" && <EmptyState title="Ticket queue unavailable" description={error} />}
-                {status === "success" && tickets.length === 0 && <EmptyState title="No tickets yet" description="Create your first support request and it will appear here." />}
-                {tickets.map((ticket) => <div key={ticket.id} className="rounded-xl border border-slate-900/10 bg-white p-4"><div className="flex items-center justify-between gap-3"><p className="font-semibold text-slate-900">{ticket.id}</p><span className="rounded-full bg-amber-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-700">{ticket.status}</span></div><p className="mt-2 text-sm text-slate-500">{ticket.topic || ticket.message}</p></div>)}
+    <CommerceShell
+      eyebrow="Support"
+      title="Care is part of the product."
+      description="A calmer way to ask for help, keep context, and follow every update."
+    >
+      <AccountAtmosphere>
+        <MotionSection className="px-5 pb-16 sm:px-6 md:px-8 md:pb-20">
+          <div className="mx-auto grid w-full max-w-[1180px] gap-5 lg:grid-cols-[0.92fr_1.08fr]">
+            <AccountCard className="p-5 sm:p-7">
+              <div className="mb-6">
+                <SoftStatus>Care request</SoftStatus>
+                <h2 className="mt-4 text-2xl font-semibold tracking-normal text-slate-950">Tell us what happened.</h2>
+                <p className="mt-2 text-sm font-light leading-7 text-slate-600">Share the product, purchase context, and what you need. We will keep the thread attached to your account.</p>
               </div>
+              <form onSubmit={submit} className="grid gap-4">
+                <PremiumField label="Full name" value={form.name} onChange={(name) => setForm((current) => ({ ...current, name }))} required />
+                <PremiumField label="Email" type="email" value={form.email} onChange={(email) => setForm((current) => ({ ...current, email }))} required />
+                <PremiumSelect label="Topic" value={form.topic} onChange={(topic) => setForm((current) => ({ ...current, topic }))} options={["Warranty", "Marketplace purchase", "Product information", "Partnership"]} />
+                <PremiumField label="Message" value={form.message} onChange={(message) => setForm((current) => ({ ...current, message }))} textarea required placeholder="Add order details, serial number, or what you noticed." />
+                <PremiumButton loading={submitting} type="submit">
+                  <Send className="h-4 w-4" />
+                  {submitting ? "Sending..." : "Send request"}
+                </PremiumButton>
+              </form>
+            </AccountCard>
+
+            <div className="space-y-5">
+              <AccountCard className="p-6 sm:p-7">
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <div>
+                    <SoftStatus>Timeline</SoftStatus>
+                    <h2 className="mt-3 text-2xl font-semibold tracking-normal text-slate-950">Support conversations</h2>
+                  </div>
+                  <TicketCheck className="h-5 w-5 text-slate-400" strokeWidth={1.8} />
+                </div>
+                <div className="grid gap-3">
+                  {status === "loading" && <PageLoader label="Opening care timeline" />}
+                  {status === "error" && <EmptyState title="Care timeline unavailable" description={error} />}
+                  {status === "success" && tickets.length === 0 && <EmptyState title="No conversations yet" description="Your requests will appear here as a calm care history." />}
+                  {tickets.map((ticket) => <TicketCard key={ticket.id} ticket={ticket} />)}
+                </div>
+              </AccountCard>
+              <AccountCard className="p-6 sm:p-7">
+                <MessageSquare className="h-5 w-5 text-slate-900" strokeWidth={1.8} />
+                <p className="mt-4 max-w-xl text-sm font-light leading-7 text-slate-600">For urgent purchase help, start a WhatsApp chat with your product serial and marketplace order details ready.</p>
+                <div className="mt-5"><SecondaryButton href="https://wa.me/1234567890" external>Start WhatsApp Chat</SecondaryButton></div>
+              </AccountCard>
+              <PremiumNotice title="Before you send">A serial number, invoice ID, or marketplace order reference helps us resolve the request faster.</PremiumNotice>
             </div>
-            <div className="premium-surface p-6">
-              <MessageSquare className="h-5 w-5 text-slate-900" />
-              <p className="mt-3 text-sm leading-7 text-slate-600">Need fast help? Start WhatsApp with product serial and marketplace order details.</p>
-              <div className="mt-5"><SecondaryButton href="https://wa.me/1234567890" external>Start WhatsApp Chat</SecondaryButton></div>
-            </div>
+          </div>
+          <div className="mx-auto mt-10 w-full max-w-[1180px]">
             <FAQList />
           </div>
-        </div>
-      </MotionSection>
+        </MotionSection>
+      </AccountAtmosphere>
     </CommerceShell>
   );
 }
 
-function Field({ label, value, onChange, type = "text", textarea = false, required }) {
-  return <label className="grid gap-2"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</span>{textarea ? <textarea required={required} value={value} onChange={(event) => onChange(event.target.value)} rows={5} className="premium-control px-4 py-3 text-sm font-medium outline-none" /> : <input required={required} type={type} value={value} onChange={(event) => onChange(event.target.value)} className="premium-control min-h-[48px] px-4 text-sm font-medium outline-none" />}</label>;
+function TicketCard({ ticket }) {
+  return (
+    <div className="rounded-2xl border border-slate-900/8 bg-white/56 p-4 shadow-[0_12px_34px_rgba(17,24,39,0.045)]">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="font-semibold tracking-normal text-slate-950">{ticket.id}</p>
+        <span className="rounded-full border border-amber-700/10 bg-amber-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-800">{ticket.status}</span>
+      </div>
+      <p className="mt-2 text-sm font-light leading-6 text-slate-500">{ticket.topic || ticket.message}</p>
+    </div>
+  );
 }

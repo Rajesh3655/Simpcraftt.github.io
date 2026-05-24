@@ -5,7 +5,8 @@ import { env } from "./config/env.js";
 await connectDatabase();
 
 const server = app.listen(env.port, env.host, () => {
-  console.log(`INFIBOLT API running on http://${env.host}:${env.port}`);
+  const origin = env.isProduction ? env.apiOrigin : `http://${env.host}:${env.port}`;
+  console.log(`INFIBOLT API running on ${origin}`);
 });
 
 const shutdown = async (signal) => {

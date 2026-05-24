@@ -4,7 +4,18 @@ import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { CommerceShell, MotionSection } from "../../../components/commerce/CommerceLayout";
 import { OtpInput } from "../../../components/OtpInput";
+import {
+  AccountAtmosphere,
+  AccountCard,
+  AccountIntro,
+  PremiumButton,
+  PremiumField,
+  PremiumNotice,
+  SoftStatus,
+} from "../../../components/customer/PremiumAccount";
 import { useAppStore } from "../../../store/appStore";
+
+const STRONG_PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=[\]{};':"\\|,.<>/?`~]).{8,}$/;
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -27,12 +38,18 @@ export default function RegisterPage() {
     if (!form.name.trim()) next.name = "Full name is required.";
     if (!/^\S+@\S+\.\S+$/.test(form.email)) next.email = "Enter a valid email address.";
     if (!/^[6-9]\d{9}$/.test(form.phone.replace(/\D/g, ""))) next.phone = "Enter a valid 10 digit mobile number.";
-    if (form.password.length < 8) next.password = "Password must be at least 8 characters.";
-    if (step === "otp" && !/^\d{6}$/.test(form.otp)) next.otp = "Enter the 6 digit OTP.";
+    if (!STRONG_PASSWORD_PATTERN.test(form.password)) next.password = "Use uppercase, lowercase, number, symbol, and 8+ characters.";
+    if (step === "otp" && !/^\d{6}$/.test(form.otp)) next.otp = "Enter the 6 digit code.";
     return next;
   }, [form, step]);
 
   const update = (key) => (value) => setForm((current) => ({ ...current, [key]: value }));
+  const requestPayload = {
+    ...form,
+    name: form.name.trim(),
+    email: form.email.trim().toLowerCase(),
+    phone: form.phone.replace(/\D/g, ""),
+  };
 
   const submit = async (event) => {
     event.preventDefault();
@@ -42,27 +59,27 @@ export default function RegisterPage() {
       if (detailErrors) return;
       setStatus("loading");
       try {
-        const result = await signup(form);
+        const result = await signup(requestPayload);
         setCooldown(result.resendAfterSeconds || 60);
-        setStatus("success");
+        setStatus("idle");
         setStep("otp");
-        toast.success("OTP sent", { description: "Check the backend terminal in local development." });
+        toast.success("Code sent", { description: "Enter the 6 digit code to finish your account." });
       } catch (error) {
         setStatus("idle");
-        toast.error("OTP request failed", { description: error.message });
+        toast.error("We could not send the code", { description: error.message });
       }
       return;
     }
     if (errors.otp) return;
     setStatus("loading");
     try {
-      await verifyOtp(form);
+      await verifyOtp(requestPayload);
       setStatus("success");
-      toast.success("Account created", { description: "Your secure session is active." });
+      toast.success("Account created", { description: "Your ownership space is ready." });
       navigate("/profile");
     } catch (error) {
       setStatus("idle");
-      toast.error("OTP verification failed", { description: error.message });
+      toast.error("Code not accepted", { description: error.message });
     }
   };
 
@@ -70,75 +87,81 @@ export default function RegisterPage() {
     if (cooldown > 0 || status === "loading") return;
     setStatus("loading");
     try {
-      const result = await signup(form);
+      const result = await signup(requestPayload);
       setCooldown(result.resendAfterSeconds || 60);
-      toast.success("OTP resent", { description: "A new code was issued." });
+      toast.success("Code resent", { description: "Use the newest code to continue." });
     } catch (error) {
-      toast.error("Unable to resend OTP", { description: error.message });
+      toast.error("Unable to resend code", { description: error.message });
     } finally {
       setStatus("idle");
     }
   };
 
   return (
-    <CommerceShell eyebrow="Customer Access" title="Create your account." description="Secure signup with single-use OTP verification and a clean account handoff.">
-      <MotionSection className="px-6 pb-16 md:px-8 md:pb-24">
-        <div className="mx-auto grid w-full max-w-[1120px] gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-          <form onSubmit={submit} noValidate className="premium-surface p-5 backdrop-blur dark:bg-white/[0.04] sm:p-8">
-            <div className="mb-6 flex items-center gap-3">
-              <span className={`h-2.5 w-2.5 rounded-full ${step === "details" ? "bg-slate-900 dark:bg-white" : "bg-emerald-500"}`} />
-              <span className={`h-2.5 w-2.5 rounded-full ${step === "otp" ? "bg-slate-900 dark:bg-white" : "bg-slate-300 dark:bg-white/20"}`} />
-            </div>
-            <div className="grid gap-5">
-              <AuthField icon={UserRound} label="Full name" value={form.name} onChange={update("name")} error={touched ? errors.name : ""} placeholder="Rajesh Kumar" />
-              <AuthField icon={Mail} label="Email address" type="email" value={form.email} onChange={update("email")} error={touched ? errors.email : ""} placeholder="you@example.com" />
-              <AuthField icon={Phone} label="Mobile number" inputMode="numeric" value={form.phone} onChange={update("phone")} error={touched ? errors.phone : ""} placeholder="9876543210" />
-              <AuthField icon={Lock} label="Password" type="password" value={form.password} onChange={update("password")} error={touched ? errors.password : ""} placeholder="Minimum 8 characters" />
-              {step === "otp" && (
-                <div className="grid gap-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">OTP code</span>
-                    <span className="text-xs font-medium text-slate-500">{cooldown > 0 ? `${cooldown}s` : "Ready to resend"}</span>
-                  </div>
-                  <OtpInput value={form.otp} onChange={update("otp")} disabled={status === "loading"} error={touched ? errors.otp : ""} />
-                  <button type="button" onClick={resend} disabled={cooldown > 0 || status === "loading"} className="premium-button inline-flex min-h-[40px] items-center justify-center rounded-full border border-slate-900/10 px-4 text-xs font-bold uppercase tracking-[0.14em] text-slate-700 disabled:opacity-50 dark:border-white/10 dark:text-slate-300">
-                    Resend OTP
-                  </button>
+    <CommerceShell
+      eyebrow="Customer Access"
+      title="Create your INFIBOLT ID."
+      description="Start your product ownership space with a calm, one-time verification."
+    >
+      <AccountAtmosphere>
+        <MotionSection className="px-5 pb-16 sm:px-6 md:px-8 md:pb-20">
+          <div className="mx-auto grid w-full max-w-[1000px] gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+            <AccountCard className="p-5 sm:p-7">
+              <div className="mb-6 flex items-center justify-between">
+                <SoftStatus>{step === "otp" ? "Verify" : "Create"}</SoftStatus>
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${step === "details" ? "bg-slate-950" : "bg-emerald-500"}`} />
+                  <span className={`h-2 w-2 rounded-full ${step === "otp" ? "bg-slate-950" : "bg-slate-300"}`} />
                 </div>
-              )}
-              <button disabled={status === "loading"} type="submit" className="premium-button inline-flex min-h-[48px] items-center justify-center rounded-full bg-slate-950 px-6 py-3 text-[11px] font-bold uppercase tracking-[0.15em] text-white shadow-[0_14px_34px_rgba(17,24,39,0.16)] transition hover:bg-slate-800 disabled:opacity-60 dark:bg-white dark:text-slate-900">
-                {status === "loading" ? "Processing..." : step === "otp" ? "Verify OTP" : "Continue to OTP"}
-              </button>
-              <Link to="/auth/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">Already have an account</Link>
-            </div>
-          </form>
+              </div>
+              <form onSubmit={submit} noValidate className="grid gap-4">
+                <PremiumField icon={UserRound} label="Full name" value={form.name} onChange={update("name")} error={touched ? errors.name : ""} placeholder="Rajesh Kumar" />
+                <PremiumField icon={Mail} label="Email address" type="email" value={form.email} onChange={update("email")} error={touched ? errors.email : ""} placeholder="you@example.com" />
+                <PremiumField icon={Phone} label="Mobile number" inputMode="numeric" value={form.phone} onChange={update("phone")} error={touched ? errors.phone : ""} placeholder="9876543210" />
+                <PremiumField
+                  icon={Lock}
+                  label="Password"
+                  type="password"
+                  value={form.password}
+                  onChange={update("password")}
+                  error={touched ? errors.password : ""}
+                  placeholder="Infibolt@123"
+                  helper="Use uppercase, lowercase, number, and symbol."
+                />
+                {step === "otp" && (
+                  <div className="grid gap-3 rounded-2xl border border-slate-900/8 bg-white/48 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Verification code</span>
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500"><Clock3 className="h-3.5 w-3.5" /> {cooldown > 0 ? `${cooldown}s` : "Ready"}</span>
+                    </div>
+                    <OtpInput value={form.otp} onChange={update("otp")} disabled={status === "loading"} error={touched ? errors.otp : ""} />
+                    <button type="button" onClick={resend} disabled={cooldown > 0 || status === "loading"} className="premium-button inline-flex min-h-[42px] items-center justify-center rounded-full border border-slate-900/10 bg-white/58 px-4 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700 disabled:opacity-50">
+                      Resend code
+                    </button>
+                  </div>
+                )}
+                <PremiumButton loading={status === "loading"} type="submit">
+                  {status === "loading" ? "Preparing..." : step === "otp" ? "Complete account" : "Continue"}
+                </PremiumButton>
+                <Link to="/auth/login" className="text-sm font-medium text-slate-500 transition hover:text-slate-950">Already have an account</Link>
+              </form>
+            </AccountCard>
 
-          <aside className="premium-surface p-6 dark:bg-white/[0.03] sm:p-8">
-            <CheckCircle2 className="h-7 w-7 text-slate-900 dark:text-white" />
-            <h2 className="mt-6 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Production auth UX</h2>
-            <div className="mt-6 grid gap-3 text-sm text-slate-600 dark:text-slate-400">
-              <div className="rounded-xl border border-slate-900/10 bg-white/60 p-4 dark:border-white/10 dark:bg-white/[0.03]">Clean validation before secure requests</div>
-              <div className="rounded-xl border border-slate-900/10 bg-white/60 p-4 dark:border-white/10 dark:bg-white/[0.03]">Single-use OTP, secure session cookies</div>
-              <div className="rounded-xl border border-slate-900/10 bg-white/60 p-4 dark:border-white/10 dark:bg-white/[0.03]">Success/error toasts and protected route handoff</div>
-              <p className="flex items-center gap-2 pt-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"><Clock3 className="h-4 w-4" /> Local provider logs OTP server-side</p>
-            </div>
-          </aside>
-        </div>
-      </MotionSection>
+            <AccountCard className="p-6 sm:p-8">
+              <AccountIntro
+                icon={CheckCircle2}
+                eyebrow="Ownership begins here"
+                title="Built for care after purchase."
+                description="Your account becomes a quiet home for devices, warranty records, support conversations, and future direct orders."
+              />
+              <div className="mt-7 grid gap-3">
+                <PremiumNotice title="One-time verification">A short code confirms the account before your profile is created.</PremiumNotice>
+                <PremiumNotice title="Designed for long-term ownership">Warranty, support, and product records stay connected to your INFIBOLT ID.</PremiumNotice>
+              </div>
+            </AccountCard>
+          </div>
+        </MotionSection>
+      </AccountAtmosphere>
     </CommerceShell>
-  );
-}
-
-function AuthField({ icon: Icon, label, type = "text", value, onChange, error, placeholder, inputMode, helper }) {
-  return (
-    <label className="grid gap-2">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">{label}</span>
-      <span className={`premium-control flex items-center gap-3 px-4 py-3 dark:bg-white/[0.03] ${error ? "border-red-400" : "dark:border-white/10"}`}>
-        {Icon && <Icon className="h-4 w-4 text-slate-400" />}
-        <input type={type} inputMode={inputMode} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="w-full bg-transparent text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none dark:text-white" />
-      </span>
-      {helper && <span className="text-xs font-medium text-slate-500">{helper}</span>}
-      {error && <span className="text-xs font-medium text-red-600 dark:text-red-300">{error}</span>}
-    </label>
   );
 }

@@ -54,13 +54,13 @@ export function OtpInput({ value, onChange, disabled = false, error }) {
               setDigit(index, event.clipboardData.getData("text"));
             }}
             onKeyDown={onKeyDown(index)}
-            className={`aspect-square min-h-[48px] rounded-2xl border bg-white text-center text-lg font-bold tracking-normal text-slate-900 outline-none transition focus:border-slate-900 focus:ring-4 focus:ring-slate-900/10 disabled:opacity-60 dark:bg-white/[0.04] dark:text-white dark:focus:border-white ${
-              error ? "border-red-400" : "border-slate-900/10 dark:border-white/10"
+            className={`aspect-square min-h-[48px] rounded-2xl border bg-white/72 text-center text-lg font-semibold tracking-normal text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] outline-none transition duration-200 focus:border-slate-900/22 focus:bg-white focus:ring-4 focus:ring-slate-900/[0.055] disabled:opacity-60 dark:bg-white/[0.04] dark:text-white dark:focus:border-white ${
+              error ? "border-rose-500/35 bg-rose-50/70" : "border-slate-900/10 dark:border-white/10"
             }`}
           />
         ))}
       </div>
-      {error && <span className="text-xs font-medium text-red-600 dark:text-red-300">{error}</span>}
+      {error && <span className="text-xs font-medium text-rose-700 dark:text-rose-300">{error}</span>}
     </div>
   );
 }

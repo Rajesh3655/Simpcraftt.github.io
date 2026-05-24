@@ -53,6 +53,7 @@ NODE_ENV=production
 AUTH_URL=https://app.infibolt.com
 AUTH_SECRET=<random secret>
 VITE_API_URL=https://api.infibolt.com/api/v1
+VITE_UPLOAD_URL=https://api.infibolt.com/uploads
 VITE_USE_MOCK_API=false
 VITE_SENTRY_DSN=<optional>
 ```
@@ -71,6 +72,7 @@ NODE_ENV=production
 AUTH_URL=https://admin.infibolt.com
 AUTH_SECRET=<random secret>
 VITE_API_URL=https://api.infibolt.com/api/v1
+VITE_UPLOAD_URL=https://api.infibolt.com/uploads
 VITE_USE_MOCK_API=false
 VITE_SENTRY_DSN=<optional>
 ```
@@ -87,3 +89,4 @@ VITE_SENTRY_DSN=<optional>
 - Admin warranty status update.
 - Admin support reply.
 - Local product, warranty, and support uploads.
+- Customer/admin mobile drawer, bottom navigation, OTP, and horizontally scrollable admin tables.

@@ -35,6 +35,19 @@
     @apply outline-none;
   }
 
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   :where(input, textarea, select, button, a):focus-visible {
     box-shadow: 0 0 0 2px var(--lux-bg), 0 0 0 4px var(--lux-focus);
     border-radius: 0.5rem;
@@ -55,6 +68,7 @@
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
+    overscroll-behavior-x: none;
     font-family: "General Sans", "Satoshi", sans-serif;
     letter-spacing: 0;
     background: var(--lux-bg);
@@ -260,6 +274,7 @@
     background: var(--lux-surface-strong);
     border-radius: var(--lux-radius);
     box-shadow: var(--lux-shadow);
+    overflow-wrap: anywhere;
   }
 
   .premium-control {
@@ -307,10 +322,27 @@
   }
 
   @media (min-width: 768px) {
+    input,
+    textarea,
+    select {
+      font-size: 0.875rem;
+    }
+
     .hero-title {
       letter-spacing: -0.024em;
       line-height: 0.9;
       max-width: 13ch;
+    }
+  }
+
+  @media (max-width: 767px) {
+    :root {
+      --lux-shadow: 0 12px 34px rgba(17, 24, 39, 0.07);
+      --lux-radius: 0.875rem;
+    }
+
+    .premium-button:hover {
+      transform: none;
     }
   }
 
@@ -392,7 +424,8 @@
   }
 
   .animate-float,
-  .custom-pulse {
+  .custom-pulse,
+  .premium-shimmer::after {
     animation: none !important;
   }
 

@@ -5,10 +5,10 @@ export const authService = {
     return request.post("/auth/login", credentials);
   },
   signup(payload) {
-    return request.post("/auth/signup", payload);
+    return request.post("/auth/signup", payload, { skipGlobalErrorToast: true });
   },
   async verifyOtp(payload) {
-    return request.post("/auth/verify-otp", payload);
+    return request.post("/auth/verify-otp", payload, { skipGlobalErrorToast: true });
   },
   forgotPassword(payload) {
     return request.post("/auth/forgot-password", payload);

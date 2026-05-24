@@ -23,7 +23,7 @@ export const useAppStore = create((set, get) => ({
   support: { tickets: [], status: "idle", error: null },
   warranty: { claims: [], status: "idle", error: null },
   notifications: [
-    { id: 1, title: "Warranty profile ready", body: "Your product care dashboard is ready for backend sync.", read: false },
+    { id: 1, title: "Care profile ready", body: "Your product ownership space is ready for your first device.", read: false },
   ],
   cart: { items: [], status: "empty" },
   wishlist: { items: [], status: "empty" },

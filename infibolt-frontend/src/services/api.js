@@ -34,14 +34,18 @@ api.interceptors.response.use(
   (error) => {
     if (error.__mockResponse) return Promise.resolve(error.response.data);
     const status = error.response?.status;
-    const message = error.response?.data?.message || error.message || "Something went wrong.";
-    if (status === 401) {
-      toast.error("Session expired", { description: "Please login again." });
-    } else if (status === 403 && message.includes("CSRF")) {
-      csrfToken = null;
-      toast.error("Security check failed", { description: "Please retry the action." });
-    } else {
-      toast.error("Request failed", { description: message });
+    const details = error.response?.data?.details;
+    const validationMessage = Array.isArray(details) ? details.map((detail) => detail.msg).filter(Boolean).join(" ") : "";
+    const message = validationMessage || error.response?.data?.message || error.message || "Something went wrong.";
+    if (!error.config?.skipGlobalErrorToast) {
+      if (status === 401) {
+        toast.error("Please sign in again", { description: "Your account pause expired for safety." });
+      } else if (status === 403 && message.includes("CSRF")) {
+        csrfToken = null;
+        toast.error("Please try once more", { description: "We refreshed the page safety check." });
+      } else {
+        toast.error("We could not complete that", { description: message });
+      }
     }
     return Promise.reject({ status, message });
   }
