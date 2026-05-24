@@ -1,5 +1,0 @@
-workers_dev = true
-compatibility_date = "2026-05-12"
-main = "./build/server/index.js"
-assets = { directory = "./build/client/" }
-name = 'devinfibolt'
