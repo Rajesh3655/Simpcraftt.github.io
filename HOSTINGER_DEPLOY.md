@@ -37,4 +37,4 @@ If Hostinger provides its own `PORT`, use Hostinger's value instead of `3000`.
 6. Restart the Node.js app after changing environment variables.
 7. Open `https://app.infibolt.com`.
 
-`npm run build` only creates the production files. The app is served only after `npm start` runs `app.js`.
+`npm run build` creates the Node server at `build/server/index.js`. The app is served after `npm start` runs `app.js`, which loads that compiled server.

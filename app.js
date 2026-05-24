@@ -1,1 +1,1 @@
-import './server.cjs';
+import './build/server/index.js';
