@@ -17,7 +17,10 @@ import { createHttpError } from "../utils/httpError.js";
 await ensureUploadDirectories();
 
 const productUpload = createUploadMiddleware("products", { imagesOnly: true, maxSize: limits.products });
-const warrantyUpload = createUploadMiddleware("warranty", { maxSize: limits.warranty });
+const warrantyUpload = createUploadMiddleware("warranty", { documentsOnly: true, maxSize: limits.warranty });
+const warrantyDraftUpload = createUploadMiddleware("temp", { documentsOnly: true, maxSize: limits.warranty });
+const policyUpload = createUploadMiddleware("policies", { documentsOnly: true, maxSize: limits.policies });
+const rmaUpload = createUploadMiddleware("rma", { imagesOnly: true, maxSize: limits.rma });
 const supportUpload = createUploadMiddleware("support", { maxSize: limits.support });
 const tempUpload = createUploadMiddleware("temp", { maxSize: limits.temp });
 
@@ -38,6 +41,21 @@ uploadRoutes.post("/products", uploadLimiter, requireAuth(["admin", "super-admin
 uploadRoutes.post("/warranty", uploadLimiter, requireAuth(["customer", "admin", "super-admin"]), warrantyUpload.single("file"), asyncHandler(async (req, res) => {
   if (!req.file) throw createHttpError(400, "Warranty invoice is required.");
   res.status(201).json(buildUploadResponse(req, "warranty"));
+}));
+
+uploadRoutes.post("/warranty-draft", uploadLimiter, requireAuth(["customer", "admin", "super-admin"]), warrantyDraftUpload.single("file"), asyncHandler(async (req, res) => {
+  if (!req.file) throw createHttpError(400, "Warranty invoice is required.");
+  res.status(201).json(buildUploadResponse(req, "temp"));
+}));
+
+uploadRoutes.post("/policies", uploadLimiter, requireAuth(["admin", "super-admin"]), policyUpload.single("file"), asyncHandler(async (req, res) => {
+  if (!req.file) throw createHttpError(400, "Warranty policy PDF is required.");
+  res.status(201).json(buildUploadResponse(req, "policies"));
+}));
+
+uploadRoutes.post("/rma", uploadLimiter, requireAuth(["customer", "admin", "super-admin"]), rmaUpload.single("file"), asyncHandler(async (req, res) => {
+  if (!req.file) throw createHttpError(400, "Product photo is required.");
+  res.status(201).json(buildUploadResponse(req, "rma"));
 }));
 
 uploadRoutes.post("/support", uploadLimiter, requireAuth(["customer", "admin", "super-admin"]), supportUpload.single("file"), asyncHandler(async (req, res) => {

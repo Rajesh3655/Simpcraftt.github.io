@@ -17,11 +17,12 @@ import { errorHandler, notFound } from "./middleware/errorHandler.js";
 import { apiLimiter } from "./middleware/rateLimit.js";
 import { requestId } from "./middleware/requestId.js";
 import { sanitizePayload } from "./middleware/sanitize.js";
-import { ensureUploadDirectories, folderPath } from "./services/uploadService.js";
+import { cleanupTempUploads, ensureUploadDirectories, folderPath } from "./services/uploadService.js";
 
 const app = express();
 initializeMonitoring();
 await ensureUploadDirectories();
+await cleanupTempUploads().catch(() => {});
 
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
@@ -66,24 +67,51 @@ app.use(hpp());
 app.use(sanitizePayload);
 app.use(apiLimiter);
 
-const staticUploadOptions = {
-  dotfiles: "deny",
-  fallthrough: false,
-  index: false,
-  maxAge: env.isProduction ? "7d" : 0,
-  setHeaders(res) {
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("Content-Security-Policy", "default-src 'none'; img-src 'self'; object-src 'none'; sandbox");
-    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-    if (env.isProduction) {
-      res.setHeader("Cache-Control", "private, max-age=604800");
-    }
-  },
-};
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/") || req.path.startsWith("/uploads/warranty") || req.path.startsWith("/uploads/rma") || req.path.startsWith("/uploads/support")) {
+    res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
+  }
+  next();
+});
 
-app.use("/uploads/products", express.static(folderPath("products"), staticUploadOptions));
+function createStaticUploadOptions({ allowPdfFrame = false, publicCache = false } = {}) {
+  return {
+    dotfiles: "deny",
+    fallthrough: false,
+    index: false,
+    maxAge: env.isProduction ? "7d" : 0,
+    setHeaders(res, filePath) {
+      const isPdf = /\.pdf$/i.test(filePath);
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+      if (allowPdfFrame && isPdf) {
+        res.removeHeader("X-Frame-Options");
+        res.setHeader("Content-Disposition", "inline");
+        res.setHeader("Content-Security-Policy", `default-src 'self' blob: data:; img-src 'self' blob: data:; object-src 'self' blob:; frame-ancestors 'self' ${env.frontendOrigin} ${env.adminOrigin}`);
+      } else {
+        res.setHeader("Content-Security-Policy", "default-src 'none'; img-src 'self'; object-src 'none'; sandbox");
+      }
+      if (env.isProduction) {
+        res.setHeader("Cache-Control", publicCache ? "public, max-age=604800, immutable" : "private, max-age=604800");
+      }
+    },
+  };
+}
+
+const staticUploadOptions = createStaticUploadOptions();
+const productUploadOptions = createStaticUploadOptions({ publicCache: true });
+const policyUploadOptions = createStaticUploadOptions({ allowPdfFrame: true, publicCache: true });
+
+app.use("/uploads/products", express.static(folderPath("products"), productUploadOptions));
+app.use("/uploads/policies", express.static(folderPath("policies"), policyUploadOptions));
 app.use("/uploads/warranty", requireAuth(["customer", "admin", "super-admin"]), express.static(folderPath("warranty"), staticUploadOptions));
+app.use("/uploads/rma", requireAuth(["customer", "admin", "super-admin"]), express.static(folderPath("rma"), staticUploadOptions));
 app.use("/uploads/support", requireAuth(["customer", "admin", "super-admin"]), express.static(folderPath("support"), staticUploadOptions));
+
+const tempUploadCleanupTimer = setInterval(() => {
+  cleanupTempUploads().catch(() => {});
+}, 60 * 60 * 1000);
+tempUploadCleanupTimer.unref?.();
 
 app.use("/health", healthRoutes);
 app.use("/api/v1/health", healthRoutes);

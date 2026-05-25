@@ -2,12 +2,12 @@ import { motion, useReducedMotion } from "framer-motion";
 import {
   AlertCircle,
   ArrowRight,
+  CircleHelp,
   CreditCard,
   FileUp,
   Grid2X2,
   Heart,
   Headphones,
-  Headset,
   Lock,
   Home,
   PackageCheck,
@@ -16,12 +16,10 @@ import {
   Shield,
   ShieldCheck,
   ShoppingBag,
-  ShoppingCart,
   SlidersHorizontal,
   Sparkles,
   Star,
   TicketCheck,
-  User,
   UserRound,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -35,6 +33,10 @@ import {
   getCategoryById,
   products
 } from "../../store/commerce";
+import { useAppStore } from "../../store/appStore";
+import { productService } from "../../services/productService";
+import { uploadUrl } from "../../config/api";
+import { request } from "../../services/api";
 
 const navItems = [
   { label: "Home", href: "/" },
@@ -49,12 +51,12 @@ const bottomNavItems = [
   { label: "Products", href: "/products", icon: Headphones },
   { label: "Collections", href: "/collections", icon: Grid2X2 },
   { label: "Warranty", href: "/warranty", icon: Shield },
-  { label: "Support", href: "/support", icon: Headset },
+  { label: "Help", href: "/support", icon: CircleHelp },
 ];
 
 const breadcrumbLabelMap = {
-  cart: "Cart",
-  checkout: "Checkout",
+  cart: "Launch partners",
+  checkout: "Products",
   collections: "Collections",
   contact: "Contact",
   faq: "FAQ",
@@ -154,6 +156,15 @@ export function MotionStaggerItem({ children }) {
 
 export function CinematicImage({ src, alt, className = "", loading = "lazy", sizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" }) {
   const [isLoaded, setIsLoaded] = useState(false);
+  const resolvedSrc = uploadUrl(src);
+
+  if (!resolvedSrc) {
+    return (
+      <div className={`${className} grid place-items-center bg-slate-100 text-slate-400 dark:bg-white/[0.04] dark:text-slate-500`}>
+        <PackageCheck className="h-7 w-7" />
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-full w-full overflow-hidden">
@@ -166,7 +177,7 @@ export function CinematicImage({ src, alt, className = "", loading = "lazy", siz
         <div className="h-full w-full animate-pulse bg-gradient-to-r from-transparent via-white/35 to-transparent dark:via-white/10" />
       </motion.div>
       <motion.img
-        src={src}
+        src={resolvedSrc}
         alt={alt}
         loading={loading}
         decoding="async"
@@ -204,16 +215,20 @@ function SEOHead({ title, description, pathname }) {
       "INFIBOLT builds premium electronics with cinematic design, refined performance, and modern ownership support.";
     const metaDescription = description || fallbackDescription;
     const canonical = `${window.location.origin}${pathname || "/"}`;
+    const privatePath = /^\/(profile|settings|orders|warranty|support|auth|login|register|signup|checkout|cart)(\/|$)/.test(pathname || "");
 
     document.title = fullTitle;
     applyOrCreateMeta('meta[name="description"]', { name: "description", content: metaDescription });
+    applyOrCreateMeta('meta[name="robots"]', { name: "robots", content: privatePath ? "noindex,nofollow" : "index,follow" });
     applyOrCreateMeta('meta[property="og:title"]', { property: "og:title", content: fullTitle });
     applyOrCreateMeta('meta[property="og:description"]', { property: "og:description", content: metaDescription });
     applyOrCreateMeta('meta[property="og:type"]', { property: "og:type", content: "website" });
     applyOrCreateMeta('meta[property="og:url"]', { property: "og:url", content: canonical });
+    applyOrCreateMeta('meta[property="og:image"]', { property: "og:image", content: `${window.location.origin}/images/Litemood-hero.png` });
     applyOrCreateMeta('meta[name="twitter:card"]', { name: "twitter:card", content: "summary_large_image" });
     applyOrCreateMeta('meta[name="twitter:title"]', { name: "twitter:title", content: fullTitle });
     applyOrCreateMeta('meta[name="twitter:description"]', { name: "twitter:description", content: metaDescription });
+    applyOrCreateMeta('meta[name="twitter:image"]', { name: "twitter:image", content: `${window.location.origin}/images/Litemood-hero.png` });
 
     let canonicalNode = document.head.querySelector('link[rel="canonical"]');
     if (!canonicalNode) {
@@ -236,8 +251,13 @@ export function CommerceShell({
   seoDescription,
 }) {
   const { pathname } = useLocation();
+  const authUser = useAppStore((state) => state.auth.user);
+  const profile = useAppStore((state) => state.profile);
+  const profileInitial = getProfileInitial(authUser || profile);
   const hideMobileBottomNav = ["/login", "/register"].some((path) => pathname === path || pathname.startsWith(`${path}/`));
   const [showMobileBottomNav, setShowMobileBottomNav] = useState(true);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [activeMega, setActiveMega] = useState(null);
 
   useEffect(() => {
     document.documentElement.classList.remove("dark");
@@ -268,6 +288,18 @@ export function CommerceShell({
     return () => window.removeEventListener("scroll", onScroll);
   }, [pathname, hideMobileBottomNav]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const onScroll = () => setIsScrolled(window.scrollY > 18);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    setActiveMega(null);
+  }, [pathname]);
+
   return (
     <div className="flex min-h-screen w-full max-w-full flex-col overflow-x-hidden font-sans selection:bg-slate-900 selection:text-white">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-slate-950 focus:px-5 focus:py-3 focus:text-sm focus:font-semibold focus:text-white">
@@ -288,8 +320,17 @@ export function CommerceShell({
         />
       </div>
 
-      <header className="fixed left-0 right-0 top-0 z-50 border-b border-black/[0.04] bg-surface/92 backdrop-blur-xl transition-colors duration-200 lg:dark:border-white/[0.03] lg:dark:bg-surface-dark/90">
-        <div className="mx-auto flex w-screen max-w-none items-center justify-between gap-3 overflow-hidden px-4 py-3 sm:px-6 lg:w-full lg:max-w-[1400px] lg:px-12 lg:py-4">
+      <header
+        onMouseLeave={() => setActiveMega(null)}
+        className={`fixed left-0 right-0 top-0 z-50 border-b backdrop-blur-2xl transition-all duration-300 ${
+          isScrolled || activeMega
+            ? "border-slate-900/10 bg-white/94 shadow-[0_18px_55px_rgba(15,23,42,0.08)] lg:dark:border-white/[0.08] lg:dark:bg-[#08090b]/84"
+            : "border-slate-900/8 bg-white/90 lg:dark:border-white/[0.03] lg:dark:bg-surface-dark/72"
+        }`}
+      >
+        <div className={`mx-auto flex w-screen max-w-none items-center justify-between gap-3 overflow-hidden px-4 transition-all duration-300 sm:px-6 lg:w-full lg:max-w-[1400px] lg:px-12 ${
+          isScrolled ? "py-2.5 lg:py-3" : "py-3 lg:py-4"
+        }`}>
           <Link to="/" className="group flex min-w-0 items-center gap-2">
             <img
               src="/images/favicon.svg"
@@ -301,69 +342,50 @@ export function CommerceShell({
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-8 lg:flex">
+          <nav className="hidden items-center gap-7 lg:flex">
             {navItems.map((item) => (
               <NavLink
                 key={item.href}
                 to={item.href}
                 prefetch="intent"
-                className={`relative text-sm font-medium tracking-wide transition-colors duration-300 ${
+                onMouseEnter={() => setActiveMega(item.href === "/products" || item.href === "/collections" ? item.href : null)}
+                className={`relative rounded-full px-1.5 py-1 text-sm font-semibold tracking-normal transition-colors duration-300 ${
                   pathname === item.href
-                    ? "text-slate-900 lg:dark:text-white"
-                    : "text-slate-500 hover:text-slate-900 lg:dark:text-slate-400 lg:dark:hover:text-white"
+                    ? "text-slate-950 lg:dark:text-white"
+                    : "text-slate-600 hover:text-slate-950 lg:dark:text-slate-300 lg:dark:hover:text-white"
                 }`}
               >
                 <span className="relative z-10 block">{item.label}</span>
                 
                 {pathname === item.href && (
-                  <span className="absolute -bottom-2 left-0 right-0 h-[2px] rounded-full bg-slate-900 lg:dark:bg-white" />
+                  <span className="absolute -bottom-2 left-1.5 right-1.5 h-[2px] rounded-full bg-slate-950 lg:dark:bg-white" />
                 )}
               </NavLink>
             ))}
           </nav>
 
           <div className="hidden items-center gap-2.5 lg:flex">
-            <IconLink href="/wishlist" label="Wishlist" active={pathname.startsWith("/wishlist")}>
-              <Heart className="h-4 w-4" />
-            </IconLink>
-            <IconLink href="/cart" label="Cart" active={pathname.startsWith("/cart") || pathname.startsWith("/checkout")}>
-              <ShoppingBag className="h-4 w-4" />
-            </IconLink>
             <IconLink href="/profile" label="Profile" active={pathname.startsWith("/profile") || pathname.startsWith("/login") || pathname.startsWith("/register")}>
-              <User className="h-4 w-4" />
+              <ProfileAvatar initial={profileInitial} signedIn={Boolean(authUser)} desktop />
             </IconLink>
           </div>
 
           <div className="relative z-[60] flex shrink-0 items-center gap-2 lg:hidden">
             <Link
-              to="/cart"
-              prefetch="intent"
-              aria-label="Cart"
-              className={`relative flex h-11 w-11 items-center justify-center rounded-full border shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-transform duration-200 active:scale-95 sm:h-12 sm:w-12 ${
-                pathname.startsWith("/cart") || pathname.startsWith("/checkout")
-                  ? "border-slate-900/25 bg-slate-900 text-white"
-                  : "border-slate-900/10 bg-white/55 text-slate-950"
-              }`}
-            >
-              <ShoppingCart className="h-5 w-5 sm:h-5.5 sm:w-5.5" strokeWidth={1.9} />
-              <span className="absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-950 px-1 text-[10px] font-bold leading-none text-white">
-                2
-              </span>
-            </Link>
-            <Link
               to="/profile"
               prefetch="intent"
               aria-label="Profile"
-              className={`flex h-11 w-11 items-center justify-center rounded-full border shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-transform duration-200 active:scale-95 sm:h-12 sm:w-12 ${
+              className={`flex h-11 w-11 items-center justify-center rounded-full border shadow-[0_10px_24px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-transform duration-200 active:scale-95 sm:h-12 sm:w-12 ${
                 pathname.startsWith("/profile") || pathname.startsWith("/login") || pathname.startsWith("/register")
                   ? "border-slate-900/25 bg-slate-900 text-white"
-                  : "border-slate-900/10 bg-white/55 text-slate-950"
+                  : "border-slate-900/12 bg-white/90 text-slate-950"
               }`}
             >
-              <UserRound className="h-5 w-5 sm:h-5.5 sm:w-5.5" strokeWidth={1.9} />
+              <ProfileAvatar initial={profileInitial} signedIn={Boolean(authUser)} />
             </Link>
           </div>
         </div>
+        <MegaMenu active={activeMega} />
       </header>
 
       {!hideMobileBottomNav && <MobileBottomNav pathname={pathname} visible={showMobileBottomNav} />}
@@ -385,7 +407,7 @@ function MobileBottomNav({ pathname, visible = true }) {
         visible ? "translate-y-0" : "translate-y-[120%]"
       }`}
     >
-      <div className="mx-auto grid w-full max-w-[720px] grid-cols-5 rounded-[1.35rem] border border-white/70 bg-white/86 p-1.5 shadow-[0_18px_60px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
+      <div className="mx-auto grid w-full max-w-[720px] grid-cols-5 rounded-[1.2rem] border border-white/70 bg-white/90 p-1 shadow-[0_14px_42px_rgba(15,23,42,0.13)] backdrop-blur-2xl">
         {bottomNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
@@ -395,7 +417,7 @@ function MobileBottomNav({ pathname, visible = true }) {
               key={item.href}
               to={item.href}
               prefetch="intent"
-              className={`relative flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-2xl text-[10px] font-semibold no-underline transition-colors duration-200 sm:min-h-[62px] sm:text-[11px] ${
+              className={`relative flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-[1rem] text-[10px] font-semibold no-underline transition-colors duration-200 sm:min-h-[60px] sm:text-[11px] ${
                 isActive
                   ? "text-slate-950"
                   : "text-slate-500 active:text-slate-900"
@@ -404,7 +426,7 @@ function MobileBottomNav({ pathname, visible = true }) {
               {isActive && (
               <motion.span
                   layoutId="mobile-bottom-nav-active"
-                  className="absolute inset-0 rounded-2xl bg-slate-950/[0.06]"
+                  className="absolute inset-0 rounded-[1rem] bg-slate-950/[0.06]"
                   transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
                 />
               )}
@@ -421,6 +443,23 @@ function MobileBottomNav({ pathname, visible = true }) {
   );
 }
 
+function ProfileAvatar({ initial, signedIn, desktop = false }) {
+  if (!signedIn) {
+    return <UserRound className={desktop ? "h-4.5 w-4.5" : "h-5 w-5 sm:h-5.5 sm:w-5.5"} strokeWidth={2} />;
+  }
+
+  return (
+    <span className={`inline-flex items-center justify-center rounded-full font-semibold leading-none ${desktop ? "text-sm" : "text-[15px] sm:text-base"}`}>
+      {initial}
+    </span>
+  );
+}
+
+function getProfileInitial(user) {
+  const source = user?.name || user?.fullName || user?.email || user?.phone || "I";
+  return String(source).trim().charAt(0).toUpperCase() || "I";
+}
+
 function IconLink({ href, label, children, active = false }) {
   return (
     <Link
@@ -428,14 +467,92 @@ function IconLink({ href, label, children, active = false }) {
       prefetch="intent"
       aria-label={label}
       title={label}
-      className={`flex h-10 w-10 items-center justify-center rounded-full transition-all duration-500 ${
+      className={`flex h-10 w-10 items-center justify-center rounded-full border shadow-[0_10px_24px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.76)] transition-all duration-300 ${
         active
-          ? "bg-slate-900 text-white shadow-[0_12px_28px_rgba(15,23,42,0.18)]"
-          : "text-slate-500 hover:bg-slate-900/5 hover:text-slate-900 lg:dark:text-slate-400 lg:dark:hover:bg-white/10 lg:dark:hover:text-white"
+          ? "border-slate-900 bg-slate-900 text-white"
+          : "border-slate-900/12 bg-white/90 text-slate-800 hover:border-slate-900/20 hover:bg-white hover:text-slate-950 lg:dark:border-white/12 lg:dark:bg-white/8 lg:dark:text-slate-200 lg:dark:hover:bg-white/12 lg:dark:hover:text-white"
       }`}
     >
       {children}
     </Link>
+  );
+}
+
+function MegaMenu({ active }) {
+  const isOpen = active === "/products" || active === "/collections";
+  const [menuData, setMenuData] = useState({ products, categories, collections });
+  const featured = (menuData.products.filter((product) => product.featured || product.homepageVisible).length
+    ? menuData.products.filter((product) => product.featured || product.homepageVisible)
+    : menuData.products).slice(0, 3);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    let alive = true;
+    Promise.all([productService.list(), productService.categories(), productService.collections()]).then(([productResult, categoryResult, collectionResult]) => {
+      if (!alive) return;
+      setMenuData({
+        products: productResult.items?.length ? productResult.items : products,
+        categories: categoryResult.items?.length ? categoryResult.items : categories,
+        collections: collectionResult.items?.length ? collectionResult.items : collections,
+      });
+    }).catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [isOpen]);
+
+  return (
+    <div
+      className={`hidden overflow-hidden border-t border-slate-900/[0.06] bg-white/92 shadow-[0_34px_80px_rgba(15,23,42,0.12)] backdrop-blur-2xl transition-all duration-300 lg:block dark:border-white/10 dark:bg-[#08090b]/92 ${
+        isOpen ? "max-h-[430px] opacity-100" : "max-h-0 opacity-0"
+      }`}
+    >
+      <div className="mx-auto grid max-w-[1400px] grid-cols-[0.85fr_1.15fr] gap-12 px-12 py-8">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+            {active === "/collections" ? "Curated ecosystems" : "Product universe"}
+          </p>
+          <div className="mt-5 grid gap-2">
+            {(active === "/collections" ? menuData.collections : menuData.categories).map((item) => {
+              const href = active === "/collections" ? `/products?collection=${item.slug}` : `/products?category=${item.id}`;
+              return (
+                <Link
+                  key={item.slug ?? item.id}
+                  to={href}
+                  prefetch="intent"
+                  className="group flex items-center justify-between rounded-2xl border border-transparent px-4 py-3 transition duration-200 hover:border-slate-900/10 hover:bg-slate-950/[0.035] dark:hover:border-white/10 dark:hover:bg-white/[0.06]"
+                >
+                  <span>
+                    <span className="block text-sm font-semibold text-slate-950 dark:text-white">{item.name}</span>
+                    <span className="mt-1 block max-w-[22rem] text-xs leading-5 text-slate-500 dark:text-slate-400">{item.description}</span>
+                  </span>
+                  <ArrowRight className="h-4 w-4 text-slate-300 transition duration-200 group-hover:translate-x-0.5 group-hover:text-slate-950 dark:group-hover:text-white" />
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          {featured.map((product) => (
+            <Link
+              key={product.slug}
+              to={`/products/${product.slug}`}
+              prefetch="intent"
+              className="group overflow-hidden rounded-2xl border border-slate-900/8 bg-slate-50/80 p-2 transition duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_18px_48px_rgba(15,23,42,0.11)] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
+            >
+              <div className="aspect-[4/3] overflow-hidden rounded-xl bg-slate-100 dark:bg-white/[0.05]">
+                <CinematicImage src={product.image} alt={product.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.025]" />
+              </div>
+              <div className="p-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">{product.badge}</p>
+                <h3 className="mt-2 text-sm font-semibold leading-tight text-slate-950 dark:text-white">{product.name}</h3>
+                <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{formatPrice(product.price)}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -461,15 +578,15 @@ export function PageHero({ eyebrow, title, description, action }) {
   }, [pathname]);
 
   return (
-    <section className={`relative z-10 flex flex-col overflow-hidden ${isHome ? "min-h-[30vh] justify-end pb-12 pt-16 sm:pt-20 lg:min-h-[50vh] lg:pb-20 lg:pt-28" : "justify-end pb-6 pt-7 sm:pt-9 lg:pb-12 lg:pt-14"}`}>
+    <section className={`relative z-10 flex flex-col overflow-hidden ${isHome ? "min-h-[30vh] justify-end pb-12 pt-16 sm:pt-20 lg:min-h-[50vh] lg:pb-20 lg:pt-28" : "border-b border-slate-900/[0.06] bg-white/35 pb-7 pt-7 sm:pt-9 lg:pb-10 lg:pt-12 dark:border-white/10 dark:bg-white/[0.02]"}`}>
       <div className="mx-auto w-full max-w-[1400px] px-5 sm:px-6 lg:px-12">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.62, ease: [0.22, 1, 0.36, 1] }} className="max-w-5xl">
-          <p className="mb-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 sm:mb-7 sm:text-[11px] dark:text-slate-300">{eyebrow}</p>
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.62, ease: [0.22, 1, 0.36, 1] }} className="max-w-4xl">
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 sm:mb-4 sm:text-[11px] dark:text-slate-300">{eyebrow}</p>
           {crumbs.length > 1 && <Breadcrumbs items={crumbs} />}
-          <h1 className={`font-medium text-slate-900 dark:text-white ${isHome ? "text-4xl leading-[0.98] sm:text-5xl lg:text-[5.25rem] lg:leading-[0.94]" : "max-w-4xl text-[2.35rem] leading-[1.06] sm:text-[3.2rem] sm:leading-[1] lg:text-[4.35rem] lg:leading-[0.96]"}`}>
+          <h1 className={`font-semibold text-slate-900 dark:text-white ${isHome ? "text-4xl leading-[0.98] sm:text-5xl lg:text-[5.25rem] lg:leading-[0.94]" : "max-w-3xl text-[2rem] leading-[1.12] sm:text-[2.55rem] sm:leading-[1.08] lg:text-[3.25rem]"}`}>
             {title}
           </h1>
-          {description && <p className={`mt-5 max-w-3xl font-light leading-relaxed text-slate-500 sm:mt-6 dark:text-slate-400 ${isHome ? "text-base sm:text-lg lg:text-xl" : "text-base sm:text-lg lg:text-[1.18rem]"}`}>{description}</p>}
+          {description && <p className={`mt-4 max-w-2xl leading-relaxed text-slate-600 dark:text-slate-400 ${isHome ? "text-base font-light sm:text-lg lg:text-xl" : "text-[0.95rem] font-normal sm:text-base"}`}>{description}</p>}
           {action && <div className="mt-8 flex flex-wrap items-center gap-3 sm:gap-4 lg:mt-16 lg:gap-6">{action}</div>}
         </motion.div>
       </div>
@@ -550,7 +667,7 @@ export function ProductGrid({ items = products, columns = "default" }) {
           transition: { staggerChildren: 0.1 }
         }
       }}
-      className={`grid grid-cols-2 gap-3 sm:gap-5 ${columnClass}`}
+      className={`grid grid-cols-2 gap-3 sm:gap-5 lg:gap-6 ${columnClass}`}
     >
       {items.map((product) => (
         <ProductCard key={product.slug} product={product} />
@@ -595,13 +712,16 @@ export function ProductCard({ product }) {
         hidden: { opacity: 0, y: 16 },
         visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } }
       }}
-      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-black/5 bg-white/58 p-1.5 shadow-[0_10px_34px_rgba(17,24,39,0.045)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_18px_46px_rgba(17,24,39,0.095)] dark:border-white/5 dark:bg-white/[0.025] dark:hover:bg-white/[0.055] dark:hover:shadow-[0_12px_34px_rgba(0,0,0,0.18)] sm:p-2"
+      className="group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-black/5 bg-white/72 p-1.5 shadow-[0_10px_34px_rgba(17,24,39,0.045)] transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-[0_24px_60px_rgba(17,24,39,0.12)] dark:border-white/5 dark:bg-white/[0.025] dark:hover:bg-white/[0.055] dark:hover:shadow-[0_12px_34px_rgba(0,0,0,0.18)] sm:p-2"
     >
       <Link to={`/products/${product.slug}`} className="block">
-        <div className="relative aspect-[1/1] overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800/50 sm:aspect-[4/4.7] sm:rounded-xl">
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100 z-10" />
+        <div className="relative aspect-[1/1] overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800/50 sm:aspect-[4/4.7]">
+          <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/32 via-black/0 to-white/8 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
           <CinematicImage src={product.image} alt={product.name} className="h-full w-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.018]" />
-          <div className="pointer-events-none absolute inset-0 z-20 rounded-2xl shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]" />
+          <div className="absolute left-3 top-3 z-20 rounded-full border border-white/45 bg-white/72 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-slate-800 shadow-[0_10px_24px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-black/38 dark:text-white sm:left-4 sm:top-4 sm:text-[10px]">
+            {product.badge}
+          </div>
+          <div className="pointer-events-none absolute inset-0 z-20 rounded-xl shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]" />
         </div>
         <div className="relative z-10 flex flex-col p-3 sm:p-6">
           <div className="mb-2 flex items-center justify-between gap-2 sm:mb-4 sm:gap-3">
@@ -612,13 +732,13 @@ export function ProductCard({ product }) {
               {product.rating} <Star className="h-3 w-3 fill-current text-amber-400 sm:h-3.5 sm:w-3.5" />
             </span>
           </div>
-          <h3 className="line-clamp-2 text-[1.02rem] font-semibold leading-tight tracking-tight text-slate-900 transition-colors duration-200 group-hover:text-slate-700 sm:text-[1.16rem] md:text-[1.25rem] dark:text-white dark:group-hover:text-slate-200">{product.name}</h3>
+          <h3 className="line-clamp-2 text-[1.02rem] font-semibold leading-tight tracking-normal text-slate-900 transition-colors duration-200 group-hover:text-slate-700 sm:text-[1.16rem] md:text-[1.25rem] dark:text-white dark:group-hover:text-slate-200">{product.name}</h3>
           <p className="mt-1.5 line-clamp-2 min-h-[2.25rem] text-[0.74rem] leading-5 text-slate-600 dark:text-slate-400 sm:mt-2.5 sm:min-h-[3rem] sm:text-[0.88rem] sm:leading-relaxed">{product.summary}</p>
           <div className="mt-3 flex items-center justify-between sm:mt-6">
             <span className="text-[0.95rem] font-semibold tracking-tight text-slate-900 dark:text-white sm:text-[1.08rem]">{formatPrice(product.price)}</span>
-            <span className="inline-flex items-center gap-2 text-[0] font-bold uppercase tracking-widest text-slate-900 transition-colors duration-300 dark:text-white sm:gap-3 sm:text-[11px]">
+            <span className="inline-flex items-center gap-2 text-[0] font-bold uppercase tracking-[0.16em] text-slate-900 transition-colors duration-300 dark:text-white sm:gap-3 sm:text-[11px]">
               <span className="hidden sm:inline">Explore</span>
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/5 transition-colors duration-300 group-hover:bg-slate-900 group-hover:text-white dark:bg-white/10 dark:group-hover:bg-white dark:group-hover:text-slate-900 sm:h-8 sm:w-8">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/5 transition-all duration-300 group-hover:translate-x-0.5 group-hover:bg-slate-900 group-hover:text-white dark:bg-white/10 dark:group-hover:bg-white dark:group-hover:text-slate-900 sm:h-8 sm:w-8">
                 <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </span>
             </span>
@@ -629,7 +749,7 @@ export function ProductCard({ product }) {
   );
 }
 
-export function ProductFilters({ selectedCategory, onCategoryChange, query, onQueryChange, sort, onSortChange }) {
+export function ProductFilters({ selectedCategory, onCategoryChange, query, onQueryChange, sort, onSortChange, categoryItems = categories }) {
   const [sortOpen, setSortOpen] = useState(false);
   const sortOptions = [
     ["featured", "Featured"],
@@ -640,7 +760,7 @@ export function ProductFilters({ selectedCategory, onCategoryChange, query, onQu
   const selectedSortLabel = sortOptions.find(([value]) => value === sort)?.[1] ?? "Featured";
 
   return (
-    <div className="premium-surface mb-8 flex flex-col gap-6 p-4 md:mb-10 sm:p-6 dark:bg-white/[0.03]">
+    <div className="premium-surface sticky top-[76px] z-30 mb-8 flex flex-col gap-6 p-4 backdrop-blur-2xl md:mb-10 sm:p-5 dark:bg-white/[0.03]">
       {/* Top Row: Search & Sort */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <label className="premium-control flex flex-1 items-center gap-3 rounded-full px-5 py-3.5 dark:border-white/10 dark:bg-white/5 dark:focus-within:border-white/30 dark:focus-within:bg-white/10">
@@ -694,7 +814,7 @@ export function ProductFilters({ selectedCategory, onCategoryChange, query, onQu
       {/* Bottom Row: Sliding Category Pills */}
       <div className="relative -mx-4 sm:mx-0">
         <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-2 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-          {[{ id: "all", name: "All Products" }, ...categories].map((category) => (
+          {[{ id: "all", name: "All Products" }, ...categoryItems].map((category) => (
             <button
               key={category.id}
               onClick={() => onCategoryChange(category.id)}
@@ -728,7 +848,7 @@ export function FutureCommerceNotice({ title = "Direct purchase is opening in ph
         <div>
           <h3 className="font-semibold">{title}</h3>
           <p className="mt-2 text-sm leading-relaxed opacity-85">
-            {description || "Cart, checkout, payments, coupons, orders, and address management are designed into the platform and will open as direct commerce rolls out."}
+            {description || "Infibolt currently launches through selected marketplace partners. Ownership, warranty registration, and support stay connected here after purchase."}
           </p>
         </div>
       </div>
@@ -737,52 +857,148 @@ export function FutureCommerceNotice({ title = "Direct purchase is opening in ph
 }
 
 export function BuyPanel({ product }) {
+  const [notifyValue, setNotifyValue] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const marketplace = product.marketplace || {};
+  const priority = marketplace.priority || "Amazon";
+  const channels = marketplace.visible === false ? [] : [
+    ["Amazon", marketplace.amazon || product.amazonLink, "Preferred launch partner"],
+    ["Flipkart", marketplace.flipkart || product.flipkartLink, "Marketplace purchase"],
+    ["Croma", marketplace.croma, "Retail partner"],
+    ["Reliance Digital", marketplace.relianceDigital, "Retail partner"],
+    ["Official retail", marketplace.retail || marketplace.custom, "Selected stores"],
+  ].filter(([, href]) => Boolean(href)).sort(([a], [b]) => (a === priority ? -1 : b === priority ? 1 : 0));
+  const primaryChannels = channels.length ? channels : [["Notify Me", "", "Launch updates"]];
+  const submitNotify = async (event) => {
+    event.preventDefault();
+    const value = notifyValue.trim();
+    if (!value) return;
+    setSubmitting(true);
+    try {
+      await productService.notify({
+        product: product.name,
+        productSlug: product.slug,
+        source: "Product purchase card",
+        ...(value.includes("@") ? { email: value } : { phone: value }),
+      });
+      toast.success("Launch updates enabled", { description: "We will alert you when partner availability changes." });
+      setNotifyValue("");
+    } catch (error) {
+      toast.error("Could not save notification", { description: error.message || "Please try again." });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
-    <div className="premium-surface p-6 sm:p-8 dark:bg-white/[0.03]">
+    <div className="premium-surface p-6 shadow-[0_18px_54px_rgba(15,23,42,0.08)] sm:p-8 lg:sticky lg:top-28 dark:bg-white/[0.03]">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Marketplace launch</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Launch partner purchase</p>
           <p className="mt-2 text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">{formatPrice(product.price)}</p>
+          {product.comparePrice > product.price && <p className="mt-1 text-sm text-slate-400 line-through">{formatPrice(product.comparePrice)}</p>}
         </div>
         <button className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-900/10 bg-transparent text-slate-600 transition-all hover:bg-slate-900/5 dark:border-white/10 dark:text-white dark:hover:bg-white/10" aria-label="Add to wishlist">
           <Heart className="h-5 w-5" />
         </button>
       </div>
-      <p className="mt-6 text-sm leading-relaxed text-slate-600 dark:text-slate-400">Choose your preferred marketplace channel, with direct INFIBOLT checkout opening in phases.</p>
-      <div className="mt-8 grid gap-4">
-        <SecondaryButton href={product.marketplace.amazon} external>Buy on Amazon</SecondaryButton>
-        <SecondaryButton href={product.marketplace.flipkart} external>Buy on Flipkart</SecondaryButton>
-        <PrimaryButton href={product.marketplace.custom} external>Buy Now</PrimaryButton>
+      <div className="mt-5 rounded-2xl border border-emerald-500/18 bg-emerald-500/8 p-4">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">{marketplace.launchStatus || product.status || "Available through selected launch partners"}</p>
+        <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">Choose your preferred purchase channel. Ownership, warranty, and support are managed through Infibolt after delivery.</p>
       </div>
-    </div>
-  );
-}
-
-export function ProductGallery({ product }) {
-  const [active, setActive] = useState(product.gallery?.[0] ?? product.image);
-
-  return (
-    <div>
-      <div className="aspect-[5/4] overflow-hidden rounded-2xl border border-black/5 bg-white/60 shadow-[0_18px_54px_rgba(17,24,39,0.07)] dark:border-white/5 dark:bg-white/[0.02]">
-        <img src={active} alt={product.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+      <div className="mt-6 grid gap-3">
+        {primaryChannels.map(([label, href, description], index) =>
+          href ? (
+            <a
+              key={label}
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              className={`group inline-flex min-h-[54px] items-center justify-between gap-3 rounded-full px-5 text-[11px] font-bold uppercase tracking-[0.15em] transition-all duration-300 ${
+                index === 0
+                  ? "bg-slate-950 text-white shadow-[0_18px_44px_rgba(15,23,42,0.18)] hover:bg-slate-800 dark:bg-white dark:text-slate-950"
+                  : "border border-slate-900/12 bg-white/60 text-slate-900 hover:bg-white dark:border-white/12 dark:bg-white/[0.04] dark:text-white dark:hover:bg-white/[0.08]"
+              }`}
+            >
+              <span>Buy on {label}</span>
+              <span className="hidden text-[10px] font-semibold normal-case tracking-normal opacity-60 sm:inline">{description}</span>
+            </a>
+          ) : null
+        )}
+        <SecondaryButton href="/warranty">Register Product</SecondaryButton>
       </div>
-      <div className="mt-4 grid grid-cols-4 gap-4">
-        {(product.gallery ?? [product.image]).map((image, index) => (
-          <button key={image} type="button" onClick={() => setActive(image)} aria-label={`View ${product.name} image ${index + 1}`} className={`aspect-square overflow-hidden rounded-2xl border transition-all duration-300 ${active === image ? "border-slate-900 dark:border-white" : "border-transparent hover:border-slate-900/20 dark:hover:border-white/20"}`}>
-            <img src={image} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
-          </button>
+      <form onSubmit={submitNotify} className="mt-5 grid gap-3 rounded-2xl border border-slate-900/8 bg-white/48 p-3 dark:border-white/10 dark:bg-white/[0.035]">
+        <label className="sr-only" htmlFor={`notify-${product.slug}`}>Email or mobile for launch updates</label>
+        <input
+          id={`notify-${product.slug}`}
+          value={notifyValue}
+          onChange={(event) => setNotifyValue(event.target.value)}
+          placeholder="Email or mobile for availability alerts"
+          className="min-h-[46px] rounded-full border border-slate-900/10 bg-white px-4 text-sm font-medium outline-none focus:border-slate-950 dark:border-white/10 dark:bg-slate-950 dark:text-white"
+        />
+        <button type="submit" disabled={submitting || !notifyValue.trim()} className="min-h-[46px] rounded-full bg-slate-950 px-5 text-[11px] font-bold uppercase tracking-[0.15em] text-white transition hover:bg-slate-800 disabled:opacity-50 dark:bg-white dark:text-slate-950">
+          {submitting ? "Saving..." : "Notify Me"}
+        </button>
+      </form>
+      <div className="mt-7 grid grid-cols-3 gap-3 border-t border-slate-900/8 pt-5 text-center dark:border-white/10">
+        {[
+          `${product.warrantyMonths || 12} month warranty`,
+          `${product.replacementDays || 7} day support`,
+          "Ownership profile",
+        ].map((item) => (
+          <span key={item} className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">{item}</span>
         ))}
       </div>
     </div>
   );
 }
 
+export function ProductGallery({ product }) {
+  const gallery = (product.gallery?.length ? product.gallery : [product.image || product.coverImage || product.thumbnail]).filter(Boolean);
+  const [active, setActive] = useState(gallery[0]);
+  const activeSrc = uploadUrl(active);
+  useEffect(() => {
+    setActive(gallery[0]);
+  }, [product.slug]);
+
+  return (
+    <div className="lg:sticky lg:top-28">
+      <div className="aspect-[5/4] overflow-hidden rounded-[1.6rem] border border-black/5 bg-white/60 shadow-[0_18px_54px_rgba(17,24,39,0.07)] dark:border-white/5 dark:bg-white/[0.02]">
+        {activeSrc ? (
+          <motion.img
+            key={active}
+            src={activeSrc}
+            alt={product.name}
+            loading="lazy"
+            decoding="async"
+            initial={{ opacity: 0.25, scale: 1.012 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="grid h-full w-full place-items-center bg-slate-100 text-slate-400">
+            <PackageCheck className="h-8 w-8" />
+          </div>
+        )}
+      </div>
+      {gallery.length > 1 && <div className="mt-4 grid grid-cols-4 gap-4">
+        {gallery.map((image, index) => (
+          <button key={image} type="button" onClick={() => setActive(image)} aria-label={`View ${product.name} image ${index + 1}`} className={`aspect-square overflow-hidden rounded-2xl border bg-white/60 transition-all duration-300 ${active === image ? "border-slate-900 shadow-[0_12px_30px_rgba(15,23,42,0.1)] dark:border-white" : "border-transparent opacity-72 hover:border-slate-900/20 hover:opacity-100 dark:hover:border-white/20"}`}>
+            <img src={uploadUrl(image)} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+          </button>
+        ))}
+      </div>}
+    </div>
+  );
+}
+
 export function EcommerceStepper({ current = 0, onStepChange }) {
   const steps = [
-    { label: "Cart", icon: ShoppingBag },
-    { label: "Address", icon: PackageCheck },
-    { label: "Payment", icon: CreditCard },
-    { label: "Order", icon: TicketCheck },
+    { label: "Discover", icon: ShoppingBag },
+    { label: "Partner", icon: PackageCheck },
+    { label: "Register", icon: CreditCard },
+    { label: "Care", icon: TicketCheck },
   ];
 
   return (
@@ -1015,7 +1231,7 @@ export function FeatureBand() {
   const features = [
     { icon: ShieldCheck, title: "Warranty-ready", text: "Registration, claims, serial details, invoice upload, and ticket tracking." },
     { icon: Sparkles, title: "Marketplace-first", text: "Every product supports editable Amazon, Flipkart, and custom purchase links." },
-    { icon: ShoppingBag, title: "Direct commerce", text: "Cart, checkout, coupons, payments, and orders are shaped for the next release phase." },
+    { icon: PackageCheck, title: "Ownership platform", text: "Buy through launch partners, then return to Infibolt for warranty, support, and device care." },
   ];
 
   return (
@@ -1042,11 +1258,11 @@ export function FeatureBand() {
   );
 }
 
-export function CollectionGrid() {
+export function CollectionGrid({ items = collections }) {
   const MotionLink = motion.create(Link);
   return (
     <div className="grid gap-6 md:grid-cols-3">
-      {collections.map((collection) => (
+      {items.map((collection) => (
         <MotionLink
           key={collection.slug}
           to={`/products?collection=${collection.slug}`}
@@ -1057,7 +1273,7 @@ export function CollectionGrid() {
         >
           
           <div className="relative z-10">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">{collection.productSlugs.length} products</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">{collection.productSlugs?.length || 0} products</p>
             <h3 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 md:text-3xl dark:text-white">{collection.name}</h3>
             <p className="mt-4 leading-relaxed text-slate-600 dark:text-slate-400">{collection.description}</p>
           </div>
@@ -1072,7 +1288,7 @@ export function CollectionGrid() {
 
 function Breadcrumbs({ items }) {
   return (
-    <nav aria-label="Breadcrumb" className="mb-5 hidden flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 sm:mb-6 sm:text-xs sm:tracking-[0.16em] lg:flex dark:text-slate-300">
+    <nav aria-label="Breadcrumb" className="mb-4 hidden flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 sm:mb-5 sm:text-[11px] sm:tracking-[0.16em] lg:flex dark:text-slate-300">
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
         return (
@@ -1130,6 +1346,27 @@ export function useFilteredProducts() {
 }
 
 function CommerceFooter() {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState("idle");
+
+  const subscribe = async (event) => {
+    event.preventDefault();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      toast.error("Enter a valid email", { description: "We need a proper email address for launch updates." });
+      return;
+    }
+    setStatus("loading");
+    try {
+      await request.post("/newsletter", { email: email.trim(), source: "Footer" }, { skipGlobalErrorToast: true });
+      setStatus("success");
+      setEmail("");
+      toast.success("Subscribed", { description: "You will receive curated Infibolt launch updates." });
+    } catch (error) {
+      setStatus("error");
+      toast.error("Subscription failed", { description: error.message || "Please try again." });
+    }
+  };
+
   return (
     <footer className="relative z-10 mt-12 border-t border-slate-900/5 py-8 md:mt-24 md:py-20 dark:border-white/5">
       <div className="mx-auto grid w-full max-w-[1400px] grid-cols-2 gap-x-6 gap-y-8 px-5 md:grid-cols-[1.4fr_1fr_1fr_1fr] md:px-8 lg:px-12">
@@ -1146,9 +1383,22 @@ function CommerceFooter() {
           </Link>
 
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-500 md:mt-6 dark:text-slate-400">
-            A premium product ecosystem moving from marketplace-first
-            launches into full direct commerce.
+            A premium product ecosystem for marketplace-first launches,
+            ownership, warranty, and connected support.
           </p>
+          <form onSubmit={subscribe} className="mt-5 flex max-w-sm gap-2">
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="Launch updates email"
+              className="min-h-[42px] min-w-0 flex-1 rounded-full border border-slate-900/10 bg-white/70 px-4 text-sm font-medium outline-none dark:border-white/10 dark:bg-white/[0.04] dark:text-white"
+              aria-label="Email for Infibolt launch updates"
+            />
+            <button type="submit" disabled={status === "loading"} className="min-h-[42px] rounded-full bg-slate-950 px-4 text-[10px] font-bold uppercase tracking-[0.14em] text-white disabled:opacity-60 dark:bg-white dark:text-slate-950">
+              {status === "loading" ? "Saving" : "Join"}
+            </button>
+          </form>
         </div>
 
         <FooterColumn
@@ -1156,8 +1406,8 @@ function CommerceFooter() {
           links={[
             ["Products", "/products"],
             ["Collections", "/collections"],
-            ["Cart", "/cart"],
-            ["Checkout", "/checkout"],
+            ["Warranty Registration", "/warranty"],
+            ["Launch Support", "/support"],
           ]}
         />
 
@@ -1165,6 +1415,7 @@ function CommerceFooter() {
           title="Care"
           links={[
             ["Warranty", "/warranty"],
+            ["Warranty Policy", "/warranty-policy"],
             ["Support", "/support"],
             ["FAQ", "/faq"],
             ["Contact", "/contact"],

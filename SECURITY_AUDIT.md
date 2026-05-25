@@ -7,7 +7,7 @@ Scope:
 - `infibolt-admin`
 - `infibolt-backend`
 - Local API: `http://localhost:4000/api/v1`
-- Production targets: `app.infibolt.com`, `admin.infibolt.com`, `api.infibolt.com`
+- Production targets: `infibolt.com`, `admin.infibolt.com`, `api.infibolt.com`
 
 ## Executive Summary
 
@@ -93,7 +93,7 @@ Upload Security:
 - Generate unique `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, and `COOKIE_SECRET`.
 - Set `NODE_ENV=production`.
 - Set `API_ORIGIN=https://api.infibolt.com`.
-- Set `CORS_ORIGINS=https://app.infibolt.com,https://admin.infibolt.com`.
+- Set `CORS_ORIGINS=https://infibolt.com,https://www.infibolt.com,https://admin.infibolt.com`.
 - Enable HTTPS on all domains.
 - Confirm cookies are sent only over HTTPS.
 - Rotate local seed admin password before launch.

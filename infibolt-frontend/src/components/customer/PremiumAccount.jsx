@@ -1,4 +1,5 @@
-import { AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
+import { AlertCircle, CheckCircle2, Eye, EyeOff, Sparkles } from "lucide-react";
+import { useState } from "react";
 
 export function AccountAtmosphere({ children, className = "" }) {
   return (
@@ -50,6 +51,9 @@ export function PremiumField({
   required = false,
   inputMode,
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const isPassword = type === "password";
+  const inputType = isPassword && showPassword ? "text" : type;
   const inputClass =
     "w-full bg-transparent text-[15px] font-medium text-slate-950 placeholder:text-slate-400 focus:outline-none disabled:opacity-55";
 
@@ -73,12 +77,23 @@ export function PremiumField({
             required={required}
             disabled={disabled}
             inputMode={inputMode}
-            type={type}
+            type={inputType}
             value={value}
             onChange={(event) => onChange(event.target.value)}
             placeholder={placeholder}
             className={inputClass}
           />
+        )}
+        {isPassword && !textarea && (
+          <button
+            type="button"
+            onClick={() => setShowPassword((value) => !value)}
+            disabled={disabled}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-900/5 hover:text-slate-950 disabled:pointer-events-none disabled:opacity-45"
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" strokeWidth={1.8} /> : <Eye className="h-4 w-4" strokeWidth={1.8} />}
+          </button>
         )}
       </span>
       {helper && !error && <span className="text-xs font-medium leading-5 text-slate-500">{helper}</span>}

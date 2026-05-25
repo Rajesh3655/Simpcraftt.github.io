@@ -36,8 +36,11 @@ export async function mockRequest(config) {
   if (url === "/auth/forgot-password") return { data: { resetId: `reset_${Date.now().toString(36)}`, message: "Reset OTP prepared." } };
 
   if (url === "/products") return { data: { items: products, categories, total: products.length } };
+  if (url === "/homepage") return { data: { featuredProducts: products.slice(0, 3), heroProducts: products.slice(0, 1), categories, collections } };
+  if (url === "/categories") return { data: { items: categories } };
   if (url.startsWith("/products/")) return { data: products.find((item) => item.slug === url.split("/").pop()) };
   if (url === "/collections") return { data: { items: collections } };
+  if (url === "/launch-notify" && method === "post") return { data: { id: `LAUNCH-${Date.now().toString().slice(-4)}`, status: "Subscribed", message: "Launch updates enabled." } };
 
   if (url === "/support-tickets" && method === "get") return { data: { items: tickets } };
   if (url === "/support-tickets" && method === "post") return { data: { id: `SCS-${Date.now().toString().slice(-4)}`, status: "Open", ...data } };

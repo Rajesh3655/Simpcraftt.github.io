@@ -109,7 +109,8 @@ export const warrantyClaims = [
 ];
 
 export const featureToggles = [
-  { key: "directCheckout", label: "Direct ecommerce checkout", enabled: false },
+  { key: "launchPartners", label: "Marketplace launch partners", enabled: true },
+  { key: "availabilityLeads", label: "Availability lead capture", enabled: true },
   { key: "marketplaceRedirects", label: "Marketplace redirect buttons", enabled: true },
   { key: "warrantyClaims", label: "Warranty claim submission", enabled: true },
   { key: "adminAlerts", label: "Admin alert notifications", enabled: true },

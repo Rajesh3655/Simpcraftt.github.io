@@ -8,9 +8,9 @@ export const adminUser = {
 
 export const adminStats = [
   { label: "Products", value: products.length, trend: "+5 launch SKUs", status: "live" },
-  { label: "Warranty Claims", value: 38, trend: "9 pending review", status: "attention" },
-  { label: "Complaints", value: 26, trend: "6 high priority", status: "attention" },
-  { label: "Future Orders", value: 0, trend: "Checkout staged", status: "staged" },
+  { label: "Owners", value: 1248, trend: "+82 this month", status: "growth" },
+  { label: "Warranty Queue", value: 9, trend: "Needs review", status: "attention" },
+  { label: "Support Open", value: 6, trend: "2 priority cases", status: "attention" },
 ];
 
 export const marketplaceRows = products.map((product, index) => ({
@@ -57,10 +57,22 @@ export const warrantyClaims = [
 ];
 
 export const customers = [
-  { name: "Aarav Mehta", email: "aarav@example.com", products: 2, tickets: 1, status: "Verified" },
-  { name: "Nisha Kapoor", email: "nisha@example.com", products: 1, tickets: 0, status: "Verified" },
-  { name: "Rahul Nair", email: "rahul@example.com", products: 1, tickets: 2, status: "Review" },
-  { name: "Isha Rao", email: "isha@example.com", products: 0, tickets: 1, status: "Subscriber" },
+  { name: "Aarav Mehta", email: "aarav@example.com", phone: "9876543210", products: 2, tickets: 1, status: "Verified", source: "Amazon" },
+  { name: "Nisha Kapoor", email: "nisha@example.com", phone: "9988776655", products: 1, tickets: 0, status: "Verified", source: "Flipkart" },
+  { name: "Rahul Nair", email: "rahul@example.com", phone: "9123456780", products: 1, tickets: 2, status: "Review", source: "Retail" },
+  { name: "Isha Rao", email: "isha@example.com", phone: "", products: 0, tickets: 1, status: "Subscriber", source: "Newsletter" },
+];
+
+export const newsletterSubscribers = [
+  { email: "isha@example.com", source: "Footer", status: "Subscribed", createdAt: "2026-05-18" },
+  { email: "launch@studio.example", source: "Launch page", status: "Subscribed", createdAt: "2026-05-20" },
+  { email: "care@example.com", source: "Support", status: "Unsubscribed", createdAt: "2026-05-21" },
+];
+
+export const launchLeads = [
+  { product: "Aura Audio Pro", email: "audio@example.com", phone: "", status: "Subscribed" },
+  { product: "Nova Watch X", email: "", phone: "9876500000", status: "Contacted" },
+  { product: "Echo Charge Max", email: "power@example.com", phone: "", status: "Converted" },
 ];
 
 export const supportTickets = [
@@ -70,12 +82,11 @@ export const supportTickets = [
 ];
 
 export const ecommerceModules = [
-  { name: "Direct Checkout", description: "Native cart-to-order flow for INFIBOLT purchases.", enabled: false },
-  { name: "Payment Gateway", description: "Card, UPI, wallet, and payment reconciliation layer.", enabled: false },
-  { name: "Orders", description: "Order lifecycle, invoices, refunds, cancellations, and tracking.", enabled: false },
-  { name: "Coupons", description: "Campaign codes, limits, eligibility, and discount rules.", enabled: false },
-  { name: "Shipping", description: "Zones, rates, partners, fulfilment states, and tracking links.", enabled: false },
-  { name: "Inventory", description: "Stock levels, reserved units, low-stock alerts, and SKU movement.", enabled: true },
+  { name: "Launch partner routing", description: "Marketplace-first purchase paths for INFIBOLT products.", enabled: true },
+  { name: "Availability leads", description: "Notify Me records by product, region, and preferred channel.", enabled: true },
+  { name: "Ownership conversion", description: "Marketplace buyers register serials and invoices for care.", enabled: true },
+  { name: "Retail partners", description: "Regional partner availability and official-store readiness.", enabled: true },
+  { name: "Inventory context", description: "Stock levels, SKU movement, and launch availability signals.", enabled: true },
 ];
 
 export const cmsBlocks = [
@@ -89,15 +100,15 @@ export const cmsBlocks = [
 export const activityLog = [
   "Marketplace links updated for Aura Audio Pro",
   "Warranty claim SCW-MAY-1001 moved to Verification",
-  "Direct checkout feature toggle reviewed",
-  "Homepage hero content staged for v2 preview",
+  "Launch partner routing reviewed",
+  "Homepage hero content aligned for launch preview",
   "Support ticket SCS-2042 assigned to care team",
 ];
 
 export const featureToggles = [
-  { key: "directCheckout", label: "Direct ecommerce checkout", enabled: false },
-  { key: "payments", label: "Payment gateway", enabled: false },
-  { key: "orders", label: "Customer order history", enabled: false },
+  { key: "launchPartners", label: "Marketplace launch partners", enabled: true },
+  { key: "availabilityLeads", label: "Availability lead capture", enabled: true },
+  { key: "ownershipConversion", label: "Ownership conversion", enabled: true },
   { key: "marketplaceRedirects", label: "Marketplace redirect buttons", enabled: true },
   { key: "warrantyClaims", label: "Warranty claim submission", enabled: true },
   { key: "adminAlerts", label: "Admin alert notifications", enabled: true },
@@ -113,9 +124,9 @@ export const databaseCollections = [
   "warranty_claims",
   "support_tickets",
   "newsletter_subscribers",
-  "orders_future",
-  "payments_future",
-  "coupons_future",
+  "launch_leads",
+  "partner_availability",
+  "ownership_conversion",
   "media_assets",
   "activity_logs",
   "feature_toggles",

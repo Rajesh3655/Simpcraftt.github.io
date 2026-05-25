@@ -19,13 +19,12 @@ export const useAppStore = create((set, get) => ({
     error: null,
   },
   profile: initialProfile,
-  products: { items: [], status: "idle", error: null },
+  products: { items: [], categories: [], status: "idle", error: null },
   support: { tickets: [], status: "idle", error: null },
-  warranty: { claims: [], status: "idle", error: null },
+  warranty: { claims: [], rmas: [], status: "idle", error: null },
   notifications: [
     { id: 1, title: "Care profile ready", body: "Your product ownership space is ready for your first device.", read: false },
   ],
-  cart: { items: [], status: "empty" },
   wishlist: { items: [], status: "empty" },
   theme: typeof window === "undefined" ? "light" : localStorage.getItem("infibolt.theme") || "light",
 
@@ -40,12 +39,29 @@ export const useAppStore = create((set, get) => ({
       throw error;
     }
   },
+  requestLoginOtp: (payload) => authService.requestLoginOtp(payload),
+  verifyLoginOtp: async (payload) => {
+    set((state) => ({ auth: { ...state.auth, status: "loading", error: null } }));
+    try {
+      const result = await authService.verifyLoginOtp(payload);
+      set({ auth: { user: result.user, status: "authenticated", error: null }, profile: { ...initialProfile, ...result.user } });
+      return result;
+    } catch (error) {
+      set((state) => ({ auth: { ...state.auth, status: "error", error: error.message || "OTP login failed." } }));
+      throw error;
+    }
+  },
   signup: (payload) => authService.signup(payload),
   verifyOtp: async (payload) => {
     set((state) => ({ auth: { ...state.auth, status: "loading", error: null } }));
-    const result = await authService.verifyOtp(payload);
-    set({ auth: { user: result.user, status: "authenticated", error: null }, profile: { ...initialProfile, ...result.user } });
-    return result;
+    try {
+      const result = await authService.verifyOtp(payload);
+      set({ auth: { user: result.user, status: "authenticated", error: null }, profile: { ...initialProfile, ...result.user } });
+      return result;
+    } catch (error) {
+      set((state) => ({ auth: { ...state.auth, status: "error", error: error.message || "OTP verification failed." } }));
+      throw error;
+    }
   },
   hydrateSession: async () => {
     try {
@@ -54,6 +70,16 @@ export const useAppStore = create((set, get) => ({
       return result;
     } catch {
       set((state) => ({ auth: { ...state.auth, user: null, status: "idle" } }));
+      return null;
+    }
+  },
+  refreshSession: async () => {
+    try {
+      const result = await authService.refresh();
+      set({ auth: { user: result.user, status: "authenticated", error: null }, profile: { ...initialProfile, ...result.user } });
+      return result;
+    } catch (error) {
+      set((state) => ({ auth: { ...state.auth, user: null, status: "expired", error: "Your secure session expired. Please sign in again." } }));
       return null;
     }
   },
@@ -69,7 +95,7 @@ export const useAppStore = create((set, get) => ({
     set((state) => ({ products: { ...state.products, status: "loading", error: null } }));
     try {
       const result = await productService.list();
-      set({ products: { items: result.items || [], status: "success", error: null } });
+      set({ products: { items: result.items || [], categories: result.categories || [], status: "success", error: null } });
     } catch (error) {
       set((state) => ({ products: { ...state.products, status: "error", error: error.message || "Unable to load products." } }));
     }
@@ -96,10 +122,10 @@ export const useAppStore = create((set, get) => ({
     set((state) => ({ warranty: { ...state.warranty, status: "loading", error: null } }));
     try {
       const result = await warrantyService.listClaims({ skipGlobalErrorToast: true });
-      set({ warranty: { claims: result.items || [], status: "success", error: null } });
+      set({ warranty: { claims: result.items || [], rmas: result.rmas || [], status: "success", error: null } });
     } catch (error) {
       if (error.status === 401) {
-        set({ warranty: { claims: [], status: "success", error: null } });
+        set({ warranty: { claims: [], rmas: [], status: "success", error: null } });
         return;
       }
       set((state) => ({ warranty: { ...state.warranty, status: "error", error: error.message || "Unable to load warranty claims." } }));
@@ -107,14 +133,39 @@ export const useAppStore = create((set, get) => ({
   },
   createWarrantyClaim: async (payload) => {
     const claim = await warrantyService.createClaim(payload);
-    set((state) => ({ warranty: { ...state.warranty, claims: [claim, ...state.warranty.claims], status: "success" } }));
     return claim;
   },
-  updateProfile: (profile) => set((state) => ({ profile: { ...state.profile, ...profile } })),
+  verifyWarrantyOtp: async (id, otp) => {
+    const claim = await warrantyService.verifyOtp(id, otp);
+    set((state) => ({
+      warranty: {
+        ...state.warranty,
+        claims: [claim, ...state.warranty.claims.filter((item) => item.id !== claim.id)],
+        status: "success",
+      },
+    }));
+    return claim;
+  },
+  createWarrantyRma: async (payload) => {
+    const rma = await warrantyService.createRma(payload);
+    set((state) => ({ warranty: { ...state.warranty, rmas: [rma, ...state.warranty.rmas], status: "success" } }));
+    return rma;
+  },
+  updateProfile: async (profile) => {
+    set((state) => ({ profile: { ...state.profile, ...profile } }));
+    const result = await authService.updateProfile(profile);
+    set((state) => ({ profile: { ...state.profile, ...result }, auth: { ...state.auth, user: { ...(state.auth.user || {}), ...result } } }));
+    return result;
+  },
+  requestProfileContactUpdate: (payload) => authService.requestProfileContactUpdate(payload),
+  verifyProfileContactUpdate: async (payload) => {
+    const result = await authService.verifyProfileContactUpdate(payload);
+    set((state) => ({ profile: { ...state.profile, ...result }, auth: { ...state.auth, user: { ...(state.auth.user || {}), ...result } } }));
+    return result;
+  },
   setTheme: (theme) => {
     if (typeof window !== "undefined") localStorage.setItem("infibolt.theme", theme);
     set({ theme });
   },
   addToWishlist: (product) => set((state) => ({ wishlist: { items: [product, ...state.wishlist.items], status: "ready" } })),
-  addToCart: (product) => set((state) => ({ cart: { items: [product, ...state.cart.items], status: "ready" } })),
 }));

@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Box, Headphones, Shield, ShieldCheck, ShoppingCart, SlidersHorizontal, Sparkles, UserRound, Watch, Zap } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import {
   CollectionGrid,
@@ -12,6 +13,7 @@ import {
   ProductGrid,
   SecondaryButton,
 } from "../../components/commerce/CommerceLayout";
+import { productService } from "../../services/productService";
 import { categories, products } from "../../store/commerce";
 
 const sectionKickerClass = "mb-6 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300";
@@ -19,6 +21,23 @@ const sectionHeadingClass = "luxury-title text-[2rem] font-semibold leading-[1.0
 const sectionHeadingAccentClass = "mt-1 block text-[0.88em] font-medium tracking-normal text-slate-500 dark:text-slate-400";
 
 export default function HomePage() {
+  const [homepage, setHomepage] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    productService.homepage().then((result) => {
+      if (active) setHomepage(result);
+    }).catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const dynamicCategories = homepage?.categories?.length ? homepage.categories : categories;
+  const featuredProducts = homepage?.featuredProducts?.length ? homepage.featuredProducts : products.slice(0, 3);
+  const homepageCollections = homepage?.collections?.length ? homepage.collections : undefined;
+  const heroProduct = useMemo(() => homepage?.heroProducts?.[0] || featuredProducts[0], [featuredProducts, homepage]);
+
   return (
     <CommerceShell
       seoTitle="Technology for the Quiet Future"
@@ -44,7 +63,7 @@ export default function HomePage() {
             className="relative z-10 flex-1"
           >
             <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-900/50 sm:text-[11px]">
-              INFIBOLT Edition 01 / Audio Object
+              {heroProduct?.badge || "INFIBOLT Edition 01"} / {heroProduct?.category || "Audio Object"}
             </p>
             <h1 className="max-w-[8.8ch] text-[3rem] font-medium leading-[0.94] tracking-normal text-slate-950 min-[390px]:text-[3.35rem] sm:text-[4.5rem]">
               Where Sound
@@ -54,7 +73,7 @@ export default function HomePage() {
               Stillness.
             </h1>
             <p className="mt-5 w-full max-w-[20.5rem] text-[0.95rem] font-light leading-[1.65] text-slate-700 sm:mt-7 sm:max-w-[34rem] sm:text-[1.05rem]">
-              Premium electronics engineered for deep focus: cinematic sound, refined materials, and modern rituals shaped around silence.
+              {heroProduct?.shortDescription || heroProduct?.summary || "Premium electronics engineered for deep focus: cinematic sound, refined materials, and modern rituals shaped around silence."}
             </p>
           </motion.div>
 
@@ -126,7 +145,7 @@ export default function HomePage() {
             <MotionStagger className="space-y-0">
               <MotionStaggerItem>
                 <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-900/52 lg:dark:text-white/78 sm:mb-6 sm:text-[11px] sm:tracking-[0.24em]">
-                  INFIBOLT Edition 01 / Audio Object
+                  {heroProduct?.badge || "INFIBOLT Edition 01"} / {heroProduct?.category || "Audio Object"}
                 </p>
               </MotionStaggerItem>
               <MotionStaggerItem>
@@ -140,7 +159,7 @@ export default function HomePage() {
               </MotionStaggerItem>
               <MotionStaggerItem>
                 <p className="mt-7 max-w-[31rem] text-[1.05rem] font-light leading-[1.7] text-slate-800/78 lg:dark:text-white/88">
-                  Premium electronics engineered for deep focus: cinematic sound, refined materials, and modern rituals shaped around silence.
+                  {heroProduct?.shortDescription || heroProduct?.summary || "Premium electronics engineered for deep focus: cinematic sound, refined materials, and modern rituals shaped around silence."}
                 </p>
               </MotionStaggerItem>
             </MotionStagger>
@@ -193,7 +212,7 @@ export default function HomePage() {
            </div>
            
            <div className="grid grid-cols-2 gap-5 md:grid-cols-4 md:gap-8 lg:gap-12">
-            {categories.map((category, index) => {
+            {dynamicCategories.map((category, index) => {
               const icons = [Headphones, Watch, Zap, Box];
               const Icon = icons[index] ?? Sparkles;
 
@@ -239,7 +258,7 @@ export default function HomePage() {
               View All Products
             </Link>
           </div>
-          <ProductGrid items={products.slice(0, 3)} />
+          <ProductGrid items={featuredProducts.slice(0, 3)} />
         </div>
       </MotionSection>
 
@@ -257,7 +276,7 @@ export default function HomePage() {
               </span>
             </h2>
             <p className="mt-8 max-w-md text-base font-light leading-relaxed text-slate-600 dark:text-slate-400">
-              Our ecosystem bridges the gap between third-party marketplaces and direct relationships. Register your product, claim warranty, and prepare for a unified checkout experience.
+              Our ecosystem connects marketplace purchases with long-term ownership. Buy through selected launch partners, then register your device for warranty, support, and care history on Infibolt.
             </p>
             <div className="mt-12">
               <FutureCommerceNotice />
@@ -266,10 +285,10 @@ export default function HomePage() {
           
           <div className="flex flex-col gap-8 pt-4 md:gap-12 md:pt-8">
             {[
-              ["Marketplace routing", "Seamlessly transition from discovery to purchase with intelligent routing to preferred partners like Amazon and Flipkart, or prepare for our upcoming direct checkout.", ShoppingCart],
+              ["Marketplace routing", "Seamlessly transition from discovery to purchase with selected launch partners like Amazon and Flipkart.", ShoppingCart],
               ["Warranty ownership", "A streamlined digital vault for your product registrations, secure invoice uploads, and real-time support ticket tracking.", ShieldCheck],
               ["Unified customer profiles", "Your personal ecosystem hub. Manage secure addresses, comprehensive order histories, curated wishlists, and registered devices.", UserRound],
-              ["Operations-ready control", "A scalable operations layer is planned for product lifecycles, storefront visibility, customer engagement, and warranty claims.", SlidersHorizontal],
+              ["Operations-ready control", "A scalable operations layer controls product lifecycles, storefront visibility, launch channels, customer engagement, and warranty claims.", SlidersHorizontal],
             ].map(([title, text, Icon]) => (
               <div key={title} className="group border-t border-slate-200 pt-8 dark:border-white/10">
                 <Icon className="mb-6 h-6 w-6 text-slate-400 dark:text-slate-400" />
@@ -295,7 +314,7 @@ export default function HomePage() {
               </span>
             </h2>
           </div>
-          <CollectionGrid />
+          <CollectionGrid items={homepageCollections} />
         </div>
       </MotionSection>
 

@@ -16,4 +16,9 @@ export const uploadService = {
     formData.append("file", file);
     return request.post("/uploads/warranty", formData, { headers: { "Content-Type": "multipart/form-data" } });
   },
+  uploadWarrantyPolicy: (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request.post("/uploads/policies", formData, { headers: { "Content-Type": "multipart/form-data" } });
+  },
 };

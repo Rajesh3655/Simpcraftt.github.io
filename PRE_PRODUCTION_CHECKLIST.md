@@ -1,6 +1,6 @@
 # Infibolt Final Pre-Production Checklist
 
-Status date: 2026-05-24
+Status date: 2026-05-25
 
 ## Local Validation
 
@@ -9,13 +9,13 @@ Status date: 2026-05-24
 - Confirm backend health at `http://localhost:4000/api/v1/health`.
 - Confirm customer app at `http://localhost:3000`.
 - Confirm admin app at `http://localhost:3001`.
-- Confirm `npm audit --workspaces` reports zero known vulnerabilities.
+- Run `npm run preprod:audit` before release and review any advisory.
 - Spot-check mobile, tablet, desktop, and ultrawide viewports for header, footer, forms, OTP inputs, admin drawer, tables, and product media.
 
 ## Local Upload Storage
 
 - Set `UPLOAD_PROVIDER=local` in backend production.
-- Set `UPLOAD_BASE_PATH=uploads`.
+- Set `UPLOAD_BASE_PATH` to the persistent Hostinger absolute path for `api.infibolt.com`.
 - Confirm Hostinger Node.js app can write to `infibolt-backend/uploads`.
 - Keep `uploads/products`, `uploads/warranty`, `uploads/support`, and `uploads/temp` persistent between deployments.
 - Store only relative URLs such as `/uploads/products/file.webp` in database records.
@@ -23,7 +23,7 @@ Status date: 2026-05-24
 ## Hostinger Domains
 
 - Backend: `api.infibolt.com`
-- Customer frontend: `app.infibolt.com`
+- Customer frontend: `infibolt.com`
 - Admin: `admin.infibolt.com`
 
 ## Production Environment
@@ -34,10 +34,11 @@ Status date: 2026-05-24
 - Set strict `CORS_ORIGINS` only to production domains.
 - Set `VITE_API_URL=https://api.infibolt.com/api/v1`.
 - Set `VITE_UPLOAD_URL=https://api.infibolt.com/uploads`.
-- Set `OTP_PROVIDER=local` for launch, then switch to `OTP_PROVIDER=msg91` after provider credentials are added.
+- Set `OTP_PROVIDER=local` only for controlled launch testing; switch to a real provider before public OTP traffic.
 - Keep OTP values server-side only; local OTPs are printed only in backend logs during development.
 - Set `SENTRY_DSN` and `VITE_SENTRY_DSN` when Sentry projects are created.
 - Production backend startup now fails fast if HTTPS origins, MongoDB URI, JWT secrets, cookie secret, or admin seed password are left as placeholders.
+- Production database seeding is disabled unless `ALLOW_PRODUCTION_SEED=true`.
 
 ## Security Launch Gate
 
@@ -73,6 +74,6 @@ Status date: 2026-05-24
 
 1. Deploy backend to `api.infibolt.com`.
 2. Verify health, CORS, cookies, CSRF, and local uploads.
-3. Deploy customer frontend to `app.infibolt.com`.
+3. Deploy customer frontend to `infibolt.com`.
 4. Deploy admin dashboard to `admin.infibolt.com`.
 5. Run customer/admin smoke tests against production API.

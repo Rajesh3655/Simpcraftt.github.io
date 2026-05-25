@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { existsSync } from "fs";
-import { mkdir, unlink } from "fs/promises";
+import { mkdir, readdir, rename, stat, unlink } from "fs/promises";
 import multer from "multer";
 import { basename, extname, resolve } from "path";
 import { env } from "../config/env.js";
@@ -9,18 +9,22 @@ import { createHttpError } from "../utils/httpError.js";
 export const uploadFolders = {
   products: "products",
   warranty: "warranty",
+  policies: "policies",
+  rma: "rma",
   support: "support",
   temp: "temp",
 };
 
-const imageMime = new Set(["image/jpeg", "image/png", "image/webp"]);
+const imageMime = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"]);
 const documentMime = new Set(["application/pdf"]);
-const imageExt = new Set([".jpg", ".jpeg", ".png", ".webp"]);
+const imageExt = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"]);
 const documentExt = new Set([".pdf"]);
 
 export const limits = {
   products: 5 * 1024 * 1024,
-  warranty: 10 * 1024 * 1024,
+  warranty: 5 * 1024 * 1024,
+  policies: 5 * 1024 * 1024,
+  rma: 2 * 1024 * 1024,
   support: 10 * 1024 * 1024,
   temp: env.maxUploadBytes,
 };
@@ -51,12 +55,14 @@ export function uniqueFilename(file) {
   return `${Date.now()}-${crypto.randomUUID()}-${sanitizeOriginalName(file.originalname)}${ext}`;
 }
 
-export function assertUploadAllowed(file, { imagesOnly = false } = {}) {
+export function assertUploadAllowed(file, { imagesOnly = false, documentsOnly = false } = {}) {
   if (!file) throw createHttpError(400, "File is required.");
   const ext = extname(file.originalname || "").toLowerCase();
   const validImage = imageMime.has(file.mimetype) && imageExt.has(ext);
   const validDocument = documentMime.has(file.mimetype) && documentExt.has(ext);
-  if (imagesOnly && !validImage) throw createHttpError(422, "Only JPG, PNG, and WEBP images are allowed.");
+  if (imagesOnly && !validImage) throw createHttpError(422, "Only JPG, PNG, WEBP, GIF, and AVIF images are allowed.");
+  if (documentsOnly && !validDocument) throw createHttpError(422, "Only PDF files are allowed.");
+  if (documentsOnly) return;
   if (!imagesOnly && !validImage && !validDocument) throw createHttpError(422, "Only JPG, PNG, WEBP, and PDF files are allowed.");
 }
 
@@ -84,7 +90,7 @@ export function createUploadMiddleware(folder, options = {}) {
 
 export function relativeUploadPath(folder, filename) {
   const safeFolder = uploadFolders[folder] || uploadFolders.temp;
-  if (!/^[0-9]+-[0-9a-f-]+-[a-z0-9-]+\.(jpg|jpeg|png|webp|pdf)$/i.test(filename)) {
+  if (!/^[0-9]+-[0-9a-f-]+-[a-z0-9-]+\.(jpg|jpeg|png|webp|gif|avif|pdf)$/i.test(filename)) {
     throw createHttpError(400, "Invalid filename.");
   }
   return `/uploads/${safeFolder}/${filename}`;
@@ -94,6 +100,12 @@ export function resolveUploadPath(folder, filename) {
   const target = resolve(folderPath(folder), filename);
   if (!target.startsWith(folderPath(folder))) throw createHttpError(400, "Invalid file path.");
   return target;
+}
+
+export function parseRelativeUploadPath(path) {
+  const match = String(path || "").match(/^\/uploads\/([a-z]+)\/([0-9]+-[0-9a-f-]+-[a-z0-9-]+\.(?:jpg|jpeg|png|webp|gif|avif|pdf))$/i);
+  if (!match) throw createHttpError(400, "Invalid upload path.");
+  return { folder: match[1], filename: match[2] };
 }
 
 export function buildUploadResponse(req, folder) {
@@ -119,6 +131,34 @@ export async function deleteLocalUpload(folder, filename) {
   return { deleted: true, path: relativeUploadPath(folder, filename) };
 }
 
+export async function moveLocalUpload(path, targetFolder) {
+  const { folder, filename } = parseRelativeUploadPath(path);
+  if (!uploadFolders[targetFolder]) throw createHttpError(400, "Invalid upload target.");
+  if (folder === targetFolder) return relativeUploadPath(targetFolder, filename);
+  if (folder !== uploadFolders.temp) throw createHttpError(422, "Only temporary uploads can be finalized.");
+  const source = resolveUploadPath(folder, filename);
+  const target = resolveUploadPath(targetFolder, filename);
+  if (!existsSync(source)) throw createHttpError(410, "Uploaded file expired. Please upload the invoice again.");
+  await rename(source, target);
+  return relativeUploadPath(targetFolder, filename);
+}
+
+export async function cleanupTempUploads(maxAgeMs = 24 * 60 * 60 * 1000) {
+  const tempPath = folderPath("temp");
+  const now = Date.now();
+  const files = await readdir(tempPath, { withFileTypes: true });
+  const deleted = [];
+  await Promise.all(files.map(async (file) => {
+    if (!file.isFile() || file.name === ".gitkeep") return;
+    const target = resolveUploadPath("temp", file.name);
+    const info = await stat(target);
+    if (now - info.mtimeMs < maxAgeMs) return;
+    await unlink(target);
+    deleted.push(file.name);
+  }));
+  return { deleted };
+}
+
 export function uploadReadiness() {
   return {
     provider: "local",
@@ -126,10 +166,12 @@ export function uploadReadiness() {
     folders: Object.values(uploadFolders),
     limits: {
       products: "5MB",
-      warranty: "10MB",
+      warranty: "5MB",
+      policies: "5MB",
+      rma: "2MB",
       support: "10MB",
       temp: `${Math.round(env.maxUploadBytes / 1024 / 1024)}MB`,
     },
-    futureProviders: ["external-cdn", "object-storage", "s3-compatible"],
+    storageModes: ["local-secure", "cdn-ready", "object-storage-ready"],
   };
 }

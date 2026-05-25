@@ -1,17 +1,10 @@
 import crypto from "crypto";
+import mongoose from "mongoose";
 import { env } from "../config/env.js";
 import { AuditLog } from "../models/AuditLog.js";
 import { OTPRecord } from "../models/OTPRecord.js";
 import { hashPassword, verifyPassword } from "../utils/crypto.js";
 import { createHttpError } from "../utils/httpError.js";
-
-const purposeLabels = {
-  signup: "signup verification",
-  login: "login verification",
-  "password-reset": "password reset",
-  warranty: "warranty verification",
-  "email-verification": "email verification",
-};
 
 function normalizeTarget(target) {
   return String(target || "").trim().toLowerCase();
@@ -21,14 +14,11 @@ function generateOtp() {
   return String(crypto.randomInt(100000, 1000000));
 }
 
-async function deliverOtp({ target, purpose, otp, req }) {
+async function deliverOtp({ purpose }) {
   await new Promise((resolve) => setTimeout(resolve, env.nodeEnv === "test" ? 0 : 350));
   if (env.otpProvider === "local") {
     if (env.isProduction && !env.allowLocalOtp) {
       return { status: "failed", provider: "local", reason: "Local OTP delivery is disabled in production." };
-    }
-    if (!env.isProduction) {
-      console.info(`[otp:local] ${purposeLabels[purpose] || purpose} for ${target}: ${otp} requestId=${req?.id || "n/a"}`);
     }
     return { status: "sent", provider: "local" };
   }
@@ -84,7 +74,7 @@ export async function issueOtp({ target, purpose, metadata = {}, ttlMinutes = en
 
   const otp = generateOtp();
   const otpHash = await hashPassword(otp);
-  const delivery = await deliverOtp({ target: normalizedTarget, purpose, otp, req });
+  const delivery = await deliverOtp({ purpose });
   if (delivery.status !== "sent") throw createHttpError(503, "OTP delivery is temporarily unavailable.");
 
   const record = await OTPRecord.create({
@@ -112,11 +102,13 @@ export async function issueOtp({ target, purpose, metadata = {}, ttlMinutes = en
   };
 }
 
-export async function verifyOtpCode({ target, purpose, otp, req }) {
+export async function verifyOtpCode({ target, purpose, otp, verificationId, req }) {
   const normalizedTarget = normalizeTarget(target);
   if (!/^\d{6}$/.test(String(otp || ""))) throw createHttpError(422, "OTP must be a 6 digit code.");
+  if (verificationId && !mongoose.isValidObjectId(verificationId)) throw createHttpError(422, "OTP has expired or does not exist.");
 
   const record = await OTPRecord.findOne({
+    ...(verificationId ? { _id: verificationId } : {}),
     target: normalizedTarget,
     purpose,
     consumedAt: { $exists: false },
@@ -133,9 +125,6 @@ export async function verifyOtpCode({ target, purpose, otp, req }) {
   if (!(await verifyPassword(String(otp), record.otpHash))) {
     record.attempts += 1;
     await record.save();
-    if (!env.isProduction) {
-      console.warn(`[otp:failed] purpose=${purpose} target=${normalizedTarget} attempts=${record.attempts} requestId=${req?.id || "n/a"}`);
-    }
     await logOtpEvent(req, "otp.verify.failed", { target: normalizedTarget, purpose, attempts: record.attempts });
     throw createHttpError(422, "Invalid OTP.");
   }

@@ -1,11 +1,16 @@
 import { Links, Meta, Scripts, ScrollRestoration, useOutlet } from 'react-router';
+import { useEffect } from 'react';
 import { Toaster } from 'sonner';
 import { initializeMonitoring } from './config/monitoring';
+import { useAppStore } from './store/appStore';
 import './styles/global.css';
+import globalStylesheetUrl from './styles/global.css?url';
 
 initializeMonitoring();
 
-const siteUrl = 'https://app.infibolt.com';
+let hasHydratedCustomerSession = false;
+
+const siteUrl = 'https://infibolt.com';
 const defaultTitle = 'INFIBOLT | Premium Electronics for Focused Living';
 const defaultDescription =
   'INFIBOLT builds premium electronics for focused work, cinematic sound, and long-term ownership care.';
@@ -28,6 +33,7 @@ export const meta = () => [
 ];
 
 export const links = () => [
+  { rel: 'stylesheet', href: globalStylesheetUrl },
   { rel: 'manifest', href: '/manifest.webmanifest' },
   { rel: 'icon', href: '/images/favicon-tab.ico' },
   { rel: 'icon', type: 'image/png', href: '/images/favicon-tab.png' },
@@ -69,10 +75,11 @@ export function Layout({ children }) {
 
 export function ErrorBoundary() {
   return (
-    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', fontFamily: 'Satoshi, sans-serif', background: '#f8f7f5', padding: 24 }}>
-      <div style={{ maxWidth: 460, textAlign: 'center', border: '1px solid rgba(15,23,42,.1)', borderRadius: 24, background: 'rgba(255,255,255,.75)', padding: 32 }}>
-        <h1>Something went wrong</h1>
-        <p>Please refresh or return to the previous page.</p>
+    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', fontFamily: 'Satoshi, Inter, sans-serif', background: '#f7f5f0', padding: 24 }}>
+      <div style={{ maxWidth: 480, textAlign: 'center', border: '1px solid rgba(15,23,42,.1)', borderRadius: 22, background: 'rgba(255,255,255,.82)', padding: 36, boxShadow: '0 24px 80px rgba(15,23,42,.08)' }}>
+        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '.2em', textTransform: 'uppercase', color: '#64748b' }}>Infibolt experience</p>
+        <h1 style={{ margin: '14px 0 0', fontSize: 30, lineHeight: 1.1, color: '#020617' }}>We could not open this view.</h1>
+        <p style={{ margin: '14px auto 0', maxWidth: 360, color: '#475569', lineHeight: 1.7 }}>Refresh the page or return to the previous screen. Your account and ownership data remain protected.</p>
       </div>
     </div>
   );
@@ -82,6 +89,7 @@ export default function App() {
   const outlet = useOutlet();
   return (
     <>
+      <CustomerSessionManager />
       {outlet}
       <Toaster
         position="top-right"
@@ -92,5 +100,27 @@ export default function App() {
       />
     </>
   );
+}
+
+function CustomerSessionManager() {
+  const authUser = useAppStore((state) => state.auth.user);
+  const hydrateSession = useAppStore((state) => state.hydrateSession);
+  const refreshSession = useAppStore((state) => state.refreshSession);
+
+  useEffect(() => {
+    if (hasHydratedCustomerSession) return;
+    hasHydratedCustomerSession = true;
+    hydrateSession();
+  }, [hydrateSession]);
+
+  useEffect(() => {
+    if (!authUser) return undefined;
+    const timer = window.setInterval(() => {
+      refreshSession();
+    }, 10 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, [authUser, refreshSession]);
+
+  return null;
 }
 

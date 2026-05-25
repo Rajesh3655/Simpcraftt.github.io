@@ -36,6 +36,7 @@ export const env = {
   maxUploadBytes: Number(process.env.MAX_UPLOAD_BYTES || 5 * 1024 * 1024),
   uploadProvider: process.env.UPLOAD_PROVIDER || "local",
   uploadBasePath: process.env.UPLOAD_BASE_PATH || "uploads",
+  allowProductionSeed: process.env.ALLOW_PRODUCTION_SEED === "true",
   otpProvider: process.env.OTP_PROVIDER || "local",
   allowLocalOtp: process.env.ALLOW_LOCAL_OTP === "true",
   otpTtlMinutes: Number(process.env.OTP_TTL_MINUTES || 10),

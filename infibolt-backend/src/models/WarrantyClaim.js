@@ -8,6 +8,7 @@ const schema = new mongoose.Schema(
     customer: { type: String, trim: true, maxlength: 120 },
     email: { type: String, trim: true, lowercase: true, maxlength: 160 },
     product: { type: String, required: true, trim: true, maxlength: 160 },
+    productSlug: { type: String, trim: true, lowercase: true, maxlength: 120 },
     serial: { type: String, required: true, trim: true, maxlength: 80 },
     invoiceNumber: { type: String, trim: true, maxlength: 80 },
     invoiceUrl: { type: String, trim: true, maxlength: 1000 },
@@ -29,7 +30,8 @@ const schema = new mongoose.Schema(
   schemaDefaults
 );
 
-schema.index({ serial: 1 }, { unique: true });
+schema.index({ productSlug: 1, serial: 1 }, { unique: true });
+schema.index({ serial: 1 });
 schema.index({ email: 1, status: 1, updatedAt: -1 });
 
 export const WarrantyClaim = mongoose.model("WarrantyClaim", schema);

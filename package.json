@@ -1,6 +1,6 @@
 {
   "name": "infibolt-platform",
-  "version": "0.1.0",
+  "version": "3.1.0",
   "private": true,
   "workspaces": [
     "infibolt-frontend",
@@ -15,7 +15,10 @@
     "build:admin": "npm --workspace infibolt-admin run build",
     "build:all": "npm run build:frontend && npm run build:admin",
     "check:backend": "npm --workspace infibolt-backend run check",
+    "typecheck:frontend": "npm --workspace infibolt-frontend run typecheck",
+    "typecheck:admin": "npm --workspace infibolt-admin run typecheck",
     "audit:all": "npm audit --workspaces",
-    "preprod:check": "npm run check:backend && npm run audit:all && npm --workspace infibolt-frontend run typecheck && npm --workspace infibolt-admin run typecheck && npm run build:all"
+    "preprod:check": "npm run check:backend && npm run typecheck:frontend && npm run typecheck:admin && npm run build:all",
+    "preprod:audit": "npm run audit:all"
   }
 }

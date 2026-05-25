@@ -25,7 +25,9 @@ export async function connectDatabase() {
     serverSelectionTimeoutMS: 4000,
     autoIndex: env.nodeEnv !== "production",
   });
-  await seedDevelopmentData();
+  if (!env.isProduction || env.allowProductionSeed) {
+    await seedDevelopmentData();
+  }
   console.log(`[db] Mongoose connected: ${env.mongoDb}`);
 }
 

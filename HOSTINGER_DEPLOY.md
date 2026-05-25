@@ -1,10 +1,10 @@
 # Hostinger Deployment
 
-Use these settings for `app.infibolt.com` in Hostinger Node.js hosting.
+Use these settings for `infibolt.com` in Hostinger Node.js hosting.
 
 ## App Settings
 
-- Domain: `app.infibolt.com`
+- Domain: `infibolt.com`
 - Framework: `React Router`
 - Runtime: Node.js `22` or newer
 - Package manager: `npm`
@@ -23,8 +23,8 @@ Set these in Hostinger's Node.js app environment variable panel:
 NODE_ENV=production
 HOST=0.0.0.0
 PORT=3000
-AUTH_URL=https://app.infibolt.com
-CORS_ORIGINS=https://app.infibolt.com,https://infibolt.com
+AUTH_URL=https://infibolt.com
+CORS_ORIGINS=https://infibolt.com,https://api.infibolt.com
 AUTH_SECRET=<generate-a-long-random-secret>
 ```
 
@@ -38,6 +38,6 @@ If Hostinger provides its own `PORT`, use Hostinger's value instead of `3000`.
 4. Make sure the entry file is `build/server/index.js`.
 5. Make sure the start command is `npm start` if Hostinger asks for it.
 6. Restart the Node.js app after changing environment variables.
-7. Open `https://app.infibolt.com`.
+7. Open `https://infibolt.com`.
 
 `npm run build` creates `build/client` and `build/server`. The compiled Hono/React Router SSR server is `build/server/index.js`; it already starts the HTTP server and serves `build/client` assets.

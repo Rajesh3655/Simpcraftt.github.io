@@ -1,6 +1,27 @@
-# Hostinger Production Deployment
+# Infibolt Hostinger Production Deployment
 
-## 1. Backend: api.infibolt.com
+Final domain map:
+
+- `https://infibolt.com` -> customer frontend
+- `https://api.infibolt.com` -> backend API and protected uploads
+- `https://admin.infibolt.com` -> Admin OS
+
+## 1. Build And Verify Before Upload
+
+Run from repository root:
+
+```bash
+npm install
+npm run preprod:check
+```
+
+Optional dependency audit:
+
+```bash
+npm run preprod:audit
+```
+
+## 2. Backend: api.infibolt.com
 
 Hostinger Node.js app:
 
@@ -9,85 +30,152 @@ Hostinger Node.js app:
 - Start command: `npm start`
 - Node version: 22+
 
-Environment variables:
+Use `infibolt-backend/.env.production.example` as the template.
+
+Required production values:
 
 ```txt
 NODE_ENV=production
-HOST=0.0.0.0
-PORT=<Hostinger-provided-port>
 API_ORIGIN=https://api.infibolt.com
-FRONTEND_ORIGIN=https://app.infibolt.com
+FRONTEND_ORIGIN=https://infibolt.com
 ADMIN_ORIGIN=https://admin.infibolt.com
-CORS_ORIGINS=https://app.infibolt.com,https://admin.infibolt.com
-MONGODB_URI=<MongoDB Atlas connection string>
+CORS_ORIGINS=https://infibolt.com,https://www.infibolt.com,https://admin.infibolt.com
+MONGODB_URI=<MongoDB Atlas app user connection string>
 MONGODB_DB=infibolt_prod
-JWT_ACCESS_SECRET=<64-byte random secret>
-JWT_REFRESH_SECRET=<different 64-byte random secret>
-COOKIE_SECRET=<different 64-byte random secret>
 UPLOAD_PROVIDER=local
-UPLOAD_BASE_PATH=uploads
-OTP_PROVIDER=<production-sms-or-email-provider>
-ALLOW_LOCAL_OTP=false
-OTP_TTL_MINUTES=10
-OTP_RESEND_COOLDOWN_SECONDS=60
-OTP_MAX_REQUESTS_PER_HOUR=5
-OTP_MAX_VERIFY_ATTEMPTS=5
-SENTRY_DSN=<optional>
+UPLOAD_BASE_PATH=/home/USER/domains/api.infibolt.com/infibolt-backend/uploads
+ALLOW_PRODUCTION_SEED=false
 ```
 
-Verify:
+Generate unique 64+ character values for:
 
+- `JWT_ACCESS_SECRET`
+- `JWT_REFRESH_SECRET`
+- `COOKIE_SECRET`
+
+Persistent upload folders must exist and be writable:
+
+- `uploads/products`
+- `uploads/policies`
+- `uploads/warranty`
+- `uploads/rma`
+- `uploads/support`
+- `uploads/temp`
+
+Protected upload behavior:
+
+- Product and policy files can be served publicly.
+- Warranty, RMA, and support files require authenticated customer/admin cookies.
+- API and sensitive uploads return `X-Robots-Tag: noindex, nofollow, noarchive`.
+- Temp uploads are cleaned hourly and should not be used as permanent records.
+
+Health checks:
+
+- `https://api.infibolt.com/health`
 - `https://api.infibolt.com/api/v1/health`
 - `https://api.infibolt.com/api/v1/csrf-token`
 
-## 2. Customer Frontend: app.infibolt.com
+## 3. Customer Frontend: infibolt.com
+
+Hostinger Node.js app:
 
 - App root: `infibolt-frontend`
 - Build command: `npm run build`
-- Start command: `npm start`
 - Entry file: `server.js`
+- Start command: `npm start`
+- Node version: 22+
 
-Environment:
+Use `infibolt-frontend/.env.production.example`.
 
 ```txt
 NODE_ENV=production
-AUTH_URL=https://app.infibolt.com
-AUTH_SECRET=<random secret>
+AUTH_URL=https://infibolt.com
 VITE_API_URL=https://api.infibolt.com/api/v1
 VITE_UPLOAD_URL=https://api.infibolt.com/uploads
 VITE_USE_MOCK_API=false
-VITE_SENTRY_DSN=<optional>
 ```
 
-## 3. Admin Frontend: admin.infibolt.com
+Indexing:
+
+- Public pages are in `public/sitemap.xml`.
+- Private pages such as profile, warranty, support, auth, cart, and checkout are blocked in `public/robots.txt` and marked `noindex` in app metadata.
+
+## 4. Admin OS: admin.infibolt.com
+
+Hostinger Node.js app:
 
 - App root: `infibolt-admin`
 - Build command: `npm run build`
-- Start command: `npm start`
 - Entry file: `server.js`
+- Start command: `npm start`
+- Node version: 22+
 
-Environment:
+Use `infibolt-admin/.env.production.example`.
 
 ```txt
 NODE_ENV=production
 AUTH_URL=https://admin.infibolt.com
-AUTH_SECRET=<random secret>
 VITE_API_URL=https://api.infibolt.com/api/v1
 VITE_UPLOAD_URL=https://api.infibolt.com/uploads
 VITE_USE_MOCK_API=false
-VITE_SENTRY_DSN=<optional>
 ```
 
-## Smoke Tests
+Admin indexing:
 
-- Customer login.
-- Customer product listing and detail.
-- Customer support ticket creation.
-- Customer warranty claim and OTP verification.
-- Signup OTP, login OTP, and password-reset OTP.
-- Admin login.
-- Admin product create/update/delete.
-- Admin warranty status update.
-- Admin support reply.
-- Local product, warranty, and support uploads.
-- Customer/admin mobile drawer, bottom navigation, OTP, and horizontally scrollable admin tables.
+- `infibolt-admin/public/robots.txt` disallows everything.
+- Root metadata includes `noindex,nofollow`.
+
+## 5. PM2 Alternative
+
+If deploying on VPS or Hostinger with PM2 access:
+
+```bash
+pm2 start ecosystem.config.cjs
+pm2 save
+pm2 startup
+```
+
+## 6. Production Smoke Tests
+
+Backend:
+
+- Health route responds.
+- CSRF token route responds.
+- CORS allows only `infibolt.com`, `www.infibolt.com`, and `admin.infibolt.com`.
+- Product upload works for admin.
+- Warranty/support files are not available without auth.
+
+Frontend:
+
+- Homepage, products, product detail, collections, warranty policy, FAQ, and contact load.
+- Product images resolve from `https://api.infibolt.com/uploads`.
+- Newsletter subscribe saves once and handles duplicate emails.
+- Notify Me stores a lead per product/contact.
+
+Admin:
+
+- Admin login works.
+- Product, category, collection, warranty, support, newsletter, lead, export, and audit sections open.
+- CSV export downloads.
+- Warranty policy PDF upload works.
+
+## 7. Backup And Restore
+
+Daily:
+
+- MongoDB Atlas automated backup.
+- Hostinger file backup of `infibolt-backend/uploads`.
+
+Before each release:
+
+- Export MongoDB snapshot.
+- Archive `uploads`.
+- Record deployed git commit.
+
+Restore order:
+
+1. Restore MongoDB.
+2. Restore `uploads`.
+3. Deploy backend.
+4. Deploy frontend and admin.
+5. Run smoke tests.

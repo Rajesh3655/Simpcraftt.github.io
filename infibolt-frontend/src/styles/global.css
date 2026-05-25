@@ -60,7 +60,7 @@
   }
 
   html {
-    scroll-behavior: auto;
+    scroll-behavior: smooth;
     color-scheme: light;
   }
 
@@ -88,6 +88,12 @@
       width: 0;
       height: 0;
     }
+  }
+
+  img,
+  video {
+    backface-visibility: hidden;
+    transform: translateZ(0);
   }
 }
 
@@ -209,6 +215,7 @@
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
   }
+
 
   @supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
   .lux-panel {
@@ -339,6 +346,67 @@
     box-shadow: 0 18px 54px rgba(17, 24, 39, 0.1) !important;
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
+  }
+
+  [data-sonner-toaster] [data-sonner-toast][data-type="success"] {
+    border-color: rgba(5, 150, 105, 0.18) !important;
+    background: rgba(236, 253, 245, 0.94) !important;
+    color: #064e3b !important;
+  }
+
+  [data-sonner-toaster] [data-sonner-toast][data-type="error"] {
+    border-color: rgba(190, 18, 60, 0.18) !important;
+    background: rgba(255, 241, 242, 0.94) !important;
+    color: #7f1d1d !important;
+  }
+
+  [data-sonner-toaster] [data-sonner-toast][data-type="info"] {
+    border-color: rgba(37, 99, 235, 0.16) !important;
+    background: rgba(239, 246, 255, 0.94) !important;
+    color: #1e3a8a !important;
+  }
+
+  [data-sonner-toaster] [data-title] {
+    font-weight: 680 !important;
+    letter-spacing: 0 !important;
+  }
+
+  [data-sonner-toaster] [data-description] {
+    color: currentColor !important;
+    opacity: 0.72 !important;
+  }
+
+  .settings-gear-spin-open,
+  .settings-gear-spin-close {
+    transform-origin: center;
+  }
+
+  .settings-gear-spin-open {
+    animation: settings-gear-open 460ms var(--lux-ease) both;
+  }
+
+  .settings-gear-spin-close {
+    animation: settings-gear-close 460ms var(--lux-ease) both;
+  }
+
+  @keyframes settings-gear-open {
+    0% { transform: rotate(0deg); }
+    72% { transform: rotate(-210deg); }
+    100% { transform: rotate(-180deg); }
+  }
+
+  @keyframes settings-gear-close {
+    0% { transform: rotate(0deg); }
+    72% { transform: rotate(210deg); }
+    100% { transform: rotate(180deg); }
+  }
+
+  @keyframes settings-gear-swing {
+    0% { transform: rotate(0deg); }
+    28% { transform: rotate(52deg); }
+    58% { transform: rotate(-38deg); }
+    82% { transform: rotate(18deg); }
+    100% { transform: rotate(0deg); }
   }
 
   .premium-control:focus-within {

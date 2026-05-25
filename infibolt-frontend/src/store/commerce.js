@@ -206,7 +206,7 @@ export const products = [
 export const faqs = [
   {
     question: "Can I buy directly from INFIBOLT?",
-    answer: "Direct checkout is architecturally ready but disabled for launch. Current purchases route to marketplace partners.",
+    answer: "Infibolt is launching marketplace-first. Current purchases route to selected partners, while ownership, warranty, and support are managed here.",
   },
   {
     question: "Can marketplace links be changed later?",
@@ -217,8 +217,8 @@ export const faqs = [
     answer: "Customers submit product, serial, purchase, invoice, and contact details. The system returns a tracking ticket.",
   },
   {
-    question: "Will cart and checkout be enabled later?",
-    answer: "Yes. Cart, checkout, coupons, orders, and address pages are present as future commerce flows.",
+    question: "How do I activate warranty after marketplace purchase?",
+    answer: "Create an Infibolt account, register the product serial and invoice, then your ownership profile unlocks warranty and support workflows.",
   },
 ];
 

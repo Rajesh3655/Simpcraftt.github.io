@@ -6,6 +6,9 @@ const schema = new mongoose.Schema(
     name: { type: String, required: true, trim: true, maxlength: 120 },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, maxlength: 160 },
     phone: { type: String, trim: true, maxlength: 20 },
+    address: { type: String, trim: true, maxlength: 240 },
+    city: { type: String, trim: true, maxlength: 80 },
+    state: { type: String, trim: true, maxlength: 80 },
     passwordHash: { type: String, select: false },
     role: { type: String, default: "customer", enum: ["customer"] },
     status: { type: String, default: "Verified", enum: ["Pending", "Verified", "Locked"] },
@@ -18,6 +21,7 @@ const schema = new mongoose.Schema(
     resetTokenExpiresAt: { type: Date, select: false },
     emailVerificationTokenHash: { type: String, select: false },
     emailVerifiedAt: { type: Date },
+    phoneVerifiedAt: { type: Date },
   },
   schemaDefaults
 );

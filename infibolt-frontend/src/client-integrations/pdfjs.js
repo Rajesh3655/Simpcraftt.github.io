@@ -35,3 +35,27 @@ export const extractTextFromPDF = async (file) => {
 	}
 };
 
+export const extractTextFromPDFUrl = async (url) => {
+	try {
+		const loadingTask = pdfjs.getDocument(url);
+		const pdf = await loadingTask.promise;
+		const { numPages } = pdf;
+		const pages = [];
+
+		for (let pageNumber = 1; pageNumber <= numPages; pageNumber++) {
+			const page = await pdf.getPage(pageNumber);
+			const textContent = await page.getTextContent();
+			const pageText = textContent.items
+				.map((item) => ('str' in item ? item.str : ''))
+				.join(' ')
+				.replace(/\s+/g, ' ')
+				.trim();
+			if (pageText) pages.push(pageText);
+		}
+
+		return pages.join('\n\n');
+	} catch (_error) {
+		return undefined;
+	}
+};
+

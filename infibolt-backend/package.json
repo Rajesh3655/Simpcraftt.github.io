@@ -1,6 +1,6 @@
 {
   "name": "infibolt-backend",
-  "version": "0.1.0",
+  "version": "3.1.0",
   "private": true,
   "type": "module",
   "main": "src/server.js",
@@ -11,9 +11,10 @@
     "dev": "node --watch src/server.js",
     "start:prod": "NODE_ENV=production node src/server.js",
     "seed": "node scripts/seed.js",
+    "repair:serial-indexes": "node scripts/repairSerialIndexes.js",
     "start": "node src/server.js",
     "audit:prod": "npm audit --omit=dev",
-    "check": "node --check src/app.js && node --check src/server.js"
+    "check": "node --check src/app.js && node --check src/server.js && node --check src/controllers/adminController.js && node --check src/controllers/customerController.js && node --check src/routes/adminRoutes.js && node --check src/routes/customerRoutes.js && node --check src/routes/uploadRoutes.js && node --check src/services/uploadService.js && node --check src/config/env.js && node --check src/config/db.js"
   },
   "dependencies": {
     "@sentry/node": "^10.53.1",

@@ -1,32 +1,37 @@
 import {
+  Activity,
   BarChart3,
   Bell,
   Boxes,
-  CreditCard,
-  Eye,
-  EyeOff,
+  CheckCircle2,
+  ChevronDown,
+  CircleDot,
+  Database,
+  Download,
   FileSearch,
   FileText,
-  Globe,
-  Images,
+  Gauge,
+  Globe2,
+  Grid3X3,
+  Home,
+  Image,
+  Layers3,
   LayoutDashboard,
   LockKeyhole,
+  Mail,
   Megaphone,
   MessageSquare,
   Package,
-  Pencil,
-  Plus,
+  PackageCheck,
+  PanelsTopLeft,
   Search,
   ShieldCheck,
-  ShoppingCart,
+  ShoppingBag,
   SlidersHorizontal,
+  Sparkles,
   TicketCheck,
-  ToggleLeft,
-  Trash2,
+  UserCog,
   Users,
-  UploadCloud,
-  UserRound,
-  WalletCards,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router";
@@ -38,698 +43,559 @@ import {
   adminUser,
   cmsBlocks,
   customers,
-  databaseCollections,
-  ecommerceModules,
-  featureToggles,
+  launchLeads,
   marketplaceRows,
+  newsletterSubscribers,
   supportTickets,
   warrantyClaims,
 } from "../store/admin";
 import { categories, collections, formatPrice, products } from "../store/commerce";
 
-const adminNav = [
-  { label: "Dashboard", href: "/", icon: LayoutDashboard },
-  { label: "Manage Products", href: "/products", icon: Package },
-  { label: "Users", href: "/users", icon: Users },
-  { label: "Warranty Claims", href: "/warranty", icon: ShieldCheck },
-  { label: "Complaints", href: "/support", icon: MessageSquare },
-  { label: "Analytics", href: "/analytics", icon: BarChart3 },
-  { label: "Settings", href: "/settings", icon: ToggleLeft },
+const navGroups = [
+  { label: "Command", items: [{ label: "Dashboard", href: "/", icon: LayoutDashboard, section: "dashboard" }] },
+  {
+    label: "Commerce",
+    items: [
+      { label: "Products", href: "/products", icon: Package, section: "products" },
+      { label: "Categories", href: "/categories", icon: Grid3X3, section: "categories" },
+      { label: "Collections", href: "/collections", icon: Layers3, section: "collections" },
+      { label: "Product Hero", href: "/product-hero", icon: Sparkles, section: "productHero" },
+      { label: "Collection Hero", href: "/collection-hero", icon: PanelsTopLeft, section: "collectionHero" },
+      { label: "Homepage Sections", href: "/homepage-sections", icon: Home, section: "homepageSections" },
+    ],
+  },
+  {
+    label: "Customers",
+    items: [
+      { label: "Users", href: "/users", icon: Users, section: "users" },
+      { label: "Newsletter", href: "/newsletter-subscribers", icon: Mail, section: "newsletterSubscribers" },
+      { label: "Export Users", href: "/export-users", icon: Download, section: "exportUsers" },
+      { label: "Ownership Profiles", href: "/ownership-profiles", icon: PackageCheck, section: "ownershipProfiles" },
+    ],
+  },
+  {
+    label: "Warranty",
+    items: [
+      { label: "Registered Warranty", href: "/warranty", icon: ShieldCheck, section: "registeredWarranty" },
+      { label: "Warranty Claims", href: "/warranty-claims", icon: TicketCheck, section: "warrantyClaims" },
+      { label: "Claim Status", href: "/claim-status", icon: CheckCircle2, section: "claimStatus" },
+      { label: "Serial Management", href: "/serial-management", icon: FileSearch, section: "serialManagement" },
+    ],
+  },
+  {
+    label: "Support",
+    items: [
+      { label: "Complaints", href: "/support", icon: MessageSquare, section: "complaints" },
+      { label: "Support Tickets", href: "/support-tickets", icon: TicketCheck, section: "supportTickets" },
+      { label: "Conversations", href: "/conversations", icon: MessageSquare, section: "conversations" },
+      { label: "Priority Support", href: "/priority-support", icon: Gauge, section: "prioritySupport" },
+    ],
+  },
+  {
+    label: "Marketing",
+    items: [
+      { label: "Newsletter", href: "/newsletter", icon: Mail, section: "newsletter" },
+      { label: "Campaign Leads", href: "/campaign-leads", icon: Megaphone, section: "campaignLeads" },
+      { label: "Notify Me Leads", href: "/notify-leads", icon: Bell, section: "notifyLeads" },
+    ],
+  },
+  {
+    label: "Content",
+    items: [
+      { label: "Homepage CMS", href: "/cms", icon: PanelsTopLeft, section: "homepageCms" },
+      { label: "Product Page CMS", href: "/product-page-cms", icon: FileText, section: "productPageCms" },
+      { label: "Collection Page CMS", href: "/collection-page-cms", icon: Layers3, section: "collectionPageCms" },
+      { label: "SEO Management", href: "/seo", icon: Globe2, section: "seo" },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { label: "Analytics", href: "/analytics", icon: BarChart3, section: "analytics" },
+      { label: "Inventory", href: "/inventory", icon: Boxes, section: "inventory" },
+      { label: "Marketplace Links", href: "/marketplace", icon: ShoppingBag, section: "marketplace" },
+      { label: "Launch Status", href: "/launch-status", icon: Activity, section: "launchStatus" },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { label: "Security", href: "/security", icon: LockKeyhole, section: "security" },
+      { label: "Admin Users", href: "/admin-users", icon: UserCog, section: "adminUsers" },
+      { label: "Audit Logs", href: "/audit-logs", icon: Database, section: "auditLogs" },
+      { label: "Settings", href: "/settings", icon: SlidersHorizontal, section: "settings" },
+    ],
+  },
 ];
 
-const sectionCopy = {
-  products: {
-    title: "Manage Products",
-    description: "Add, edit, feature, hide, and prepare launch products with the fields needed for the storefront.",
-  },
-  marketplace: {
-    title: "Marketplace Redirects",
-    description: "Control Amazon, Flipkart, and custom marketplace buttons per product while tracking outbound click performance.",
-  },
-  warranty: {
-    title: "Warranty Claims",
-    description: "Review warranty requests, verify invoices and serial numbers, and update claim status.",
-  },
-  customers: {
-    title: "Customer Management",
-    description: "View users, profiles, registered products, activity, support tickets, newsletter status, and future order history.",
-  },
-  ecommerce: {
-    title: "Cart & Orders",
-    description: "Monitor staged direct checkout, payments, and order lifecycle readiness.",
-  },
-  cms: {
-    title: "Content Management",
-    description: "Manage homepage banners, hero copy, product highlights, testimonials, FAQs, collections, promotions, social links, and footer content.",
-  },
-  support: {
-    title: "Complaints & Support",
-    description: "Handle customer complaints, support tickets, reply notes, and escalation status.",
-  },
-  analytics: {
-    title: "Analytics",
-    description: "Monitor product views, marketplace redirects, warranty registrations, customer engagement, traffic, and newsletter performance.",
-  },
-  media: {
-    title: "Media Library",
-    description: "Upload product images, banners, invoice files, documents, and future optimized media assets.",
-  },
-  settings: {
-    title: "Settings",
-    description: "Configure brand details, SEO, contact data, marketplace integrations, social links, roles, permissions, and feature toggles.",
-  },
+const allNavItems = navGroups.flatMap((group) => group.items);
+
+const sectionMeta = {
+  dashboard: ["Operations Dashboard", "A calm command center for launch health, ownership growth, warranty pressure, and support workload."],
+  products: ["Product Management", "Create and control products through focused cards instead of one overwhelming form."],
+  categories: ["Category Management", "Organize product families, category heroes, and navigation visibility."],
+  collections: ["Collection Management", "Build launch stories, bundles, and ecosystem groupings."],
+  productHero: ["Product Hero", "Control flagship product placement across homepage and product surfaces."],
+  collectionHero: ["Collection Hero", "Choose which collection story receives hero treatment."],
+  homepageSections: ["Homepage Sections", "Arrange homepage modules visually by purpose and visibility."],
+  users: ["Customer Directory", "Search, segment, export, and inspect ownership customers."],
+  newsletterSubscribers: ["Newsletter Subscribers", "Manage footer subscribers, consent status, exports, and unsubscribe state."],
+  exportUsers: ["Export Center", "Export users, warranty customers, support customers, and subscribers."],
+  ownershipProfiles: ["Ownership Profiles", "View registered devices, warranty health, marketplace origin, and support history."],
+  registeredWarranty: ["Registered Warranty", "Verify device ownership and warranty activation records."],
+  warrantyClaims: ["Warranty Claims", "Approve, reject, and track claim decisions with invoice and serial context."],
+  claimStatus: ["Claim Status", "Move claims through a clear operational timeline."],
+  serialManagement: ["Serial Management", "Look up serials, product mappings, ownership conflicts, and duplicate risk."],
+  complaints: ["Complaints", "Triage incoming customer issues with context and priority."],
+  supportTickets: ["Support Tickets", "Manage assignments, status, replies, and resolution health."],
+  conversations: ["Conversations", "Review customer-support threads as a timeline."],
+  prioritySupport: ["Priority Support", "Keep urgent warranty, flagship, and escalation cases visible."],
+  newsletter: ["Newsletter", "Create launch updates and subscriber segments."],
+  campaignLeads: ["Campaign Leads", "Track product-campaign interest and source quality."],
+  notifyLeads: ["Notify Me Leads", "Monitor launch availability requests by product and channel."],
+  homepageCms: ["Homepage CMS", "Visually manage hero blocks, sections, banners, and product placements."],
+  productPageCms: ["Product Page CMS", "Control product story blocks, specs, ownership messaging, and SEO."],
+  collectionPageCms: ["Collection Page CMS", "Manage collection heroes, copy, ordering, and featured products."],
+  seo: ["SEO Management", "Review titles, descriptions, sitemap readiness, and index controls."],
+  analytics: ["Analytics", "Simple, useful operational analytics without chart clutter."],
+  inventory: ["Inventory", "Track SKU, stock, serial prefixes, and launch readiness."],
+  marketplace: ["Marketplace Links", "Control Amazon, Flipkart, retail partner, and regional launch URLs."],
+  launchStatus: ["Launch Status", "Coordinate public visibility, hero timing, and availability signals."],
+  security: ["Security", "Session, RBAC, rate limit, audit, and upload hardening controls."],
+  adminUsers: ["Admin Users", "Manage internal users, roles, status, and permissions."],
+  auditLogs: ["Audit Logs", "Review sensitive changes, sign-ins, exports, and operational actions."],
+  settings: ["Settings", "Brand, system, integration, and feature controls."],
 };
 
-export function AdminShell({ title = "Admin Command Center", description, children }) {
+export function AdminShell({ title, description, section = "dashboard", children }) {
   const [navOpen, setNavOpen] = useState(false);
   const { pathname } = useLocation();
-  const isAdminDashboard = pathname === "/";
-  const primaryAction = isAdminDashboard
-    ? { href: "/products", label: "Manage Products" }
-    : { href: "/", label: "Dashboard" };
+  const active = allNavItems.find((item) => pathname === item.href) || allNavItems.find((item) => item.section === section) || allNavItems[0];
 
-  useEffect(() => {
-    setNavOpen(false);
-  }, [pathname]);
+  useEffect(() => setNavOpen(false), [pathname]);
 
   useEffect(() => {
     if (!navOpen) return undefined;
-    const onKeyDown = (event) => {
-      if (event.key === "Escape") setNavOpen(false);
-    };
     document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKeyDown);
+    const close = (event) => event.key === "Escape" && setNavOpen(false);
+    window.addEventListener("keydown", close);
     return () => {
       document.body.style.overflow = "";
-      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keydown", close);
     };
   }, [navOpen]);
 
   return (
     <AdminProtectedRoute>
-    <div className="min-h-screen bg-[#F7F5F0] font-sans selection:bg-slate-900 selection:text-white dark:bg-[#090A0D] dark:selection:bg-white dark:selection:text-slate-900">
-      <a href="#admin-main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-slate-950 focus:px-5 focus:py-3 focus:text-sm focus:font-semibold focus:text-white dark:bg-white dark:text-slate-950">
-        Skip to content
-      </a>
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/5 dark:to-white/5" />
-        <div className="absolute inset-0 opacity-[0.025] dark:opacity-[0.04] mix-blend-overlay" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }} />
-      </div>
+      <div className="min-h-screen bg-[#f6f4ef] text-slate-950 dark:bg-[#08090c] dark:text-white">
+        {navOpen && <button type="button" aria-label="Close navigation" onClick={() => setNavOpen(false)} className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-sm xl:hidden" />}
 
-      {navOpen && (
-        <button
-          type="button"
-          aria-label="Close admin navigation overlay"
-          className="fixed inset-0 z-40 bg-slate-950/28 backdrop-blur-[2px] lg:hidden"
-          onClick={() => setNavOpen(false)}
-        />
-      )}
-
-      <aside className={`fixed inset-y-0 left-0 z-50 flex w-[min(18rem,calc(100vw-1.25rem))] flex-col border-r border-slate-900/5 bg-white/92 p-4 shadow-[12px_0_40px_rgba(17,24,39,0.08)] backdrop-blur-2xl transition-transform duration-300 lg:w-72 lg:translate-x-0 dark:border-white/5 dark:bg-black/82 ${navOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="flex items-center justify-between gap-3 px-2 py-3">
-          <Link to="/" className="flex items-center gap-2">
-            <img
-              src="/images/favicon.svg"
-              alt="INFIBOLT logo"
-              className="h-6 w-6 shrink-0 object-contain dark:invert"
-            />
-            <span>
-              <span className="block text-[13px] font-bold uppercase leading-none tracking-[0.22em] text-slate-900 dark:text-white">INFIBOLT</span>
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Admin OS</span>
-            </span>
-          </Link>
-          <button className="rounded-xl border border-slate-900/10 p-2 text-slate-500 lg:hidden dark:border-white/10 dark:text-slate-400" onClick={() => setNavOpen(false)} aria-label="Close admin navigation">
-            <SlidersHorizontal className="h-4 w-4" />
-          </button>
-        </div>
-
-        <nav className="mt-6 grid gap-1 overflow-y-auto pb-28">
-          {adminNav.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink key={item.href} to={item.href} className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-900/5 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white">
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="truncate">{item.label}</span>
-              </NavLink>
-            );
-          })}
-        </nav>
-
-        <div className="mt-auto rounded-2xl border border-slate-900/10 bg-white/50 p-4 dark:border-white/10 dark:bg-white/5">
-          <div className="flex items-center gap-3">
-            <LockKeyhole className="h-5 w-5 text-slate-900 dark:text-white" />
-            <div>
-              <p className="text-sm font-medium text-slate-900 dark:text-white">Protected Admin</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Secure session active</p>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <div className="relative z-10 lg:pl-72">
-        <header className="fixed left-0 right-0 top-0 z-40 border-b border-slate-900/5 bg-[#F7F5F0]/90 px-4 py-3 backdrop-blur-2xl dark:border-white/5 dark:bg-[#090A0D]/90 md:px-8 md:py-4 lg:left-72 lg:px-12">
-          <div className="flex items-center justify-between gap-4">
-            <button className="rounded-xl border border-slate-900/10 p-3 text-slate-500 lg:hidden dark:border-white/10 dark:text-slate-400" onClick={() => setNavOpen(true)} aria-label="Open admin navigation">
-              <LayoutDashboard className="h-5 w-5" />
+        <aside className={`fixed inset-y-0 left-0 z-50 flex w-[min(21rem,calc(100vw-1rem))] flex-col border-r border-slate-900/8 bg-white/90 shadow-[16px_0_60px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition-transform duration-300 xl:translate-x-0 dark:border-white/10 dark:bg-[#0c0d12]/92 ${navOpen ? "translate-x-0" : "-translate-x-full"}`}>
+          <div className="flex items-center justify-between gap-3 px-5 py-5">
+            <Link to="/" className="flex items-center gap-3">
+              <img src="/images/favicon.svg" alt="INFIBOLT" className="h-7 w-7 dark:invert" />
+              <span>
+                <span className="block text-[13px] font-bold uppercase leading-none tracking-[0.24em]">INFIBOLT</span>
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Admin OS</span>
+              </span>
+            </Link>
+            <button type="button" onClick={() => setNavOpen(false)} className="rounded-xl border border-slate-900/10 p-2 xl:hidden dark:border-white/10" aria-label="Close admin navigation">
+              <ChevronDown className="h-4 w-4 rotate-90" />
             </button>
-            <label className="hidden min-h-[44px] w-full max-w-lg items-center gap-3 rounded-full border border-slate-900/10 bg-white/50 px-5 md:flex dark:border-white/10 dark:bg-white/5">
-              <Search className="h-4 w-4 text-slate-400" />
-              <input className="w-full bg-transparent text-sm font-medium focus:outline-none dark:text-white placeholder:text-slate-400" placeholder="Search products, warranty claims, complaints" />
-            </label>
-            <div className="ml-auto flex items-center gap-3">
-              <Link to="/notifications" className="relative rounded-full border border-slate-900/10 bg-white/50 p-3 dark:border-white/10 dark:bg-white/5 dark:text-white" aria-label="Admin alerts">
-                <Bell className="h-4 w-4" />
-                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-slate-900 dark:bg-white" />
-              </Link>
-              <ThemeToggle />
-              <div className="hidden rounded-full border border-slate-900/10 bg-white/50 px-5 py-2 md:block dark:border-white/10 dark:bg-white/5">
-                <p className="text-sm font-medium text-slate-900 dark:text-white">{adminUser.name}</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{adminUser.role}</p>
-              </div>
-            </div>
           </div>
-        </header>
 
-        <main id="admin-main-content" className="px-4 pb-10 pt-24 sm:px-6 md:px-8 lg:px-12">
-          <div className="mx-auto w-full max-w-[1400px]">
-            <div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end">
-              <div>
-                <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-500 dark:text-slate-300">Admin Operations</p>
-                <h1 className="text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-[2.5rem] lg:text-[3rem] dark:text-white">{title}</h1>
-                {description && <p className="mt-5 max-w-3xl text-base font-light leading-relaxed text-slate-600 dark:text-slate-400 sm:text-lg">{description}</p>}
+          <nav className="flex-1 overflow-y-auto px-3 pb-5">
+            {navGroups.map((group) => (
+              <div key={group.label} className="mb-5">
+                <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">{group.label}</p>
+                <div className="grid gap-1">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <NavLink
+                        key={item.href}
+                        to={item.href}
+                        className={({ isActive }) =>
+                          `group flex min-h-[42px] items-center gap-3 rounded-xl px-3 text-sm font-semibold transition ${
+                            isActive || active.href === item.href
+                              ? "bg-slate-950 text-white shadow-[0_10px_24px_rgba(15,23,42,0.12)] dark:bg-white dark:text-slate-950"
+                              : "text-slate-600 hover:bg-slate-900/5 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-white/8 dark:hover:text-white"
+                          }`
+                        }
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                      </NavLink>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <AdminButton href="/products">Product Workspace</AdminButton>
-                <AdminButton href={primaryAction.href} tone="solid">{primaryAction.label}</AdminButton>
+            ))}
+          </nav>
+
+          <div className="border-t border-slate-900/8 p-4 dark:border-white/10">
+            <div className="rounded-2xl bg-slate-950 p-4 text-white dark:bg-white dark:text-slate-950">
+              <p className="text-sm font-semibold">Secure session</p>
+              <p className="mt-1 text-xs opacity-70">{adminUser.role} access · audit enabled</p>
+            </div>
+          </div>
+        </aside>
+
+        <div className="xl:pl-[21rem]">
+          <header className="sticky top-0 z-30 border-b border-slate-900/8 bg-[#f6f4ef]/86 px-4 py-3 backdrop-blur-2xl dark:border-white/10 dark:bg-[#08090c]/86 sm:px-6 lg:px-8">
+            <div className="mx-auto flex max-w-[1440px] items-center gap-3">
+              <button type="button" onClick={() => setNavOpen(true)} className="rounded-xl border border-slate-900/10 bg-white/60 p-3 xl:hidden dark:border-white/10 dark:bg-white/5" aria-label="Open admin navigation">
+                <LayoutDashboard className="h-5 w-5" />
+              </button>
+              <label className="hidden min-h-[44px] flex-1 items-center gap-3 rounded-full border border-slate-900/10 bg-white/60 px-5 md:flex dark:border-white/10 dark:bg-white/5">
+                <Search className="h-4 w-4 text-slate-400" />
+                <input className="w-full bg-transparent text-sm font-medium placeholder:text-slate-400 focus:outline-none" placeholder="Search users, serials, products, claims" />
+              </label>
+              <div className="ml-auto flex items-center gap-2">
+                <Link to="/security" className="hidden min-h-[42px] items-center gap-2 rounded-full border border-slate-900/10 bg-white/60 px-4 text-xs font-bold uppercase tracking-[0.14em] text-slate-600 md:inline-flex dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                  <LockKeyhole className="h-4 w-4" />
+                  Protected
+                </Link>
+                <ThemeToggle />
+                <div className="grid h-11 w-11 place-items-center rounded-full bg-slate-950 text-sm font-bold text-white dark:bg-white dark:text-slate-950">{adminUser.name.slice(0, 1)}</div>
               </div>
             </div>
-            {children}
-          </div>
-        </main>
+          </header>
+
+          <main id="admin-main-content" className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+            <div className="mx-auto max-w-[1440px]">
+              <div className="mb-6 flex flex-col gap-4 rounded-[1.35rem] border border-slate-900/8 bg-white/62 p-5 shadow-[0_18px_60px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-white/[0.035] lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">{active ? active.label : "Admin"}</p>
+                  <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
+                  {description && <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 dark:text-slate-400">{description}</p>}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <CommandButton href="/products" label="Add Product" />
+                  <CommandButton href="/export-users" label="Export" tone="ghost" />
+                </div>
+              </div>
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
     </AdminProtectedRoute>
   );
 }
 
 export function AdminOverview() {
   return (
-    <AdminShell
-      title="Admin Dashboard"
-      description="A focused control panel for products, warranty claims, customer complaints, and future cart/order readiness."
-    >
-      <div className="space-y-8">
-        <MetricGrid />
-        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <AdminPanel title="Product Queue" icon={Package}>
-            <AdminTable columns={["Product", "Category", "Status", "Price"]} rows={products.slice(0, 5).map((product) => [product.name, getProductCategoryName(product.category), product.status, formatPrice(product.price)])} />
-          </AdminPanel>
-          <AdminPanel title="Warranty Queue" icon={ShieldCheck}>
-            <AdminTable columns={["Claim", "Customer", "Product", "Status"]} rows={warrantyClaims.map((claim) => [claim.id, claim.customer, claim.product, claim.status])} />
-          </AdminPanel>
-        </div>
-        <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
-          <AdminPanel title="Complaints" icon={MessageSquare}>
-            <AdminTable columns={["Ticket", "Customer", "Topic", "Status"]} rows={supportTickets.map((ticket) => [ticket.id, ticket.customer, ticket.topic, ticket.status])} />
-          </AdminPanel>
-          <AdminPanel title="Future Cart & Orders" icon={ShoppingCart}>
-            <ComingReadyBanner
-              title="Cart and order handling will be enabled later"
-              description="Checkout, payments, customer orders, invoices, refunds, and shipping controls are staged for direct commerce launch."
-              icon={ShoppingCart}
-            />
-          </AdminPanel>
-        </div>
-      </div>
+    <AdminShell section="dashboard" title={sectionMeta.dashboard[0]} description={sectionMeta.dashboard[1]}>
+      <DashboardWorkspace />
     </AdminShell>
   );
 }
 
 export function AdminSectionPage({ section }) {
-  const copy = sectionCopy[section] ?? sectionCopy.products;
-
+  const meta = sectionMeta[section] || sectionMeta.dashboard;
   return (
-    <AdminShell title={copy.title} description={copy.description}>
-      <AdminSectionContent section={section} />
+    <AdminShell section={section} title={meta[0]} description={meta[1]}>
+      <Workspace section={section} />
     </AdminShell>
   );
 }
 
-function AdminSectionContent({ section }) {
-  if (section === "products") return <ProductsAdmin />;
-  if (section === "marketplace") return <MarketplaceAdmin />;
-  if (section === "warranty") return <WarrantyAdmin />;
-  if (section === "customers") return <CustomersAdmin />;
-  if (section === "ecommerce") return <EcommerceAdmin />;
-  if (section === "cms") return <CMSAdmin />;
-  if (section === "support") return <SupportAdmin />;
-  if (section === "analytics") return <AnalyticsAdmin />;
-  if (section === "media") return <MediaAdmin />;
-  if (section === "settings") return <SettingsAdmin />;
-  return <ProductsAdmin />;
+function Workspace({ section }) {
+  if (["products", "categories", "collections", "productHero", "collectionHero", "homepageSections"].includes(section)) return <CommerceWorkspace section={section} />;
+  if (["users", "newsletterSubscribers", "exportUsers", "ownershipProfiles"].includes(section)) return <CustomerWorkspace section={section} />;
+  if (["registeredWarranty", "warrantyClaims", "claimStatus", "serialManagement"].includes(section)) return <WarrantyWorkspace section={section} />;
+  if (["complaints", "supportTickets", "conversations", "prioritySupport"].includes(section)) return <SupportWorkspace section={section} />;
+  if (["newsletter", "campaignLeads", "notifyLeads"].includes(section)) return <MarketingWorkspace section={section} />;
+  if (["homepageCms", "productPageCms", "collectionPageCms", "seo"].includes(section)) return <ContentWorkspace section={section} />;
+  if (["analytics", "inventory", "marketplace", "launchStatus"].includes(section)) return <OperationsWorkspace section={section} />;
+  if (["security", "adminUsers", "auditLogs", "settings"].includes(section)) return <SystemWorkspace section={section} />;
+  return <DashboardWorkspace />;
 }
 
-function getProductCategoryName(categoryId) {
-  return categories.find((category) => category.id === categoryId)?.name ?? "Product";
+function DashboardWorkspace() {
+  return (
+    <div className="grid gap-5">
+      <MetricGrid />
+      <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+        <Panel title="Today" icon={Gauge}>
+          <div className="grid gap-3">
+            {activityLog.map((item) => <TimelineRow key={item} label={item} />)}
+          </div>
+        </Panel>
+        <Panel title="Queues" icon={CircleDot}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <QueueCard label="Warranty review" value={warrantyClaims.length} href="/warranty" />
+            <QueueCard label="Support open" value={supportTickets.filter((ticket) => ticket.status !== "Resolved").length} href="/support" />
+            <QueueCard label="Notify leads" value={launchLeads.length} href="/notify-leads" />
+            <QueueCard label="Products live" value={products.length} href="/products" />
+          </div>
+        </Panel>
+      </div>
+      <Panel title="Operational Map" icon={LayoutDashboard}>
+        <div className="grid gap-4 md:grid-cols-3">
+          <FeatureCard title="Commerce" text="Products, categories, collections, heroes, and homepage placement." href="/products" />
+          <FeatureCard title="Ownership" text="Users, registered devices, warranty records, serial integrity, and support context." href="/ownership-profiles" />
+          <FeatureCard title="Launch" text="Marketplace links, notify leads, launch status, newsletter, and campaign readiness." href="/launch-status" />
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function CommerceWorkspace({ section }) {
+  const productRows = products.map((product) => [product.name, categoryName(product.category), product.status, formatPrice(product.price), product.badge || "Standard"]);
+  const categoryRows = categories.map((category) => [category.name, category.id, products.filter((product) => product.category === category.id).length, "Enabled"]);
+  const collectionRows = collections.map((collection) => [collection.name, collection.slug, collection.productSlugs?.length || 0, "Visible"]);
+
+  return (
+    <div className="grid gap-5">
+      <ActionStrip
+        title="Commerce controls"
+        text="Use focused modules for daily changes. Deep editing stays in the product workspace."
+        actions={[["Quick add", "/products"], ["Marketplace", "/marketplace"], ["Homepage", "/homepage-sections"]]}
+      />
+      {section === "products" && (
+        <Panel title="Product Operating Table" icon={Package}>
+          <DataTable columns={["Product", "Category", "Status", "Price", "Positioning"]} rows={productRows} />
+        </Panel>
+      )}
+      {section === "categories" && (
+        <Panel title="Categories" icon={Grid3X3}>
+          <DataTable columns={["Category", "Slug", "Products", "Status"]} rows={categoryRows} />
+        </Panel>
+      )}
+      {section === "collections" && (
+        <Panel title="Collections" icon={Layers3}>
+          <DataTable columns={["Collection", "Slug", "Products", "Homepage"]} rows={collectionRows} />
+        </Panel>
+      )}
+      {["productHero", "collectionHero", "homepageSections"].includes(section) && (
+        <HeroPlanner section={section} />
+      )}
+      <div className="grid gap-5 lg:grid-cols-3">
+        <FeatureCard title="Visibility" text="Published, homepage, hero, collection, and mobile carousel controls stay separated." href="/launch-status" />
+        <FeatureCard title="Media" text="Cover, hover, gallery, thumbnail, and mobile hero assets are managed per product." href="/products" />
+        <FeatureCard title="SEO" text="Titles, descriptions, keywords, and structured product data remain launch-ready." href="/seo" />
+      </div>
+    </div>
+  );
+}
+
+function CustomerWorkspace({ section }) {
+  const rows = customers.map((customer) => [customer.name, customer.email, customer.phone || "Not set", customer.products, customer.status]);
+  const subscriberRows = newsletterSubscribers.map((subscriber) => [subscriber.email, subscriber.source, subscriber.status, subscriber.createdAt]);
+
+  return (
+    <div className="grid gap-5">
+      <ActionStrip
+        title="Customer management"
+        text="Profile, warranty, support, newsletter, and export workflows are separated so operators know exactly where to act."
+        actions={[["Export CSV", "/export-users"], ["Ownership", "/ownership-profiles"], ["Subscribers", "/newsletter-subscribers"]]}
+      />
+      {section === "newsletterSubscribers" ? (
+        <Panel title="Newsletter Subscribers" icon={Mail}>
+          <DataTable columns={["Email", "Source", "Status", "Joined"]} rows={subscriberRows} />
+        </Panel>
+      ) : section === "exportUsers" ? (
+        <ExportCenter />
+      ) : section === "ownershipProfiles" ? (
+        <Panel title="Ownership Profiles" icon={PackageCheck}>
+          <DataTable columns={["Customer", "Email", "Mobile", "Devices", "Status"]} rows={rows} />
+        </Panel>
+      ) : (
+        <Panel title="Registered Users" icon={Users}>
+          <DataTable columns={["Name", "Email", "Mobile", "Devices", "Status"]} rows={rows} />
+        </Panel>
+      )}
+      <Panel title="Profile Sync Rules" icon={ShieldCheck}>
+        <div className="grid gap-3 md:grid-cols-2">
+          <PolicyRow title="Email updates" text="Require verification before login, support, newsletter, and ownership records switch to the new address." />
+          <PolicyRow title="Mobile updates" text="Require OTP before warranty or support contact numbers update." />
+          <PolicyRow title="Change history" text="Every profile change writes an audit entry with actor, IP, and device context." />
+          <PolicyRow title="Ownership integrity" text="Serial ownership remains locked to verified accounts unless an admin transfers it." />
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function WarrantyWorkspace({ section }) {
+  const rows = warrantyClaims.map((claim) => [claim.id, claim.customer, claim.product, claim.serial, claim.status]);
+  return (
+    <div className="grid gap-5">
+      <ActionStrip title="Warranty OS" text="A single calm queue for serial lookup, invoice review, approvals, rejections, and timeline movement." actions={[["Serial lookup", "/serial-management"], ["Claim status", "/claim-status"], ["Policy", "/warranty"]]} />
+      <div className="grid gap-5 lg:grid-cols-[1fr_0.9fr]">
+        <Panel title={section === "serialManagement" ? "Serial Lookup" : "Warranty Queue"} icon={ShieldCheck}>
+          <DataTable columns={["Claim", "Customer", "Product", "Serial", "Status"]} rows={rows} />
+        </Panel>
+        <Panel title="Claim Timeline" icon={TicketCheck}>
+          {["Submitted", "Invoice review", "Serial verified", "Decision", "Closed"].map((item, index) => <TimelineRow key={item} label={item} meta={index < 2 ? "Active" : "Waiting"} />)}
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+function SupportWorkspace({ section }) {
+  const rows = supportTickets.map((ticket) => [ticket.id, ticket.customer, ticket.topic, ticket.status, ticket.channel]);
+  return (
+    <div className="grid gap-5">
+      <ActionStrip title="Support OS" text="Operators can triage, assign, reply, and resolve without opening unrelated product or warranty tools." actions={[["New reply", "/support"], ["Priority", "/priority-support"], ["Threads", "/conversations"]]} />
+      <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
+        <Panel title={section === "prioritySupport" ? "Priority Queue" : "Support Queue"} icon={MessageSquare}>
+          <DataTable columns={["Ticket", "Customer", "Topic", "Status", "Channel"]} rows={rows} />
+        </Panel>
+        <Panel title="Conversation Preview" icon={MessageSquare}>
+          <div className="grid gap-3">
+            {supportTickets.map((ticket) => <ConversationCard key={ticket.id} ticket={ticket} />)}
+          </div>
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+function MarketingWorkspace({ section }) {
+  return (
+    <div className="grid gap-5">
+      <ActionStrip title="Marketing workspace" text="Newsletter, launch leads, and campaign capture live here instead of inside product operations." actions={[["Newsletter", "/newsletter"], ["Notify leads", "/notify-leads"], ["Export", "/export-users"]]} />
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Panel title={section === "notifyLeads" ? "Notify Me Leads" : "Campaign Leads"} icon={Megaphone}>
+          <DataTable columns={["Product", "Email", "Phone", "Status"]} rows={launchLeads.map((lead) => [lead.product, lead.email || "-", lead.phone || "-", lead.status])} />
+        </Panel>
+        <Panel title="Subscriber Health" icon={Mail}>
+          <DataTable columns={["Email", "Source", "Status", "Joined"]} rows={newsletterSubscribers.map((item) => [item.email, item.source, item.status, item.createdAt])} />
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+function ContentWorkspace({ section }) {
+  return (
+    <div className="grid gap-5">
+      <ActionStrip title="CMS workspace" text="Content is organized by where it appears, so admins can safely update the right screen." actions={[["Homepage", "/cms"], ["SEO", "/seo"], ["Products", "/product-page-cms"]]} />
+      <Panel title="Content Blocks" icon={FileText}>
+        <DataTable columns={["Block", "Owner", "Status", "Updated"]} rows={cmsBlocks.map((block) => [block.name, block.owner, block.status, block.updated])} />
+      </Panel>
+      <div className="grid gap-5 md:grid-cols-3">
+        <FeatureCard title="Homepage" text="Hero, featured products, launch banners, and section order." href="/homepage-sections" />
+        <FeatureCard title="Product pages" text="Highlights, specs, media, support details, and recommendations." href="/product-page-cms" />
+        <FeatureCard title="Collections" text="Collection hero banners, copy, product ordering, and SEO." href="/collection-page-cms" />
+      </div>
+    </div>
+  );
+}
+
+function OperationsWorkspace({ section }) {
+  const marketplace = marketplaceRows.map((row) => [row.product, row.preferred, row.clicks, row.enabled ? "Live" : "Paused"]);
+  return (
+    <div className="grid gap-5">
+      <MetricGrid />
+      {section === "marketplace" ? (
+        <Panel title="Marketplace Links" icon={ShoppingBag}>
+          <DataTable columns={["Product", "Preferred", "Clicks", "Status"]} rows={marketplace} />
+        </Panel>
+      ) : (
+        <Panel title="Launch Operations" icon={Activity}>
+          <DataTable columns={["Product", "SKU", "Stock", "Status"]} rows={products.map((product) => [product.name, product.sku || product.slug, product.stock ?? "Track", product.status])} />
+        </Panel>
+      )}
+    </div>
+  );
+}
+
+function SystemWorkspace({ section }) {
+  const securityRows = [
+    ["Helmet + CSP", "Enabled", "Strict headers and framing protection"],
+    ["CSRF", "Enabled", "Token required for API writes"],
+    ["Rate limits", "Enabled", "Auth, uploads, and API limits"],
+    ["Audit logs", "Enabled", "Sensitive admin actions recorded"],
+  ];
+  return (
+    <div className="grid gap-5">
+      <ActionStrip title="System controls" text="Security, audit, admin-user, and settings controls are isolated from daily commerce work." actions={[["Security", "/security"], ["Audit", "/audit-logs"], ["Settings", "/settings"]]} />
+      <Panel title={section === "auditLogs" ? "Audit Log Policy" : "Security Posture"} icon={LockKeyhole}>
+        <DataTable columns={["Control", "State", "Purpose"]} rows={securityRows} />
+      </Panel>
+      <div className="grid gap-5 md:grid-cols-2">
+        <FeatureCard title="RBAC" text="Admin and super-admin roles gate protected operations." href="/admin-users" />
+        <FeatureCard title="Index control" text="Admin, private profiles, warranty, support, and APIs are noindex." href="/security" />
+      </div>
+    </div>
+  );
+}
+
+function HeroPlanner({ section }) {
+  const rows = section === "collectionHero"
+    ? collections.map((item) => [item.name, item.slug, "Hero ready", "Visible"])
+    : products.slice(0, 5).map((item) => [item.name, item.slug, item.badge || "Launch", item.status]);
+  return (
+    <Panel title="Visual Placement" icon={Image}>
+      <DataTable columns={["Item", "Slug", "Placement", "State"]} rows={rows} />
+    </Panel>
+  );
+}
+
+function ExportCenter() {
+  const exports = [
+    ["All users", "CSV / Excel", customers.length],
+    ["Warranty customers", "CSV", warrantyClaims.length],
+    ["Support customers", "CSV", supportTickets.length],
+    ["Newsletter subscribers", "CSV", newsletterSubscribers.length],
+  ];
+  return (
+    <Panel title="Export Center" icon={Download}>
+      <DataTable columns={["Dataset", "Format", "Records"]} rows={exports} />
+    </Panel>
+  );
 }
 
 function MetricGrid() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {adminStats.map((stat) => (
-        <div key={stat.label} className="premium-surface p-6 dark:bg-white/[0.03]">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">{stat.label}</p>
-              <p className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{stat.value}</p>
-              <p className="mt-2 text-sm font-medium text-slate-500">{stat.trend}</p>
-            </div>
+        <div key={stat.label} className="rounded-[1.15rem] border border-slate-900/8 bg-white/68 p-5 shadow-[0_12px_36px_rgba(15,23,42,0.05)] dark:border-white/10 dark:bg-white/[0.035]">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{stat.label}</p>
+          <div className="mt-4 flex items-end justify-between gap-4">
+            <p className="text-3xl font-semibold tracking-tight">{stat.value}</p>
             <StatusPill status={stat.status} />
           </div>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{stat.trend}</p>
         </div>
       ))}
     </div>
   );
 }
 
-function ProductsAdmin() {
-  const rows = products.map((product) => [
-    product.name,
-    categories.find((category) => category.id === product.category)?.name ?? product.category,
-    formatPrice(product.price),
-    product.status,
-    product.badge,
-  ]);
-
+function Panel({ title, icon: Icon, children }) {
   return (
-    <div className="space-y-6">
-      <ComingReadyBanner
-        title="Product management workspace"
-        description="Create, edit, publish, and manage product records from one focused operating surface."
-        icon={Package}
-      />
-      <div className="flex flex-wrap gap-3">
-        <AdminButton href="/products/add" tone="solid">Add Product</AdminButton>
-        <AdminButton href="/marketplace">Marketplace Links</AdminButton>
-      </div>
-      <div className="grid gap-4 md:grid-cols-3">
-        <SimpleAdminCard icon={Plus} title="Add product" description="Create product name, price, category, images, and status." status="Ready" />
-        <SimpleAdminCard icon={Pencil} title="Edit details" description="Update content, feature state, visibility, and marketplace copy." status="Ready" />
-        <SimpleAdminCard icon={UploadCloud} title="Upload media" description="Add hero images, galleries, and specification files." status="Ready" />
-      </div>
-      <AdminPanel title="Product Catalogue" icon={Package}>
-        <AdminTable columns={["Product", "Category", "Price", "Stock Status", "Badge"]} rows={rows} />
-      </AdminPanel>
-      <AdminPanel title="Quick Product Actions" icon={Pencil}>
-        <div className="grid gap-3">
-          {products.slice(0, 3).map((product, index) => (
-            <div key={product.slug} className="grid gap-3 rounded-xl border border-slate-900/5 bg-white/40 p-4 dark:border-white/5 dark:bg-white/[0.02] md:grid-cols-[1fr_auto] md:items-center">
-              <div>
-                <p className="font-medium text-slate-900 dark:text-white">{product.name}</p>
-                <p className="mt-1 text-sm text-slate-500">{product.status} · {product.badge}</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <AdminButton href={`/products/edit/${product.slug}`}>Edit</AdminButton>
-                <ActionPill icon={index % 2 === 0 ? Eye : EyeOff} label={index % 2 === 0 ? "Visible" : "Hidden"} />
-                <ActionPill icon={Trash2} label="Delete Confirm" tone="danger" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </AdminPanel>
-    </div>
-  );
-}
-
-function MarketplaceAdmin() {
-  return (
-    <div className="space-y-6">
-      <AdminToolbar primary="Update Links" secondary="Export Clicks" />
-      <AdminPanel title="Per-product Marketplace Links" icon={Link}>
-        <AdminTable columns={["Product", "Preferred", "Clicks", "Amazon", "Flipkart"]} rows={marketplaceRows.map((row) => [row.product, row.preferred, row.clicks, "Enabled", "Enabled"])} />
-      </AdminPanel>
-      <AdminPanel title="Redirect Controls" icon={Globe}>
-        <ModuleGrid modules={[
-          { name: "Amazon buttons", description: "Enable or disable Amazon redirects globally.", enabled: true },
-          { name: "Flipkart buttons", description: "Enable or disable Flipkart redirects globally.", enabled: true },
-          { name: "Custom Buy Now", description: "Use custom marketplace URL or campaign landing URL.", enabled: true },
-        ]} />
-      </AdminPanel>
-    </div>
-  );
-}
-
-function WarrantyAdmin() {
-  return (
-    <div className="space-y-6">
-      <ComingReadyBanner
-        title="Warranty queue"
-        description="Review claims, inspect serial numbers, verify invoices, and update claim status."
-        icon={ShieldCheck}
-      />
-      <div className="grid gap-4 md:grid-cols-3">
-        <SimpleAdminCard icon={FileSearch} title="Review claim" description="Open claim details, customer info, product, and submitted invoice." status="Planned" />
-        <SimpleAdminCard icon={ShieldCheck} title="Verify serial" description="Check product serial number and invoice before approval." status="Planned" />
-        <SimpleAdminCard icon={TicketCheck} title="Update status" description="Move claim through pending, approved, rejected, or resolved." status="Planned" />
-      </div>
-      <AdminPanel title="Warranty Claim Queue" icon={ShieldCheck}>
-        <AdminTable columns={["Claim ID", "Customer", "Product", "Serial", "Status", "Priority"]} rows={warrantyClaims.map((claim) => [claim.id, claim.customer, claim.product, claim.serial, claim.status, claim.priority])} />
-      </AdminPanel>
-      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        <AdminPanel title="Claim Detail View" icon={FileSearch}>
-          <div className="grid gap-4">
-            {warrantyClaims.slice(0, 1).map((claim) => (
-              <div key={claim.id} className="grid gap-4">
-                <div className="grid gap-3 md:grid-cols-2">
-                  <DetailBlock label="Claim ID" value={claim.id} />
-                  <DetailBlock label="Status" value={claim.status} />
-                  <DetailBlock label="Customer" value={claim.customer} />
-                  <DetailBlock label="Product" value={claim.product} />
-                  <DetailBlock label="Serial number" value={claim.serial} />
-                  <DetailBlock label="Priority" value={claim.priority} />
-                </div>
-                <div className="rounded-xl border border-dashed border-slate-900/15 bg-white/40 p-5 dark:border-white/15 dark:bg-white/[0.02]">
-                  <p className="font-medium text-slate-900 dark:text-white">Invoice preview</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">Secure invoice files render here for authorized admins.</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </AdminPanel>
-        <AdminPanel title="Claim Status Controls" icon={TicketCheck}>
-          <div className="grid gap-3">
-            {["Verification", "Approved", "Rejected", "Pending invoice", "Resolved"].map((status) => (
-              <button key={status} type="button" disabled className="flex items-center justify-between rounded-xl border border-slate-900/5 bg-white/40 px-4 py-3 text-left text-sm font-medium text-slate-600 opacity-80 dark:border-white/5 dark:bg-white/[0.02] dark:text-slate-400">
-                {status}
-                <StatusPill status={status} />
-              </button>
-            ))}
-          </div>
-        </AdminPanel>
-      </div>
-    </div>
-  );
-}
-
-function CustomersAdmin() {
-  return (
-    <div className="space-y-6">
-      <AdminToolbar primary="Create Segment" secondary="Export Customers" />
-      <AdminPanel title="Customer Directory" icon={Users}>
-        <AdminTable columns={["Name", "Email", "Registered Products", "Tickets", "Status"]} rows={customers.map((customer) => [customer.name, customer.email, customer.products, customer.tickets, customer.status])} />
-      </AdminPanel>
-      <AdminPanel title="Customer Data Modules" icon={Users}>
-        <ModuleGrid modules={[
-          { name: "Profiles", description: "Personal details, preferences, and verification state.", enabled: true },
-          { name: "Saved Addresses", description: "Prepared for checkout and warranty service.", enabled: false },
-          { name: "Registered Products", description: "Ownership records linked to warranty claims.", enabled: true },
-          { name: "Future Orders", description: "Inactive until direct ecommerce launches.", enabled: false },
-        ]} />
-      </AdminPanel>
-    </div>
-  );
-}
-
-function EcommerceAdmin() {
-  return (
-    <div className="space-y-6">
-      <ComingReadyBanner
-        title="Cart & orders workspace ready"
-        description="This section manages cart, direct booking, checkout, payments, and order management workflows."
-        icon={ShoppingCart}
-      />
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <SimpleAdminCard icon={ShoppingCart} title="Cart management" description="View carts, abandoned carts, reserved stock, and customer cart activity." status="Ready" />
-        <SimpleAdminCard icon={CreditCard} title="Direct booking" description="Allow customers to book directly from INFIBOLT instead of marketplace-only purchase." status="Ready" />
-        <SimpleAdminCard icon={WalletCards} title="Checkout & payment" description="Manage payment gateway, coupons, invoices, refunds, and payment status." status="Ready" />
-        <SimpleAdminCard icon={Package} title="Order management" description="Track orders, shipping, delivery, cancellation, and customer order history." status="Ready" />
-      </div>
-      <AdminPanel title="Launch Roadmap" icon={ShoppingCart}>
-        <AdminList items={[
-          "Phase 1: Enable cart and direct booking UI",
-          "Phase 2: Connect payment gateway and invoice generation",
-          "Phase 3: Add order lifecycle, shipping, refunds, and cancellation",
-          "Phase 4: Show customer order history in account dashboard",
-        ]} />
-      </AdminPanel>
-    </div>
-  );
-}
-
-function CMSAdmin() {
-  return (
-    <div className="space-y-6">
-      <AdminToolbar primary="Create Block" secondary="Preview Site" />
-      <AdminPanel title="Content Blocks" icon={FileText}>
-        <AdminTable columns={["Block", "Owner", "Status", "Updated"]} rows={cmsBlocks.map((block) => [block.name, block.owner, block.status, block.updated])} />
-      </AdminPanel>
-      <AdminPanel title="Manageable Content" icon={Megaphone}>
-        <AdminList items={["Homepage banners", "Hero content", "Testimonials", "FAQs", "Collections", "Product highlights", "Promotional sections", "Footer content", "Social links"]} />
-      </AdminPanel>
-    </div>
-  );
-}
-
-function SupportAdmin() {
-  return (
-    <div className="space-y-6">
-      <ComingReadyBanner
-        title="Complaint queue"
-        description="Manage ticket intake, reply drafts, priority, and status updates from one calm support view."
-        icon={MessageSquare}
-      />
-      <div className="grid gap-4 md:grid-cols-3">
-        <SimpleAdminCard icon={TicketCheck} title="New complaint" description="See incoming support requests from email, forms, and WhatsApp." status="Planned" />
-        <SimpleAdminCard icon={MessageSquare} title="Reply customer" description="Send support replies and keep conversation history." status="Planned" />
-        <SimpleAdminCard icon={UserRound} title="Escalate case" description="Move warranty or product complaints to the right team." status="Planned" />
-      </div>
-      <AdminPanel title="Support Tickets" icon={TicketCheck}>
-        <AdminTable columns={["Ticket", "Customer", "Topic", "Status", "Channel"]} rows={supportTickets.map((ticket) => [ticket.id, ticket.customer, ticket.topic, ticket.status, ticket.channel])} />
-      </AdminPanel>
-      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <AdminPanel title="Complaint Detail" icon={MessageSquare}>
-          <div className="grid gap-4">
-            {supportTickets.map((ticket) => (
-              <div key={ticket.id} className="rounded-xl border border-slate-900/5 bg-white/40 p-4 dark:border-white/5 dark:bg-white/[0.02]">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-slate-900 dark:text-white">{ticket.id} · {ticket.customer}</p>
-                    <p className="mt-1 text-sm text-slate-500">{ticket.topic} via {ticket.channel}</p>
-                  </div>
-                  <StatusPill status={ticket.status} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </AdminPanel>
-        <AdminPanel title="Admin Reply Layout" icon={UserRound}>
-          <div className="grid gap-4">
-            <AdminSelect label="Reply template" options={["Warranty follow-up", "Marketplace guidance", "Product information", "Escalation note"]} />
-            <textarea rows={7} placeholder="Write a customer reply" className="w-full resize-none rounded-xl border border-slate-900/10 bg-white/40 px-4 py-3 text-sm text-slate-600 placeholder:text-slate-400 disabled:opacity-70 dark:border-white/10 dark:bg-white/[0.02] dark:text-slate-300" />
-            <button type="button" className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white dark:bg-white dark:text-slate-900">
-              <MessageSquare className="h-4 w-4" />
-              Send Reply
-            </button>
-          </div>
-        </AdminPanel>
-      </div>
-    </div>
-  );
-}
-
-function AnalyticsAdmin() {
-  return (
-    <div className="space-y-6">
-      <MetricGrid />
-      <div className="grid gap-6 lg:grid-cols-3">
-        {["Product views", "Marketplace redirects", "Warranty registrations", "Newsletter performance", "Traffic overview", "Customer engagement"].map((item, index) => (
-          <AdminPanel key={item} title={item} icon={BarChart3}>
-            <div className="h-40 rounded-xl border border-slate-900/5 bg-slate-50 p-4 dark:border-white/5 dark:bg-white/[0.02]">
-              <div className="flex h-full items-end gap-2">
-                {[42, 64, 38, 80, 56, 92, 71].map((height, barIndex) => (
-                  <div key={`${item}-${barIndex}`} className="flex-1 rounded-t bg-slate-900/20 dark:bg-white/20" style={{ height: `${Math.max(20, height - index * 4)}%` }} />
-                ))}
-              </div>
-            </div>
-          </AdminPanel>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function MediaAdmin() {
-  return (
-    <div className="space-y-6">
-      <AdminToolbar primary="Upload Media" secondary="Optimize Assets" />
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        {products.slice(0, 4).map((product) => (
-          <div key={product.slug} className="overflow-hidden rounded-2xl border border-slate-900/5 bg-white/50 dark:border-white/5 dark:bg-white/[0.02]">
-            <img src={product.image} alt={product.name} loading="lazy" decoding="async" className="aspect-[4/3] w-full object-cover" />
-            <div className="p-4">
-              <p className="font-medium text-slate-900 dark:text-white">{product.name}</p>
-              <p className="mt-1 text-sm text-slate-500">Product image asset</p>
-            </div>
-          </div>
-        ))}
-      </div>
-      <AdminPanel title="Media Capabilities" icon={Images}>
-        <AdminList items={["Product galleries", "Homepage banners", "Warranty invoice uploads", "Document storage", "Image compression", "Alt text and SEO metadata"]} />
-      </AdminPanel>
-    </div>
-  );
-}
-
-function SettingsAdmin() {
-  return (
-    <div className="space-y-6">
-      <AdminPanel title="Feature Toggles" icon={ToggleLeft}>
-        <div className="grid gap-3">
-          {featureToggles.map((toggle) => (
-            <div key={toggle.key} className="flex items-center justify-between gap-5 rounded-xl border border-slate-900/5 bg-white/40 p-4 dark:border-white/5 dark:bg-white/[0.02]">
-              <div>
-                <p className="font-medium text-slate-900 dark:text-white">{toggle.label}</p>
-                <p className="text-sm text-slate-500">{toggle.enabled ? "Enabled" : "Disabled"}</p>
-              </div>
-              <span className={`h-7 w-12 rounded-full p-1 transition-colors ${toggle.enabled ? "bg-slate-900 dark:bg-white" : "bg-slate-200 dark:bg-white/10"}`}>
-                <span className={`block h-5 w-5 rounded-full bg-white transition-transform ${toggle.enabled ? "translate-x-5 dark:bg-slate-900" : ""}`} />
-              </span>
-            </div>
-          ))}
-        </div>
-      </AdminPanel>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <AdminPanel title="Security & Roles" icon={LockKeyhole}>
-          <AdminList items={["JWT/session authentication", "Role-based permissions", "Password reset", "Admin activity log", "Protected routes"]} />
-        </AdminPanel>
-        <AdminPanel title="Database Collections" icon={Boxes}>
-          <AdminList items={databaseCollections} />
-        </AdminPanel>
-      </div>
-    </div>
-  );
-}
-
-function SimpleAdminCard({ icon: Icon, title, description, status }) {
-  return (
-    <div className="premium-surface p-5 dark:bg-white/[0.03]">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <span className="rounded-xl bg-slate-900/5 p-2 text-slate-900 dark:bg-white/10 dark:text-white">
-          <Icon className="h-5 w-5" />
-        </span>
-        <StatusPill status={status} />
-      </div>
-      <h3 className="text-base font-semibold text-slate-900 dark:text-white">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">{description}</p>
-    </div>
-  );
-}
-
-function AdminPanel({ title, icon: Icon, children }) {
-  return (
-    <section className="premium-surface p-6 dark:bg-white/[0.03]">
+    <section className="rounded-[1.25rem] border border-slate-900/8 bg-white/72 p-5 shadow-[0_16px_48px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-white/[0.035]">
       <div className="mb-5 flex items-center gap-3">
-        <span className="rounded-xl bg-slate-900/5 p-2 text-slate-900 dark:bg-white/10 dark:text-white">
-          <Icon className="h-5 w-5" />
+        <span className="grid h-10 w-10 place-items-center rounded-xl bg-slate-950 text-white dark:bg-white dark:text-slate-950">
+          <Icon className="h-4 w-4" />
         </span>
-        <h2 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">{title}</h2>
+        <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
       </div>
       {children}
     </section>
   );
 }
 
-function ComingReadyBanner({ title, description, icon: Icon }) {
+function DataTable({ columns, rows }) {
   return (
-    <div className="rounded-2xl border border-slate-900/10 bg-white/54 p-5 text-slate-800 shadow-[0_12px_34px_rgba(17,24,39,0.06)] dark:border-white/10 dark:bg-white/[0.035] dark:text-slate-100">
-      <div className="flex items-start gap-4">
-        <span className="rounded-xl bg-slate-900/5 p-2 dark:bg-white/10">
-          <Icon className="h-5 w-5" />
-        </span>
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-          <p className="mt-2 max-w-4xl text-sm leading-7 opacity-85">{description}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AdminInput({ label, placeholder }) {
-  return (
-    <label className="grid gap-2">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">{label}</span>
-      <input placeholder={placeholder} className="w-full rounded-xl border border-slate-900/10 bg-white/40 px-4 py-3 text-sm font-medium text-slate-700 placeholder:text-slate-400 dark:border-white/10 dark:bg-white/[0.02] dark:text-slate-300" />
-    </label>
-  );
-}
-
-function AdminSelect({ label, options }) {
-  return (
-    <label className="grid gap-2">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">{label}</span>
-      <select className="w-full rounded-xl border border-slate-900/10 bg-white/40 px-4 py-3 text-sm font-medium text-slate-700 dark:border-white/10 dark:bg-white/[0.02] dark:text-slate-300">
-        {options.map((option) => (
-          <option key={option}>{option}</option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function ToggleRow({ icon: Icon, title, description, enabled }) {
-  return (
-    <div className="flex items-start justify-between gap-4 rounded-xl border border-slate-900/5 bg-white/40 p-4 dark:border-white/5 dark:bg-white/[0.02]">
-      <div className="flex gap-3">
-        <Icon className="mt-1 h-4 w-4 text-slate-500 dark:text-slate-400" />
-        <div>
-          <p className="font-medium text-slate-900 dark:text-white">{title}</p>
-          <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
-        </div>
-      </div>
-      <span className={`h-6 w-11 shrink-0 rounded-full p-1 ${enabled ? "bg-slate-900 dark:bg-white" : "bg-slate-200 dark:bg-white/10"}`}>
-        <span className={`block h-4 w-4 rounded-full bg-white ${enabled ? "translate-x-5 dark:bg-slate-900" : ""}`} />
-      </span>
-    </div>
-  );
-}
-
-function ActionPill({ icon: Icon, label, tone = "default" }) {
-  const toneClass = tone === "danger" ? "text-red-700 dark:text-red-300" : "text-slate-700 dark:text-slate-300";
-  return (
-    <button type="button" className={`inline-flex items-center gap-2 rounded-full border border-slate-900/10 bg-white/50 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] opacity-75 dark:border-white/10 dark:bg-white/[0.03] ${toneClass}`}>
-      <Icon className="h-3.5 w-3.5" />
-      {label}
-    </button>
-  );
-}
-
-function DetailBlock({ label, value }) {
-  return (
-    <div className="rounded-xl border border-slate-900/5 bg-white/40 p-4 dark:border-white/5 dark:bg-white/[0.02]">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">{label}</p>
-      <p className="mt-2 text-sm font-medium text-slate-900 dark:text-white">{value}</p>
-    </div>
-  );
-}
-
-function AdminTable({ columns, rows }) {
-  return (
-    <div className="-mx-2 overflow-x-auto overscroll-x-contain px-2 [scrollbar-gutter:stable]">
+    <div className="-mx-2 overflow-x-auto px-2">
       <table className="w-full min-w-[720px] border-separate border-spacing-y-2 text-left text-sm">
         <thead>
-          <tr>
-            {columns.map((column) => (
-              <th key={column} className="px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">{column}</th>
-            ))}
-          </tr>
+          <tr>{columns.map((column) => <th key={column} className="px-4 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{column}</th>)}</tr>
         </thead>
         <tbody>
-          {rows.map((row, rowIndex) => (
-            <tr key={rowIndex} className="border-b border-slate-900/5 transition-colors hover:bg-slate-900/5 dark:border-white/5 dark:hover:bg-white/5">
+          {rows.map((row, index) => (
+            <tr key={index} className="rounded-xl bg-slate-950/[0.025] transition hover:bg-slate-950/[0.045] dark:bg-white/[0.025] dark:hover:bg-white/[0.055]">
               {row.map((cell, cellIndex) => (
-                <td key={`${rowIndex}-${cellIndex}`} className="px-4 py-4 text-sm text-slate-700 dark:text-slate-300">
-                  {cellIndex === row.length - 1 && typeof cell === "string" ? <StatusPill status={cell} /> : <span className="font-medium">{cell}</span>}
+                <td key={`${index}-${cellIndex}`} className="px-4 py-4 text-slate-700 first:rounded-l-xl last:rounded-r-xl dark:text-slate-300">
+                  {cellIndex === row.length - 1 ? <StatusPill status={cell} /> : <span className="font-medium">{cell}</span>}
                 </td>
               ))}
             </tr>
@@ -740,82 +606,89 @@ function AdminTable({ columns, rows }) {
   );
 }
 
-function ModuleGrid({ modules }) {
+function ActionStrip({ title, text, actions }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {modules.map((module) => (
-        <div key={module.name} className="rounded-2xl border border-slate-900/5 bg-white/40 p-6 dark:border-white/5 dark:bg-white/[0.02]">
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <h3 className="font-medium text-slate-900 dark:text-white">{module.name}</h3>
-            <StatusPill status={module.enabled ? "Enabled" : "Disabled"} />
-          </div>
-          <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{module.description}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function AdminList({ items }) {
-  return (
-    <div className="grid gap-2">
-      {items.map((item) => (
-        <div key={item} className="rounded-xl border border-slate-900/5 bg-white/40 px-4 py-3 text-sm font-medium text-slate-600 dark:border-white/5 dark:bg-white/[0.02] dark:text-slate-400">{item}</div>
-      ))}
-    </div>
-  );
-}
-
-function AdminToolbar({ primary, secondary }) {
-  return (
-    <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-900/5 bg-white/50 p-5 md:flex-row md:items-center dark:border-white/5 dark:bg-white/[0.02]">
-      <p className="text-sm font-medium text-slate-500">Operational changes are handled through protected admin workflows.</p>
-      <div className="flex gap-3">
-        <AdminDisabledButton>{secondary}</AdminDisabledButton>
-        <AdminDisabledButton tone="solid">{primary}</AdminDisabledButton>
+    <div className="flex flex-col gap-4 rounded-[1.15rem] border border-slate-900/8 bg-white/68 p-5 dark:border-white/10 dark:bg-white/[0.035] lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p className="font-semibold">{title}</p>
+        <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400">{text}</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {actions.map(([label, href], index) => <CommandButton key={label} href={href} label={label} tone={index === 0 ? "solid" : "ghost"} />)}
       </div>
     </div>
   );
 }
 
-function AdminDisabledButton({ children, tone = "ghost" }) {
-  const className =
-    tone === "solid"
-      ? "premium-button inline-flex min-h-[44px] items-center justify-center rounded-full bg-slate-950 px-6 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white dark:bg-white dark:text-slate-900"
-      : "premium-button inline-flex min-h-[44px] items-center justify-center rounded-full border border-slate-900/10 bg-transparent px-6 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-900 dark:border-white/10 dark:text-white";
+function CommandButton({ href, label, tone = "solid" }) {
+  const classes = tone === "solid"
+    ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950"
+    : "border border-slate-900/10 bg-white/50 text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-300";
+  return <Link to={href} className={`inline-flex min-h-[40px] items-center justify-center rounded-full px-4 text-[10px] font-bold uppercase tracking-[0.14em] transition hover:-translate-y-0.5 ${classes}`}>{label}</Link>;
+}
 
+function FeatureCard({ title, text, href }) {
   return (
-    <button type="button" className={className}>
-      {children}
-    </button>
+    <Link to={href} className="block rounded-[1rem] border border-slate-900/8 bg-slate-950/[0.025] p-5 transition hover:-translate-y-0.5 hover:bg-white dark:border-white/10 dark:bg-white/[0.025] dark:hover:bg-white/[0.055]">
+      <p className="font-semibold">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">{text}</p>
+    </Link>
   );
 }
 
-function AdminButton({ href, children, tone = "ghost" }) {
-  const className =
-    tone === "solid"
-        ? "premium-button inline-flex min-h-[44px] items-center justify-center rounded-full bg-slate-950 px-6 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white shadow-[0_12px_30px_rgba(17,24,39,0.14)] transition-all duration-300 dark:bg-white dark:text-slate-900"
-        : "premium-button inline-flex min-h-[44px] items-center justify-center rounded-full border border-slate-900/10 bg-transparent px-6 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-900 transition-all duration-300 hover:bg-slate-900/5 dark:border-white/10 dark:text-white dark:hover:bg-white/5";
+function QueueCard({ label, value, href }) {
+  return (
+    <Link to={href} className="rounded-2xl border border-slate-900/8 bg-white/56 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+      <p className="text-2xl font-semibold">{value}</p>
+      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{label}</p>
+    </Link>
+  );
+}
 
-  return <Link to={href} className={className}>{children}</Link>;
+function TimelineRow({ label, meta = "Updated" }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl bg-slate-950/[0.025] px-4 py-3 dark:bg-white/[0.025]">
+      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span>
+      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{meta}</span>
+    </div>
+  );
+}
+
+function PolicyRow({ title, text }) {
+  return (
+    <div className="rounded-xl bg-slate-950/[0.025] p-4 dark:bg-white/[0.025]">
+      <p className="font-semibold">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">{text}</p>
+    </div>
+  );
+}
+
+function ConversationCard({ ticket }) {
+  return (
+    <div className="rounded-xl bg-slate-950/[0.025] p-4 dark:bg-white/[0.025]">
+      <div className="flex items-center justify-between gap-3">
+        <p className="font-semibold">{ticket.customer}</p>
+        <StatusPill status={ticket.status} />
+      </div>
+      <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{ticket.id} · {ticket.topic} · {ticket.channel}</p>
+    </div>
+  );
 }
 
 function StatusPill({ status }) {
-  const normalized = String(status).toLowerCase();
-  const tone =
-    normalized.includes("enabled") || normalized.includes("active") || normalized.includes("published") || normalized.includes("approved") || normalized.includes("live") || normalized.includes("growth")
-      ? "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
-      : normalized.includes("disabled") || normalized.includes("paused") || normalized.includes("inactive")
-        ? "bg-slate-500/10 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300"
-        : "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300";
-
-  return <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] ${tone}`}>{status}</span>;
+  const value = String(status || "Live");
+  const normalized = value.toLowerCase();
+  const tone = normalized.includes("rejected") || normalized.includes("locked") || normalized.includes("high")
+    ? "bg-rose-500/10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300"
+    : normalized.includes("pending") || normalized.includes("review") || normalized.includes("verification") || normalized.includes("attention")
+      ? "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
+      : "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300";
+  return <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] ${tone}`}>{value}</span>;
 }
 
-export { adminNav };
+function categoryName(id) {
+  return categories.find((category) => category.id === id)?.name || id || "Product";
+}
 
-
-
-
-
-
+export const adminNav = allNavItems;
+export { navGroups };

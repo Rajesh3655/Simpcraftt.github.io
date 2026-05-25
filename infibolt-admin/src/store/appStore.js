@@ -15,7 +15,7 @@ export const useAdminStore = create((set, get) => ({
   products: { items: [], status: "idle", error: null },
   users: { items: [], status: "idle", error: null },
   support: { tickets: [], status: "idle", error: null },
-  warranty: { claims: [], status: "idle", error: null },
+  warranty: { claims: [], rmas: [], units: [], status: "idle", error: null },
   notifications: [
     { id: 1, title: "Warranty queue", body: "3 claims need verification.", read: false },
     { id: 2, title: "Support SLA", body: "2 tickets are approaching SLA.", read: false },
@@ -87,7 +87,20 @@ export const useAdminStore = create((set, get) => ({
   loadWarranty: async () => {
     set((state) => ({ warranty: { ...state.warranty, status: "loading", error: null } }));
     const result = await warrantyService.listClaims();
-    set({ warranty: { claims: result.items || [], status: "success", error: null } });
+    set({ warranty: { claims: result.items || [], rmas: result.rmas || [], units: result.units || [], status: "success", error: null } });
+  },
+  updateWarrantyStatus: async (id, payload) => {
+    const result = await warrantyService.updateStatus(id, payload);
+    set((state) => ({
+      warranty: {
+        ...state.warranty,
+        claims: state.warranty.claims.map((item) => (item.id === result.id ? result : item)),
+        rmas: state.warranty.rmas.map((item) => (item.id === result.id ? result : item)),
+        status: "success",
+        error: null,
+      },
+    }));
+    return result;
   },
   markNotificationRead: (id) =>
     set((state) => ({ notifications: state.notifications.map((item) => (item.id === id ? { ...item, read: true } : item)) })),

@@ -2,18 +2,37 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Layers, LayoutGrid, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CommerceShell, MotionSection, ProductGrid, ProductGridSkeleton } from "../../components/commerce/CommerceLayout";
+import { productService } from "../../services/productService";
 import { collections, products } from "../../store/commerce";
 
 export default function CollectionsPage() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPreparing, setIsPreparing] = useState(true);
   const [isSwitching, setIsSwitching] = useState(false);
-  const activeCollection = collections[activeIndex];
-  const collectionProducts = products.filter(p => activeCollection.productSlugs.includes(p.slug));
+  const [remoteProducts, setRemoteProducts] = useState(products);
+  const [remoteCollections, setRemoteCollections] = useState(collections);
+  const activeCollection = remoteCollections[activeIndex] || remoteCollections[0];
+  const collectionProducts = remoteProducts.filter((product) =>
+    activeCollection?.productSlugs?.length
+      ? activeCollection.productSlugs.includes(product.slug)
+      : product.collection === activeCollection?.slug || product.collectionSlug === activeCollection?.slug
+  );
 
   useEffect(() => {
     const timer = window.setTimeout(() => setIsPreparing(false), 520);
     return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([productService.list(), productService.collections()]).then(([productResult, collectionResult]) => {
+      if (!active) return;
+      if (productResult.items?.length) setRemoteProducts(productResult.items);
+      if (collectionResult.items?.length) setRemoteCollections(collectionResult.items);
+    }).catch(() => {});
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -34,7 +53,7 @@ export default function CollectionsPage() {
           
           {/* Interactive Ecosystem Map / Selector */}
           <div className="grid grid-cols-3 gap-3 sm:gap-4">
-            {collections.map((collection, index) => {
+            {remoteCollections.map((collection, index) => {
               const isActive = index === activeIndex;
               const icons = [Sparkles, LayoutGrid, Layers];
               const Icon = icons[index] ?? Sparkles;
@@ -67,7 +86,7 @@ export default function CollectionsPage() {
                   </div>
                   <div className="relative z-10">
                     <p className="mb-2 text-[8px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300 sm:mb-3 sm:text-[10px] sm:tracking-[0.2em]">
-                      {collection.productSlugs.length} products
+                      {collection.productSlugs?.length || remoteProducts.filter((product) => product.collection === collection.slug || product.collectionSlug === collection.slug).length} products
                     </p>
                     <h3 className={`text-sm font-bold leading-tight tracking-tight transition-colors duration-300 sm:text-lg md:text-xl ${
                       isActive ? "text-slate-900 dark:text-white" : "text-slate-700 dark:text-slate-400"
@@ -84,7 +103,7 @@ export default function CollectionsPage() {
           <div className="pt-4 md:pt-8">
             <AnimatePresence mode="wait">
               <motion.div
-                key={activeCollection.slug}
+                key={activeCollection?.slug}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
@@ -92,8 +111,8 @@ export default function CollectionsPage() {
               >
                 <div className="mb-8 flex flex-col items-start justify-between gap-6 md:mb-12 md:flex-row md:items-end rounded-2xl bg-slate-50 p-6 md:p-8 dark:bg-white/[0.02] border border-black/5 dark:border-white/10">
                   <div className="max-w-2xl">
-                    <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-white">{activeCollection.name}</h2>
-                    <p className="mt-4 text-base leading-relaxed text-slate-600 dark:text-slate-400">{activeCollection.description}</p>
+                    <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-white">{activeCollection?.name}</h2>
+                    <p className="mt-4 text-base leading-relaxed text-slate-600 dark:text-slate-400">{activeCollection?.description}</p>
                   </div>
                 </div>
                 

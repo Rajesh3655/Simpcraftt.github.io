@@ -2,42 +2,124 @@ import mongoose from "mongoose";
 import { PRODUCT_VISIBILITY } from "../constants/status.js";
 import { schemaDefaults } from "./base.js";
 
+const imageField = { type: String, trim: true, maxlength: 1000 };
+const textList = [{ type: String, trim: true, maxlength: 180 }];
+
 const schema = new mongoose.Schema(
   {
     slug: { type: String, required: true, unique: true, trim: true, lowercase: true, match: /^[a-z0-9-]+$/ },
     name: { type: String, required: true, trim: true, maxlength: 120 },
     category: { type: String, required: true, trim: true, maxlength: 60 },
+    categorySlug: { type: String, trim: true, lowercase: true, maxlength: 80, index: true },
     collection: { type: String, trim: true, maxlength: 80 },
+    collectionSlug: { type: String, trim: true, lowercase: true, maxlength: 100, index: true },
+    sku: { type: String, trim: true, uppercase: true, maxlength: 80, index: true },
+    serialPrefix: { type: String, trim: true, uppercase: true, maxlength: 30 },
     price: { type: Number, required: true, min: 0 },
+    comparePrice: { type: Number, min: 0 },
+    stock: { type: Number, default: 0, min: 0 },
     rating: { type: Number, default: 0, min: 0, max: 5 },
     reviewCount: { type: Number, default: 0, min: 0 },
     badge: { type: String, default: "New", trim: true, maxlength: 40 },
     status: { type: String, default: "Draft", enum: PRODUCT_VISIBILITY, index: true },
     featured: { type: Boolean, default: false, index: true },
+    newLaunch: { type: Boolean, default: false, index: true },
+    bestseller: { type: Boolean, default: false, index: true },
+    trending: { type: Boolean, default: false, index: true },
+    homepageVisible: { type: Boolean, default: false, index: true },
+    heroVisible: { type: Boolean, default: false, index: true },
+    collectionVisible: { type: Boolean, default: true, index: true },
+    productPageVisible: { type: Boolean, default: true, index: true },
+    mobileFeatured: { type: Boolean, default: false, index: true },
+    supportWarrantyEnabled: { type: Boolean, default: true },
+    sortOrder: { type: Number, default: 0, index: true },
     visibility: { type: String, default: "public", enum: ["public", "private", "admin-only"], index: true },
     summary: { type: String, required: true, trim: true, maxlength: 500 },
+    shortDescription: { type: String, trim: true, maxlength: 500 },
     description: { type: String, trim: true, maxlength: 2000 },
-    image: { type: String, trim: true, maxlength: 1000 },
-    gallery: [{ type: String, trim: true, maxlength: 1000 }],
+    fullDescription: { type: String, trim: true, maxlength: 6000 },
+    image: imageField,
+    coverImage: imageField,
+    hoverImage: imageField,
+    thumbnail: imageField,
+    mobileHeroImage: imageField,
+    gallery: [imageField],
+    galleryImages: [imageField],
     variants: [{ type: String, trim: true, maxlength: 80 }],
-    features: [{ type: String, trim: true, maxlength: 160 }],
+    features: textList,
+    highlights: textList,
     specs: { type: Map, of: String, default: {} },
+    specifications: [
+      {
+        label: { type: String, trim: true, maxlength: 100 },
+        value: { type: String, trim: true, maxlength: 300 },
+      },
+    ],
+    featureBlocks: [
+      {
+        title: { type: String, trim: true, maxlength: 120 },
+        body: { type: String, trim: true, maxlength: 600 },
+        image: imageField,
+      },
+    ],
+    recommendations: [{ type: String, trim: true, lowercase: true, match: /^[a-z0-9-]+$/ }],
+    warrantyMonths: { type: Number, default: 12, min: 0, max: 120 },
+    replacementDays: { type: Number, default: 7, min: 0, max: 365 },
+    supportPriority: { type: String, default: "Normal", enum: ["Low", "Normal", "High", "Flagship"] },
     seo: {
       title: { type: String, trim: true, maxlength: 160 },
       description: { type: String, trim: true, maxlength: 300 },
       keywords: [{ type: String, trim: true, maxlength: 80 }],
     },
+    metaTitle: { type: String, trim: true, maxlength: 160 },
+    metaDescription: { type: String, trim: true, maxlength: 300 },
+    keywords: [{ type: String, trim: true, maxlength: 80 }],
+    amazonLink: { type: String, trim: true, maxlength: 1000 },
+    flipkartLink: { type: String, trim: true, maxlength: 1000 },
+    externalBuyEnabled: { type: Boolean, default: true },
     marketplace: {
       amazon: { type: String, trim: true, maxlength: 1000 },
       flipkart: { type: String, trim: true, maxlength: 1000 },
+      croma: { type: String, trim: true, maxlength: 1000 },
+      relianceDigital: { type: String, trim: true, maxlength: 1000 },
+      retail: { type: String, trim: true, maxlength: 1000 },
       custom: { type: String, trim: true, maxlength: 1000 },
+      externalBuyEnabled: { type: Boolean, default: true },
+      visible: { type: Boolean, default: true },
+      priority: { type: String, default: "Amazon", enum: ["Amazon", "Flipkart", "Croma", "Reliance Digital", "Retail", "Custom"] },
+      regionalAvailability: [{ type: String, trim: true, maxlength: 80 }],
+      launchStatus: { type: String, default: "Available through launch partners", trim: true, maxlength: 120 },
     },
   },
   schemaDefaults
 );
 
-schema.index({ name: "text", summary: "text", description: "text", category: "text" });
-schema.index({ category: 1, collection: 1, status: 1, visibility: 1 });
-schema.index({ price: 1, rating: -1 });
+schema.pre("validate", function normalizeProduct(next) {
+  this.shortDescription = this.shortDescription || this.summary;
+  this.fullDescription = this.fullDescription || this.description;
+  this.categorySlug = this.categorySlug || String(this.category || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  this.collectionSlug = this.collectionSlug || String(this.collection || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  this.coverImage = this.coverImage || this.image;
+  this.thumbnail = this.thumbnail || this.coverImage;
+  this.galleryImages = this.galleryImages?.length ? this.galleryImages : this.gallery;
+  this.marketplace = {
+    ...(this.marketplace || {}),
+    amazon: this.marketplace?.amazon || this.amazonLink,
+    flipkart: this.marketplace?.flipkart || this.flipkartLink,
+    externalBuyEnabled: this.marketplace?.externalBuyEnabled ?? this.externalBuyEnabled,
+  };
+  this.seo = {
+    ...(this.seo || {}),
+    title: this.seo?.title || this.metaTitle,
+    description: this.seo?.description || this.metaDescription,
+    keywords: this.seo?.keywords?.length ? this.seo.keywords : this.keywords,
+  };
+  next();
+});
+
+schema.index({ name: "text", summary: "text", shortDescription: "text", description: "text", fullDescription: "text", category: "text", collection: "text" });
+schema.index({ categorySlug: 1, collectionSlug: 1, status: 1, visibility: 1 });
+schema.index({ homepageVisible: -1, heroVisible: -1, featured: -1, sortOrder: 1 });
+schema.index({ price: 1, rating: -1, stock: -1 });
 
 export const Product = mongoose.model("Product", schema);

@@ -5,16 +5,44 @@ import { Category } from "../models/Category.js";
 import { Collection } from "../models/Collection.js";
 import { Customer } from "../models/Customer.js";
 import { FeatureToggle } from "../models/FeatureToggle.js";
+import { HomepageSection } from "../models/HomepageSection.js";
+import { LaunchLead } from "../models/LaunchLead.js";
+import { NewsletterSubscriber } from "../models/NewsletterSubscriber.js";
 import { Product } from "../models/Product.js";
+import { ProductOwnership } from "../models/ProductOwnership.js";
+import { ProductUnit } from "../models/ProductUnit.js";
+import { RMARequest } from "../models/RMARequest.js";
+import { SiteSetting } from "../models/SiteSetting.js";
 import { SupportTicket } from "../models/SupportTicket.js";
 import { WarrantyClaim } from "../models/WarrantyClaim.js";
+import { AuditLog } from "../models/AuditLog.js";
 import { hashToken, verifyPassword } from "../utils/crypto.js";
 import { clearAuthCookies, verifyRefreshToken } from "../utils/cookies.js";
 import { createHttpError } from "../utils/httpError.js";
 import { ok, sanitizeUser } from "../utils/response.js";
 import { createSession, revokeUserSessions, rotateRefreshSession } from "../services/sessionService.js";
+import { assertSerialAvailable, assertValidSerial, ensureProductUnit, resolveProductForOwnership, syncUnitOwner, warrantyEndFromPurchase } from "../services/ownershipService.js";
 
 const maxFailedLogins = 5;
+
+function slugify(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function csvEscape(value) {
+  const normalized = value === undefined || value === null ? "" : String(value);
+  return `"${normalized.replace(/"/g, '""')}"`;
+}
+
+function sendCsv(res, filename, rows) {
+  const body = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  return res.status(200).send(body);
+}
 
 export async function adminLogin(req, res) {
   const { email, password } = matchedData(req);
@@ -61,20 +89,24 @@ export async function adminMe(req, res) {
 }
 
 export async function overview(_req, res) {
-  const [products, warrantyClaims, supportTickets] = await Promise.all([
+  const verifiedOwnershipFilter = { otpVerifiedAt: { $exists: true } };
+  const [products, warrantyClaims, ownerships, rmas, supportTickets] = await Promise.all([
     Product.find().lean(),
     WarrantyClaim.find().lean(),
+    ProductOwnership.find(verifiedOwnershipFilter).lean(),
+    RMARequest.find().lean(),
     SupportTicket.find().lean(),
   ]);
   return ok(res, {
     stats: [
       { label: "Products", value: products.length, trend: "Local catalogue", status: "live" },
-      { label: "Warranty Claims", value: warrantyClaims.length, trend: "Local queue", status: "attention" },
+      { label: "Registered Devices", value: ownerships.length, trend: "Ownership records", status: "live" },
+      { label: "Warranty Claims", value: rmas.length + warrantyClaims.length, trend: "RMA queue", status: "attention" },
       { label: "Complaints", value: supportTickets.length, trend: "Support queue", status: "attention" },
-      { label: "Future Orders", value: 0, trend: "Checkout staged", status: "staged" },
     ],
     products,
-    warrantyClaims,
+    warrantyClaims: ownerships,
+    rmas,
     supportTickets,
   });
 }
@@ -85,24 +117,65 @@ export async function listAdminProducts(_req, res) {
   const filter = {};
   if (_req.query.category) filter.category = _req.query.category;
   if (_req.query.status) filter.status = _req.query.status;
+  if (_req.query.featured === "true") filter.featured = true;
+  if (_req.query.newLaunch === "true") filter.newLaunch = true;
+  if (_req.query.homepageVisible === "true") filter.homepageVisible = true;
   if (_req.query.search) filter.$text = { $search: String(_req.query.search) };
   const [items, total] = await Promise.all([
-    Product.find(filter).sort({ updatedAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+    Product.find(filter).sort({ sortOrder: 1, updatedAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
     Product.countDocuments(filter),
   ]);
   return ok(res, { items, total, page, pages: Math.ceil(total / limit) || 1 });
 }
 
 export async function createProduct(req, res) {
-  const data = matchedData(req);
-  const slug = data.slug || data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  const data = matchedData(req, { locations: ["body"], includeOptionals: true });
+  const slug = data.slug || slugify(data.name);
   const product = await Product.create({ ...data, slug });
   await writeAuditLog(req, "admin.product.created", { slug });
   return ok(res, product, 201);
 }
 
+export async function createWebsitePurchaseOwnership(req, res) {
+  const data = matchedData(req, { locations: ["body"] });
+  const serial = assertValidSerial(data.serial);
+  const customer = await Customer.findOne({ email: data.email });
+  if (!customer) throw createHttpError(404, "Customer account not found for website purchase ownership.");
+  const productInfo = await resolveProductForOwnership({ product: data.product, productSlug: data.productSlug });
+  await assertSerialAvailable(serial, customer._id, productInfo.productSlug);
+  await ensureProductUnit({ serial, ...productInfo, customer, source: "Website" });
+  const { start, end } = warrantyEndFromPurchase(data.purchaseDate);
+  const ownership = await ProductOwnership.create({
+    id: `OWN-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+    customerId: customer._id,
+    customerName: customer.name,
+    email: customer.email,
+    phone: customer.phone,
+    ...productInfo,
+    serial,
+    source: "Website",
+    sourceDetail: "infibolt.com",
+    invoiceNumber: data.invoiceNumber,
+    invoiceUrl: data.invoiceUrl,
+    purchaseDate: data.purchaseDate || start,
+    registeredAt: new Date(),
+    otpVerifiedAt: new Date(),
+    verifiedAt: new Date(),
+    warrantyStart: start,
+    warrantyUntil: end,
+    status: "Active",
+    warrantyStatus: "Active",
+    timeline: [{ status: "Active", note: "Website purchase automatically linked and activated.", actorEmail: req.user.email }],
+  });
+  await syncUnitOwner({ serial, ownership });
+  await writeAuditLog(req, "admin.website_ownership.created", { ownershipId: ownership.id, serial, email: customer.email });
+  return ok(res, ownership, 201);
+}
+
 export async function updateProduct(req, res) {
-  const product = await Product.findOneAndUpdate({ slug: req.params.slug }, matchedData(req, { locations: ["body"] }), {
+  const data = matchedData(req, { locations: ["body"], includeOptionals: true });
+  if (data.name && !data.slug) data.slug = req.params.slug;
+  const product = await Product.findOneAndUpdate({ slug: req.params.slug }, data, {
     new: true,
     runValidators: true,
   });
@@ -118,12 +191,69 @@ export async function deleteProduct(req, res) {
   return ok(res, { deleted: true, product });
 }
 
+export async function reorderProducts(req, res) {
+  const { items = [] } = matchedData(req, { locations: ["body"] });
+  await Promise.all(
+    items.map((item, index) =>
+      Product.findOneAndUpdate({ slug: item.slug }, { sortOrder: Number.isFinite(item.sortOrder) ? item.sortOrder : index }, { runValidators: true })
+    )
+  );
+  await writeAuditLog(req, "admin.products.reordered", { count: items.length });
+  return ok(res, { reordered: true, count: items.length });
+}
+
 export async function listUsers(_req, res) {
-  return ok(res, { items: await Customer.find().sort({ createdAt: -1 }).lean() });
+  const items = await Customer.find().sort({ createdAt: -1 }).lean();
+  return ok(res, { items });
+}
+
+export async function listNewsletterSubscribers(_req, res) {
+  const items = await NewsletterSubscriber.find().sort({ updatedAt: -1 }).lean();
+  return ok(res, { items });
+}
+
+export async function listLaunchLeads(_req, res) {
+  const items = await LaunchLead.find().sort({ updatedAt: -1 }).lean();
+  return ok(res, { items });
+}
+
+export async function listAuditLogs(_req, res) {
+  const items = await AuditLog.find().sort({ createdAt: -1 }).limit(200).lean();
+  return ok(res, { items });
+}
+
+export async function exportUsers(req, res) {
+  const type = req.query.type || "users";
+  const header = ["name", "email", "phone", "status", "products", "tickets", "createdAt"];
+  let rows = [];
+  let filename = "infibolt-users.csv";
+  if (type === "newsletter") {
+    const subscribers = await NewsletterSubscriber.find().sort({ updatedAt: -1 }).lean();
+    filename = "infibolt-newsletter-subscribers.csv";
+    rows = [["email", "status", "source", "subscribedAt"], ...subscribers.map((item) => [item.email, item.status, item.source, item.subscribedAt])];
+  } else if (type === "warranty") {
+    const ownerships = await ProductOwnership.find({ otpVerifiedAt: { $exists: true } }).sort({ updatedAt: -1 }).lean();
+    filename = "infibolt-warranty-customers.csv";
+    rows = [["name", "email", "phone", "product", "serial", "status"], ...ownerships.map((item) => [item.customerName, item.email, item.phone, item.product, item.serial, item.warrantyStatus || item.status])];
+  } else if (type === "support") {
+    const tickets = await SupportTicket.find().sort({ updatedAt: -1 }).lean();
+    filename = "infibolt-support-customers.csv";
+    rows = [["customer", "email", "topic", "status", "channel"], ...tickets.map((item) => [item.customer, item.email, item.topic, item.status, item.channel])];
+  } else {
+    const users = await Customer.find().sort({ createdAt: -1 }).lean();
+    rows = [header, ...users.map((item) => [item.name, item.email, item.phone, item.status, item.products, item.tickets, item.createdAt])];
+  }
+  await writeAuditLog(req, "admin.users.exported", { type });
+  return sendCsv(res, filename, rows);
 }
 
 export async function listWarrantyClaimsAdmin(_req, res) {
-  return ok(res, { items: await WarrantyClaim.find().sort({ updatedAt: -1 }).lean() });
+  const [items, rmas, units] = await Promise.all([
+    ProductOwnership.find({ otpVerifiedAt: { $exists: true } }).sort({ updatedAt: -1 }).lean(),
+    RMARequest.find().sort({ updatedAt: -1 }).lean(),
+    ProductUnit.find().sort({ updatedAt: -1 }).limit(200).lean(),
+  ]);
+  return ok(res, { items, rmas, units });
 }
 
 export async function listSupportTicketsAdmin(_req, res) {
@@ -136,42 +266,157 @@ export async function settings(_req, res) {
   return ok(res, { featureToggles: await FeatureToggle.find().lean() });
 }
 
+export async function getWarrantyPolicyAdmin(_req, res) {
+  const setting = await SiteSetting.findOne({ key: "warrantyPolicy" }).lean();
+  return ok(res, setting?.value || null);
+}
+
+export async function updateWarrantyPolicy(req, res) {
+  const data = matchedData(req, { locations: ["body"] });
+  const value = {
+    title: data.title || "INFIBOLT Warranty Policy",
+    url: data.url,
+    filename: data.filename,
+    originalName: data.originalName,
+    uploadedAt: new Date(),
+    uploadedBy: req.user.email,
+  };
+  const setting = await SiteSetting.findOneAndUpdate(
+    { key: "warrantyPolicy" },
+    { key: "warrantyPolicy", value },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+  await writeAuditLog(req, "admin.warranty_policy.updated", { url: value.url });
+  return ok(res, setting.value);
+}
+
 export async function listCategoriesAdmin(_req, res) {
-  return ok(res, { items: await Category.find().sort({ name: 1 }).lean() });
+  return ok(res, { items: await Category.find().sort({ sortOrder: 1, name: 1 }).lean() });
 }
 
 export async function createCategory(req, res) {
-  const category = await Category.create(matchedData(req));
+  const data = matchedData(req, { locations: ["body"], includeOptionals: true });
+  const category = await Category.create({ ...data, id: data.id || data.slug || slugify(data.name), slug: data.slug || data.id || slugify(data.name) });
   await writeAuditLog(req, "admin.category.created", { id: category.id });
   return ok(res, category, 201);
 }
 
+export async function updateCategory(req, res) {
+  const data = matchedData(req, { locations: ["body"], includeOptionals: true });
+  const category = await Category.findOneAndUpdate({ id: req.params.id }, data, { new: true, runValidators: true });
+  if (!category) throw createHttpError(404, "Category not found.");
+  await writeAuditLog(req, "admin.category.updated", { id: category.id });
+  return ok(res, category);
+}
+
+export async function deleteCategory(req, res) {
+  const category = await Category.findOneAndDelete({ id: req.params.id });
+  if (!category) throw createHttpError(404, "Category not found.");
+  await writeAuditLog(req, "admin.category.deleted", { id: category.id });
+  return ok(res, { deleted: true, category });
+}
+
 export async function listCollectionsAdmin(_req, res) {
-  return ok(res, { items: await Collection.find().sort({ name: 1 }).lean() });
+  return ok(res, { items: await Collection.find().sort({ sortOrder: 1, name: 1 }).lean() });
 }
 
 export async function createCollection(req, res) {
-  const collection = await Collection.create(matchedData(req));
+  const data = matchedData(req, { locations: ["body"], includeOptionals: true });
+  const collection = await Collection.create({ ...data, slug: data.slug || slugify(data.name) });
   await writeAuditLog(req, "admin.collection.created", { slug: collection.slug });
   return ok(res, collection, 201);
 }
 
+export async function updateCollection(req, res) {
+  const data = matchedData(req, { locations: ["body"], includeOptionals: true });
+  const collection = await Collection.findOneAndUpdate({ slug: req.params.slug }, data, { new: true, runValidators: true });
+  if (!collection) throw createHttpError(404, "Collection not found.");
+  await writeAuditLog(req, "admin.collection.updated", { slug: collection.slug });
+  return ok(res, collection);
+}
+
+export async function deleteCollection(req, res) {
+  const collection = await Collection.findOneAndDelete({ slug: req.params.slug });
+  if (!collection) throw createHttpError(404, "Collection not found.");
+  await writeAuditLog(req, "admin.collection.deleted", { slug: collection.slug });
+  return ok(res, { deleted: true, collection });
+}
+
+export async function listHomepageSectionsAdmin(_req, res) {
+  return ok(res, { items: await HomepageSection.find().sort({ sortOrder: 1, updatedAt: -1 }).lean() });
+}
+
+export async function upsertHomepageSection(req, res) {
+  const data = matchedData(req, { locations: ["body"], includeOptionals: true });
+  const key = req.params.key || data.key || slugify(data.title);
+  const section = await HomepageSection.findOneAndUpdate(
+    { key },
+    { ...data, key },
+    { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
+  );
+  await writeAuditLog(req, "admin.homepage_section.upserted", { key });
+  return ok(res, section, req.params.key ? 200 : 201);
+}
+
+export async function deleteHomepageSection(req, res) {
+  const section = await HomepageSection.findOneAndDelete({ key: req.params.key });
+  if (!section) throw createHttpError(404, "Homepage section not found.");
+  await writeAuditLog(req, "admin.homepage_section.deleted", { key: req.params.key });
+  return ok(res, { deleted: true, section });
+}
+
 export async function updateWarrantyStatus(req, res) {
   const data = matchedData(req, { locations: ["body"] });
-  const update = {
-    $set: data,
-    $push: data.status
-      ? {
-          statusHistory: {
-            status: data.status,
-            note: data.notes || "Admin status update",
-            actorEmail: req.user.email,
-          },
-        }
-      : undefined,
-  };
-  if (!update.$push) delete update.$push;
-  const claim = await WarrantyClaim.findOneAndUpdate({ id: req.params.id }, update, { new: true, runValidators: true });
+  const ownership = await ProductOwnership.findOne({ id: req.params.id });
+  if (ownership) {
+    if (data.status) {
+      ownership.status = data.status === "Active" ? "Active" : data.status === "Rejected" ? "Rejected" : ownership.status;
+      ownership.warrantyStatus = data.status;
+      if (data.status === "Active") {
+        ownership.verifiedAt = new Date();
+        await syncUnitOwner({ serial: ownership.serial, ownership });
+      }
+      if (data.status === "Rejected") ownership.rejectedAt = new Date();
+      ownership.timeline.push({ status: data.status, note: data.notes || "Admin warranty update", actorEmail: req.user.email });
+    }
+    if (data.notes) ownership.reviewNote = data.notes;
+    await ownership.save();
+    await writeAuditLog(req, "admin.ownership.updated", { ownershipId: req.params.id, status: data.status });
+    return ok(res, ownership);
+  }
+
+  const rma = await RMARequest.findOne({ id: req.params.id });
+  if (rma) {
+    if (data.status) {
+      rma.status = data.status;
+      rma.timeline.push({ status: data.status, note: data.notes || "Admin RMA update", actorEmail: req.user.email });
+    }
+    if (data.priority) rma.priority = data.priority;
+    if (data.notes) rma.notes = data.notes;
+    await rma.save();
+    const ownershipWarrantyStatus = ["Replacement Approved", "Repaired", "Replaced"].includes(data.status) ? data.status : "Claim Under Review";
+    await ProductOwnership.findOneAndUpdate(
+      { id: rma.ownershipId },
+      {
+        warrantyStatus: ownershipWarrantyStatus,
+        $push: { timeline: { status: ownershipWarrantyStatus, note: `${rma.id} updated: ${data.status || "Under review"}`, actorEmail: req.user.email } },
+      },
+      { new: true }
+    );
+    await writeAuditLog(req, "admin.rma.updated", { rmaId: req.params.id, status: data.status });
+    return ok(res, rma);
+  }
+
+  const claim = await WarrantyClaim.findOneAndUpdate(
+    { id: req.params.id },
+    {
+      $set: data,
+      ...(data.status
+        ? { $push: { statusHistory: { status: data.status, note: data.notes || "Admin status update", actorEmail: req.user.email } } }
+        : {}),
+    },
+    { new: true, runValidators: true }
+  );
   if (!claim) throw createHttpError(404, "Claim not found.");
   await writeAuditLog(req, "admin.warranty.updated", { claimId: req.params.id });
   return ok(res, claim);

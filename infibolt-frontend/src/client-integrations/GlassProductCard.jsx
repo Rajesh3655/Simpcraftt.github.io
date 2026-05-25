@@ -11,7 +11,7 @@ export function GlassProductCard({ product }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [direction, setDirection] = useState(0);
   const [isAutoPlayPaused, setIsAutoPlayPaused] = useState(false);
-  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isOpeningPartner, setIsOpeningPartner] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
   // Lock body scroll when cinematic modal is open
@@ -81,17 +81,16 @@ export function GlassProductCard({ product }) {
     });
   };
 
-  const handleAddToCart = (e) => {
+  const handleOpenPartner = (e) => {
     e.stopPropagation();
-    setIsAddingToCart(true);
+    setIsOpeningPartner(true);
     
-    // Simulate a network request to add the item to the cart
     setTimeout(() => {
-      setIsAddingToCart(false);
-      toast.success("Added to cart", {
-        description: `${product.name} has been added to your cart.`
+      setIsOpeningPartner(false);
+      toast.success("Launch partner ready", {
+        description: `Choose a marketplace partner for ${product.name}.`
       });
-    }, 1500); // 1.5 seconds loading state
+    }, 900);
   };
 
   // Auto-play effect
@@ -367,16 +366,16 @@ export function GlassProductCard({ product }) {
                 className="mt-10 flex flex-col gap-4 sm:flex-row"
               >
                 <button
-                  onClick={handleAddToCart}
-                  disabled={isAddingToCart}
+                  onClick={handleOpenPartner}
+                  disabled={isOpeningPartner}
                   className="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-full bg-slate-900 dark:bg-white px-8 py-4 text-sm font-bold uppercase tracking-widest text-white dark:text-slate-900 shadow-xl dark:shadow-white/10 transition-all hover:-translate-y-1 hover:bg-slate-800 dark:hover:bg-slate-100 hover:shadow-2xl active:scale-95 disabled:pointer-events-none sm:w-auto"
                 >
-                  <span className={`relative z-10 flex items-center gap-2 transition-opacity duration-300 ${isAddingToCart ? 'opacity-0' : 'opacity-100'}`}>
+                  <span className={`relative z-10 flex items-center gap-2 transition-opacity duration-300 ${isOpeningPartner ? 'opacity-0' : 'opacity-100'}`}>
                     <ShoppingBag className="h-5 w-5" />
-                    Add to Cart
+                    View Partner
                   </span>
                   
-                  {isAddingToCart && (
+                  {isOpeningPartner && (
                     <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900">
                       <style>{`
                         @keyframes shimmer-btn {
@@ -385,11 +384,11 @@ export function GlassProductCard({ product }) {
                         }
                       `}</style>
                       <div className="absolute inset-0 -translate-x-full [animation:shimmer-btn_1.5s_infinite_linear] bg-gradient-to-r from-transparent via-white/20 dark:via-black/10 to-transparent" />
-                      <span className="relative z-10 text-sm font-bold uppercase tracking-widest">Adding...</span>
+                      <span className="relative z-10 text-sm font-bold uppercase tracking-widest">Opening...</span>
                     </div>
                   )}
 
-                  {!isAddingToCart && (
+                  {!isOpeningPartner && (
                     <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 dark:via-black/10 to-transparent transition-transform duration-500 ease-out group-hover:translate-x-full" />
                   )}
                 </button>
