@@ -3,11 +3,13 @@ import {
   Bell,
   CheckCircle2,
   ChevronRight,
+  Clock3,
   HelpCircle,
   Heart,
   Home,
   LifeBuoy,
   LogOut,
+  Mail,
   MapPin,
   PackageCheck,
   Settings,
@@ -23,6 +25,7 @@ import { CommerceShell, MotionSection } from "../../components/commerce/Commerce
 import { EmptyState, PageLoader } from "../../components/AppStates";
 import { AccountAccess, SessionExpiredNotice } from "../../components/customer/AccountAccess";
 import { AccountAtmosphere, AccountCard, PremiumButton, PremiumField, PremiumSelect, SoftStatus } from "../../components/customer/PremiumAccount";
+import { OtpInput } from "../../components/OtpInput";
 import { formatPrice, products } from "../../store/commerce";
 import { useAppStore } from "../../store/appStore";
 
@@ -106,10 +109,13 @@ export default function ProfilePage() {
   const loadSupportTickets = useAppStore((state) => state.loadSupportTickets);
   const loadWarrantyClaims = useAppStore((state) => state.loadWarrantyClaims);
   const updateProfile = useAppStore((state) => state.updateProfile);
+  const requestProfileContactUpdate = useAppStore((state) => state.requestProfileContactUpdate);
+  const verifyProfileContactUpdate = useAppStore((state) => state.verifyProfileContactUpdate);
   const logout = useAppStore((state) => state.logout);
   const [activeTab, setActiveTab] = useState("settings");
   const [settingsForm, setSettingsForm] = useState(profile);
   const [settingsPasswordError, setSettingsPasswordError] = useState("");
+  const [emailVerification, setEmailVerification] = useState({ email: "", verificationId: "", otp: "", cooldown: 0, status: "idle", error: "" });
 
   useEffect(() => {
     if (!auth.user) return;
@@ -120,6 +126,14 @@ export default function ProfilePage() {
   useEffect(() => {
     setSettingsForm(profile);
   }, [profile]);
+
+  useEffect(() => {
+    if (emailVerification.cooldown <= 0) return undefined;
+    const timer = window.setInterval(() => {
+      setEmailVerification((current) => ({ ...current, cooldown: Math.max(current.cooldown - 1, 0) }));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [emailVerification.cooldown]);
 
   const signedIn = Boolean(auth.user);
   const supportItems = support.tickets.length ? support.tickets : defaultTickets;
@@ -155,7 +169,8 @@ export default function ProfilePage() {
     }
     const { currentPassword, newPassword, ...profileFields } = settingsForm;
     try {
-      await updateProfile(profileFields);
+      const { email, phone, ...safeProfileFields } = profileFields;
+      await updateProfile(safeProfileFields);
       setSettingsPasswordError("");
       setSettingsForm({ ...profileFields, currentPassword: "", newPassword: "" });
       toast.success("Profile saved", {
@@ -164,6 +179,38 @@ export default function ProfilePage() {
       });
     } catch (error) {
       toast.error("Profile not saved", { id: "account-profile-action", description: error.message || "Please try again." });
+    }
+  };
+
+  const verifyEmailChange = async () => {
+    if (!emailVerification.email || emailVerification.otp.length !== 6) {
+      setEmailVerification((current) => ({ ...current, error: "Enter the 6 digit email code." }));
+      return;
+    }
+    setEmailVerification((current) => ({ ...current, status: "loading", error: "" }));
+    try {
+      const result = await verifyProfileContactUpdate({
+        email: emailVerification.email,
+        verificationId: emailVerification.verificationId,
+        otp: emailVerification.otp,
+      });
+      setSettingsForm((current) => ({ ...current, ...result, currentPassword: "", newPassword: "" }));
+      setEmailVerification({ email: "", verificationId: "", otp: "", cooldown: 0, status: "idle", error: "" });
+      toast.success("Email updated", { id: "account-profile-action", description: "Your account, warranty, support, and newsletter records now use the new email." });
+    } catch (error) {
+      setEmailVerification((current) => ({ ...current, status: "pending", error: error.message || "Email code was not accepted." }));
+    }
+  };
+
+  const resendEmailChange = async () => {
+    if (!emailVerification.email || emailVerification.cooldown > 0 || emailVerification.status === "loading") return;
+    setEmailVerification((current) => ({ ...current, status: "loading", error: "" }));
+    try {
+      const result = await requestProfileContactUpdate({ email: emailVerification.email });
+      setEmailVerification((current) => ({ ...current, verificationId: result.verificationId || current.verificationId, cooldown: result.resendAfterSeconds || 60, status: "pending", otp: "" }));
+      toast.success("Code resent", { id: "account-profile-action", description: "Use the newest email code to continue." });
+    } catch (error) {
+      setEmailVerification((current) => ({ ...current, status: "pending", error: error.message || "Could not resend the code." }));
     }
   };
 
@@ -180,6 +227,13 @@ export default function ProfilePage() {
             <MobileProfileApp
               profile={profile}
               updateProfile={updateProfile}
+              requestProfileContactUpdate={requestProfileContactUpdate}
+              emailVerification={emailVerification}
+              onEmailOtpChange={(otp) => setEmailVerification((current) => ({ ...current, otp, error: "" }))}
+              onEmailVerificationStart={setEmailVerification}
+              onVerifyEmail={verifyEmailChange}
+              onResendEmail={resendEmailChange}
+              onCancelEmail={() => setEmailVerification({ email: "", verificationId: "", otp: "", cooldown: 0, status: "idle", error: "" })}
               onOpenTab={setActiveTab}
               onLogout={handleLogout}
             />
@@ -240,6 +294,11 @@ export default function ProfilePage() {
                           setSettingsPasswordError("");
                         }}
                         onSubmit={saveProfile}
+                        emailVerification={emailVerification}
+                        onEmailOtpChange={(otp) => setEmailVerification((current) => ({ ...current, otp, error: "" }))}
+                        onVerifyEmail={verifyEmailChange}
+                        onResendEmail={resendEmailChange}
+                        onCancelEmail={() => setEmailVerification({ email: "", verificationId: "", otp: "", cooldown: 0, status: "idle", error: "" })}
                       />
                     </TabPanel>
                   )}
@@ -253,7 +312,7 @@ export default function ProfilePage() {
   );
 }
 
-function MobileProfileApp({ profile, updateProfile, onOpenTab, onLogout }) {
+function MobileProfileApp({ profile, updateProfile, requestProfileContactUpdate, emailVerification, onEmailOtpChange, onEmailVerificationStart, onVerifyEmail, onResendEmail, onCancelEmail, onOpenTab, onLogout }) {
   const [editingProfile, setEditingProfile] = useState(false);
   const [mobileForm, setMobileForm] = useState(profile);
   const [passwordError, setPasswordError] = useState("");
@@ -278,7 +337,8 @@ function MobileProfileApp({ profile, updateProfile, onOpenTab, onLogout }) {
     }
     const { currentPassword, newPassword, ...profileFields } = mobileForm;
     try {
-      await updateProfile(profileFields);
+      const { email, phone, ...safeProfileFields } = profileFields;
+      await updateProfile(safeProfileFields);
       setPasswordError("");
       setMobileForm({ ...profileFields, currentPassword: "", newPassword: "" });
       setEditingProfile(false);
@@ -314,6 +374,11 @@ function MobileProfileApp({ profile, updateProfile, onOpenTab, onLogout }) {
             setEditingProfile(false);
           }}
           onSubmit={saveMobileProfile}
+          emailVerification={emailVerification}
+          onEmailOtpChange={onEmailOtpChange}
+          onVerifyEmail={onVerifyEmail}
+          onResendEmail={onResendEmail}
+          onCancelEmail={onCancelEmail}
         />
       )}
       <MobileServiceSection title="Account options" items={[...mobileQuickActions, ...mobileServices]} onOpenTab={onOpenTab} />
@@ -359,7 +424,7 @@ function MobileProfileHeader({ profile, onEdit, spinning }) {
   );
 }
 
-function MobileProfileEditor({ form, phone, onChange, passwordError, onCancel, onSubmit }) {
+function MobileProfileEditor({ form, phone, onChange, passwordError, onCancel, onSubmit, emailVerification, onEmailOtpChange, onVerifyEmail, onResendEmail, onCancelEmail }) {
   return (
     <form onSubmit={onSubmit} className="grid gap-4 rounded-[1.35rem] border border-slate-900/8 bg-white/82 p-4 shadow-[0_14px_42px_rgba(15,23,42,0.055)] backdrop-blur-2xl">
       <div>
@@ -367,8 +432,9 @@ function MobileProfileEditor({ form, phone, onChange, passwordError, onCancel, o
         <h2 className="mt-2 text-xl font-semibold tracking-normal text-slate-950">Edit account</h2>
       </div>
       <PremiumField label="Full name" value={form.name || ""} onChange={(name) => onChange((current) => ({ ...current, name }))} />
-      <PremiumField label="Email" type="email" value={form.email || ""} onChange={(email) => onChange((current) => ({ ...current, email }))} />
-      <PremiumField label="Mobile number" value={form.phone || phone || ""} onChange={(phone) => onChange((current) => ({ ...current, phone }))} helper="Mobile changes are protected by OTP verification in production." />
+      <PremiumField label="Email" type="email" value={form.email || ""} onChange={() => {}} disabled helper="Account email is fixed after signup." />
+      <PremiumField label="Phone number" value={form.phone || phone || ""} onChange={() => {}} disabled helper="Phone is fixed after signup and can be used for login." />
+      <EmailVerificationPanel verification={emailVerification} onOtpChange={onEmailOtpChange} onVerify={onVerifyEmail} onResend={onResendEmail} onCancel={onCancelEmail} />
       <div className="grid grid-cols-2 gap-3">
         <PremiumField label="City" value={form.city || ""} onChange={(city) => onChange((current) => ({ ...current, city }))} />
         <PremiumSelect label="State" value={form.state || "Karnataka"} onChange={(state) => onChange((current) => ({ ...current, state }))} options={indianStates} />
@@ -667,7 +733,7 @@ function AlertsPanel() {
   );
 }
 
-function SettingsPanel({ form, phone, passwordError, onChange, onCancel, onSubmit }) {
+function SettingsPanel({ form, phone, passwordError, onChange, onCancel, onSubmit, emailVerification, onEmailOtpChange, onVerifyEmail, onResendEmail, onCancelEmail }) {
   return (
     <AccountCard className="p-4 sm:p-6">
       <SectionHeading label="Settings" title="Edit account" description="Keep your profile details current and manage password changes from the same account space." />
@@ -676,11 +742,12 @@ function SettingsPanel({ form, phone, passwordError, onChange, onCancel, onSubmi
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Profile details</p>
           <div className="grid gap-4 md:grid-cols-2">
             <PremiumField label="Full name" value={form.name || ""} onChange={(name) => onChange((current) => ({ ...current, name }))} />
-            <PremiumField label="Email" type="email" value={form.email || ""} onChange={(email) => onChange((current) => ({ ...current, email }))} />
-            <PremiumField label="Mobile number" value={form.phone || phone || ""} onChange={(phone) => onChange((current) => ({ ...current, phone }))} helper="Mobile changes are protected by OTP verification in production." />
+            <PremiumField label="Email" type="email" value={form.email || ""} onChange={() => {}} disabled helper="Account email is fixed after signup." />
+            <PremiumField label="Phone number" value={form.phone || phone || ""} onChange={() => {}} disabled helper="Phone is fixed after signup and can be used for login." />
             <PremiumField label="City" value={form.city || ""} onChange={(city) => onChange((current) => ({ ...current, city }))} />
             <PremiumSelect label="State" value={form.state || "Karnataka"} onChange={(state) => onChange((current) => ({ ...current, state }))} options={indianStates} />
           </div>
+          <EmailVerificationPanel verification={emailVerification} onOtpChange={onEmailOtpChange} onVerify={onVerifyEmail} onResend={onResendEmail} onCancel={onCancelEmail} />
         </div>
         <div className="grid gap-4 border-b border-slate-900/8 pb-5">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Password</p>
@@ -701,6 +768,41 @@ function SettingsPanel({ form, phone, passwordError, onChange, onCancel, onSubmi
         </div>
       </form>
     </AccountCard>
+  );
+}
+
+function EmailVerificationPanel({ verification, onOtpChange, onVerify, onResend, onCancel }) {
+  if (!verification?.email) return null;
+  const loading = verification.status === "loading";
+  return (
+    <div className="grid gap-4 rounded-[1.2rem] border border-sky-900/10 bg-sky-50/70 p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <span className="flex min-w-0 gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white">
+            <Mail className="h-4 w-4" strokeWidth={1.8} />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-slate-950">Verify new email</span>
+            <span className="mt-1 block break-words text-xs font-medium leading-5 text-slate-600">{verification.email}</span>
+          </span>
+        </span>
+        <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500">
+          <Clock3 className="h-3.5 w-3.5" /> {verification.cooldown > 0 ? `${verification.cooldown}s` : "Ready"}
+        </span>
+      </div>
+      <OtpInput value={verification.otp || ""} onChange={onOtpChange} disabled={loading} error={verification.error} />
+      <div className="grid gap-2 sm:grid-cols-3">
+        <button type="button" onClick={onCancel} className="min-h-[42px] rounded-full border border-slate-900/10 bg-white px-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600">
+          Cancel
+        </button>
+        <button type="button" onClick={onResend} disabled={verification.cooldown > 0 || loading} className="min-h-[42px] rounded-full border border-slate-900/10 bg-white px-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-700 disabled:opacity-50">
+          Resend
+        </button>
+        <button type="button" onClick={onVerify} disabled={loading} className="min-h-[42px] rounded-full bg-slate-950 px-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-white disabled:opacity-60">
+          {loading ? "Checking..." : "Verify"}
+        </button>
+      </div>
+    </div>
   );
 }
 

@@ -99,14 +99,15 @@ function createStaticUploadOptions({ allowPdfFrame = false, publicCache = false 
 }
 
 const staticUploadOptions = createStaticUploadOptions();
+const warrantyUploadOptions = createStaticUploadOptions({ allowPdfFrame: true });
 const productUploadOptions = createStaticUploadOptions({ publicCache: true });
 const policyUploadOptions = createStaticUploadOptions({ allowPdfFrame: true, publicCache: true });
 
 app.use("/uploads/products", express.static(folderPath("products"), productUploadOptions));
 app.use("/uploads/policies", express.static(folderPath("policies"), policyUploadOptions));
-app.use("/uploads/warranty", requireAuth(["customer", "admin", "super-admin"]), express.static(folderPath("warranty"), staticUploadOptions));
-app.use("/uploads/rma", requireAuth(["customer", "admin", "super-admin"]), express.static(folderPath("rma"), staticUploadOptions));
-app.use("/uploads/support", requireAuth(["customer", "admin", "super-admin"]), express.static(folderPath("support"), staticUploadOptions));
+app.use("/uploads/warranty", requireAuth(["customer", "admin"]), express.static(folderPath("warranty"), warrantyUploadOptions));
+app.use("/uploads/rma", requireAuth(["customer", "admin"]), express.static(folderPath("rma"), staticUploadOptions));
+app.use("/uploads/support", requireAuth(["customer", "admin"]), express.static(folderPath("support"), staticUploadOptions));
 
 const tempUploadCleanupTimer = setInterval(() => {
   cleanupTempUploads().catch(() => {});

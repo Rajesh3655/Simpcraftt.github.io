@@ -11,6 +11,7 @@ import {
   SoftStatus,
 } from "../../components/customer/PremiumAccount";
 import { uploadService } from "../../services/uploadService";
+import { defaultContactSettings, siteService } from "../../services/siteService";
 import { useAppStore } from "../../store/appStore";
 
 export default function SupportPage() {
@@ -18,6 +19,19 @@ export default function SupportPage() {
   const [form, setForm] = useState({ name: "", email: "", topic: "Warranty", message: "" });
   const [bugUpload, setBugUpload] = useState({ status: "idle", error: "", fileName: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [contact, setContact] = useState(defaultContactSettings);
+
+  useEffect(() => {
+    let mounted = true;
+    siteService.settings().then((result) => {
+      if (mounted) setContact(result.contactSettings);
+    }).catch(() => {
+      if (mounted) setContact(defaultContactSettings);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -116,7 +130,7 @@ export default function SupportPage() {
                   </div>
                 </div>
                 <a
-                  href="https://wa.me/1234567890"
+                  href={contact.whatsapp || defaultContactSettings.whatsapp}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-6 inline-flex min-h-[46px] w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_14px_34px_rgba(37,211,102,0.28)] transition hover:bg-[#1fb85a] sm:w-auto"

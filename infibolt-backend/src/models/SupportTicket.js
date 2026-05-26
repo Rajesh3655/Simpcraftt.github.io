@@ -23,7 +23,7 @@ const schema = new mongoose.Schema(
     replies: [
       {
         authorName: { type: String, trim: true, maxlength: 120 },
-        authorRole: { type: String, enum: ["customer", "admin", "super-admin"], default: "customer" },
+        authorRole: { type: String, enum: ["customer", "admin"], default: "customer" },
         message: { type: String, required: true, trim: true, maxlength: 3000 },
         createdAt: { type: Date, default: Date.now },
       },

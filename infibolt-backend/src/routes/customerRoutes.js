@@ -8,6 +8,7 @@ import {
   forgotPassword,
   getHomepageProducts,
   getProduct,
+  getPublicSiteSettings,
   getWarrantyPolicy,
   listCategories,
   getProfile,
@@ -46,7 +47,7 @@ export const customerRoutes = Router();
 
 customerRoutes.post("/auth/login", authLimiter, customerLoginValidator, validate, asyncHandler(login));
 customerRoutes.post("/auth/login/request-otp", authLimiter, customerLoginValidator, validate, asyncHandler(requestLoginOtp));
-customerRoutes.post("/auth/login/verify-otp", authLimiter, [accountIdentifierField, body("email").optional().isEmail().normalizeEmail(), otpValidator], validate, asyncHandler(verifyLoginOtp));
+customerRoutes.post("/auth/login/verify-otp", authLimiter, [accountIdentifierField, body("email").optional().trim(), otpValidator], validate, asyncHandler(verifyLoginOtp));
 customerRoutes.post("/auth/signup", authLimiter, customerSignupValidator, validate, asyncHandler(signup));
 customerRoutes.post(
   "/auth/verify-otp",
@@ -55,8 +56,8 @@ customerRoutes.post(
   validate,
   asyncHandler(verifyOtp)
 );
-customerRoutes.post("/auth/forgot-password", authLimiter, [emailField], validate, asyncHandler(forgotPassword));
-customerRoutes.post("/auth/reset-password", authLimiter, [emailField, otpValidator, strongPasswordField], validate, asyncHandler(resetPassword));
+customerRoutes.post("/auth/forgot-password", authLimiter, [accountIdentifierField, body("email").optional().trim()], validate, asyncHandler(forgotPassword));
+customerRoutes.post("/auth/reset-password", authLimiter, [accountIdentifierField, body("email").optional().trim(), otpValidator, strongPasswordField], validate, asyncHandler(resetPassword));
 customerRoutes.post("/auth/refresh", authLimiter, asyncHandler(refresh));
 customerRoutes.post("/auth/logout", requireAuth("customer"), asyncHandler(logout));
 customerRoutes.get("/auth/me", requireAuth("customer"), asyncHandler(me));
@@ -64,6 +65,7 @@ customerRoutes.get("/auth/me", requireAuth("customer"), asyncHandler(me));
 customerRoutes.get("/products", asyncHandler(listProducts));
 customerRoutes.get("/products/featured", asyncHandler(listFeaturedProducts));
 customerRoutes.get("/homepage", asyncHandler(getHomepageProducts));
+customerRoutes.get("/site-settings", asyncHandler(getPublicSiteSettings));
 customerRoutes.get("/products/:slug", [param("slug").trim().matches(/^[a-z0-9-]+$/)], validate, asyncHandler(getProduct));
 customerRoutes.get("/warranty-policy", asyncHandler(getWarrantyPolicy));
 customerRoutes.get("/collections", asyncHandler(listCollections));
@@ -85,8 +87,7 @@ customerRoutes.post(
   "/profile/contact-update",
   requireAuth("customer"),
   [
-    body("email").optional({ nullable: true }).isEmail().normalizeEmail(),
-    body("phone").optional({ nullable: true }).trim().isLength({ min: 8, max: 20 }),
+    body("email").isEmail().normalizeEmail(),
   ],
   validate,
   asyncHandler(requestProfileContactUpdate)
@@ -95,8 +96,7 @@ customerRoutes.post(
   "/profile/contact-update/verify",
   requireAuth("customer"),
   [
-    body("email").optional({ nullable: true }).isEmail().normalizeEmail(),
-    body("phone").optional({ nullable: true }).trim().isLength({ min: 8, max: 20 }),
+    body("email").isEmail().normalizeEmail(),
     body("verificationId").trim().isLength({ min: 12, max: 80 }),
     body("otp").trim().isLength({ min: 6, max: 6 }),
   ],
@@ -110,8 +110,7 @@ customerRoutes.post(
   [
     body("product").trim().isLength({ min: 2, max: 160 }),
     body("productSlug").trim().matches(/^[a-z0-9-]+$/),
-    body("email").optional({ nullable: true }).isEmail().normalizeEmail(),
-    body("phone").optional({ nullable: true }).trim().isLength({ min: 8, max: 20 }),
+    body("email").isEmail().normalizeEmail(),
     body("source").optional({ nullable: true }).trim().isLength({ max: 120 }),
   ],
   validate,

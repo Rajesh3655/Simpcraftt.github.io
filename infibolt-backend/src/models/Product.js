@@ -4,6 +4,7 @@ import { schemaDefaults } from "./base.js";
 
 const imageField = { type: String, trim: true, maxlength: 1000 };
 const textList = [{ type: String, trim: true, maxlength: 180 }];
+const marketplaceUrl = { type: String, trim: true, maxlength: 1000 };
 
 const schema = new mongoose.Schema(
   {
@@ -21,6 +22,7 @@ const schema = new mongoose.Schema(
     rating: { type: Number, default: 0, min: 0, max: 5 },
     reviewCount: { type: Number, default: 0, min: 0 },
     badge: { type: String, default: "New", trim: true, maxlength: 40 },
+    subtitle: { type: String, trim: true, maxlength: 180 },
     status: { type: String, default: "Draft", enum: PRODUCT_VISIBILITY, index: true },
     featured: { type: Boolean, default: false, index: true },
     newLaunch: { type: Boolean, default: false, index: true },
@@ -28,6 +30,7 @@ const schema = new mongoose.Schema(
     trending: { type: Boolean, default: false, index: true },
     homepageVisible: { type: Boolean, default: false, index: true },
     heroVisible: { type: Boolean, default: false, index: true },
+    desktopMenuFeatured: { type: Boolean, default: false, index: true },
     collectionVisible: { type: Boolean, default: true, index: true },
     productPageVisible: { type: Boolean, default: true, index: true },
     mobileFeatured: { type: Boolean, default: false, index: true },
@@ -48,21 +51,46 @@ const schema = new mongoose.Schema(
     variants: [{ type: String, trim: true, maxlength: 80 }],
     features: textList,
     highlights: textList,
+    premiumHighlights: [
+      {
+        label: { type: String, trim: true, maxlength: 80 },
+        icon: { type: String, trim: true, maxlength: 40 },
+        order: { type: Number, default: 0 },
+      },
+    ],
+    storySection: {
+      title: { type: String, trim: true, maxlength: 140 },
+      subtitle: { type: String, trim: true, maxlength: 360 },
+      backgroundImage: imageField,
+      alignment: { type: String, default: "left", enum: ["left", "center", "right"] },
+    },
     specs: { type: Map, of: String, default: {} },
     specifications: [
       {
         label: { type: String, trim: true, maxlength: 100 },
         value: { type: String, trim: true, maxlength: 300 },
+        group: { type: String, trim: true, maxlength: 80 },
+        order: { type: Number, default: 0 },
       },
     ],
     featureBlocks: [
       {
         title: { type: String, trim: true, maxlength: 120 },
         body: { type: String, trim: true, maxlength: 600 },
+        description: { type: String, trim: true, maxlength: 600 },
         image: imageField,
+        order: { type: Number, default: 0 },
+      },
+    ],
+    faqs: [
+      {
+        question: { type: String, trim: true, maxlength: 180 },
+        answer: { type: String, trim: true, maxlength: 800 },
+        order: { type: Number, default: 0 },
       },
     ],
     recommendations: [{ type: String, trim: true, lowercase: true, match: /^[a-z0-9-]+$/ }],
+    relatedProducts: [{ type: String, trim: true, lowercase: true, match: /^[a-z0-9-]+$/ }],
     warrantyMonths: { type: Number, default: 12, min: 0, max: 120 },
     replacementDays: { type: Number, default: 7, min: 0, max: 365 },
     supportPriority: { type: String, default: "Normal", enum: ["Low", "Normal", "High", "Flagship"] },
@@ -78,12 +106,13 @@ const schema = new mongoose.Schema(
     flipkartLink: { type: String, trim: true, maxlength: 1000 },
     externalBuyEnabled: { type: Boolean, default: true },
     marketplace: {
-      amazon: { type: String, trim: true, maxlength: 1000 },
-      flipkart: { type: String, trim: true, maxlength: 1000 },
-      croma: { type: String, trim: true, maxlength: 1000 },
-      relianceDigital: { type: String, trim: true, maxlength: 1000 },
-      retail: { type: String, trim: true, maxlength: 1000 },
-      custom: { type: String, trim: true, maxlength: 1000 },
+      amazon: marketplaceUrl,
+      flipkart: marketplaceUrl,
+      croma: marketplaceUrl,
+      relianceDigital: marketplaceUrl,
+      retail: marketplaceUrl,
+      custom: marketplaceUrl,
+      customLabel: { type: String, trim: true, maxlength: 80 },
       externalBuyEnabled: { type: Boolean, default: true },
       visible: { type: Boolean, default: true },
       priority: { type: String, default: "Amazon", enum: ["Amazon", "Flipkart", "Croma", "Reliance Digital", "Retail", "Custom"] },
@@ -94,9 +123,10 @@ const schema = new mongoose.Schema(
   schemaDefaults
 );
 
-schema.pre("validate", function normalizeProduct(next) {
+schema.pre("validate", function normalizeProduct() {
   this.shortDescription = this.shortDescription || this.summary;
   this.fullDescription = this.fullDescription || this.description;
+  this.subtitle = this.subtitle || this.shortDescription || this.summary;
   this.categorySlug = this.categorySlug || String(this.category || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
   this.collectionSlug = this.collectionSlug || String(this.collection || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
   this.coverImage = this.coverImage || this.image;
@@ -108,13 +138,22 @@ schema.pre("validate", function normalizeProduct(next) {
     flipkart: this.marketplace?.flipkart || this.flipkartLink,
     externalBuyEnabled: this.marketplace?.externalBuyEnabled ?? this.externalBuyEnabled,
   };
+  this.premiumHighlights = this.premiumHighlights?.length
+    ? this.premiumHighlights
+    : (this.highlights?.length ? this.highlights : this.features || []).slice(0, 5).map((label, index) => ({ label, icon: "sparkles", order: index }));
+  this.featureBlocks = (this.featureBlocks || []).map((block, index) => ({
+    ...block,
+    body: block.body || block.description,
+    description: block.description || block.body,
+    order: Number.isFinite(block.order) ? block.order : index,
+  }));
+  this.relatedProducts = this.relatedProducts?.length ? this.relatedProducts : this.recommendations;
   this.seo = {
     ...(this.seo || {}),
     title: this.seo?.title || this.metaTitle,
     description: this.seo?.description || this.metaDescription,
     keywords: this.seo?.keywords?.length ? this.seo.keywords : this.keywords,
   };
-  next();
 });
 
 schema.index({ name: "text", summary: "text", shortDescription: "text", description: "text", fullDescription: "text", category: "text", collection: "text" });

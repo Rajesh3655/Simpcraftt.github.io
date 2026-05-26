@@ -1,8 +1,8 @@
 export const categories = [
-  { id: "audio", name: "Audio" },
-  { id: "wearables", name: "Wearables" },
-  { id: "charging", name: "Charging" },
-  { id: "home-tech", name: "Home Tech" },
+  { id: "audio", name: "Audio", icon: "headphones", desktopMenuVisible: true, sortOrder: 1 },
+  { id: "wearables", name: "Wearables", icon: "watch", desktopMenuVisible: true, sortOrder: 2 },
+  { id: "charging", name: "Charging", icon: "zap", desktopMenuVisible: true, sortOrder: 3 },
+  { id: "home-tech", name: "Home Tech", icon: "home", desktopMenuVisible: true, sortOrder: 4 },
 ];
 
 export const collections = [
@@ -23,6 +23,7 @@ export const products = [
     badge: "Flagship",
     status: "Ready",
     featured: true,
+    desktopMenuFeatured: true,
     visibility: "public",
     summary: "Hybrid active noise cancellation with a cinematic, low-distortion soundstage.",
     image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=1400",

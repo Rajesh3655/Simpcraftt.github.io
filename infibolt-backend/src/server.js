@@ -6,11 +6,15 @@ await connectDatabase();
 
 const server = app.listen(env.port, env.host, () => {
   const origin = env.isProduction ? env.apiOrigin : `http://${env.host}:${env.port}`;
-  console.log(`INFIBOLT API running on ${origin}`);
+  if (!env.isProduction) {
+    console.info(`INFIBOLT API running on ${origin}`);
+  }
 });
 
 const shutdown = async (signal) => {
-  console.log(`[server] ${signal} received. Closing HTTP server.`);
+  if (!env.isProduction) {
+    console.info(`[server] ${signal} received. Closing HTTP server.`);
+  }
   server.close(() => process.exit(0));
 };
 

@@ -53,6 +53,13 @@ export function ErrorState({ title = "Could not load data", description, onRetry
 
 export function AdminProtectedRoute({ children }) {
   const auth = useAdminStore((state) => state.auth);
+  if (auth.status === "loading") {
+    return (
+      <div className="grid min-h-screen place-items-center bg-[#F8F7F5] px-6">
+        <PageLoader label="Checking admin session" />
+      </div>
+    );
+  }
   if (!auth.user) {
     return (
       <div className="grid min-h-screen place-items-center bg-[#F8F7F5] px-6">

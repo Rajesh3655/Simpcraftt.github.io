@@ -1,4 +1,4 @@
-import { products, collections, categories } from "../store/commerce";
+import { products, categories } from "../store/commerce";
 
 const wait = (ms = 650) => new Promise((resolve) => window.setTimeout(resolve, ms));
 const token = (role = "customer") => `${role}.${Date.now().toString(36)}.mock-token`;
@@ -11,6 +11,18 @@ const tickets = [
 const claims = [
   { id: "SCW-MAY-1001", product: "Aura Audio Pro", serial: "AAP-26-IND-4410", status: "Verification", updatedAt: "2026-05-22" },
 ];
+
+const contactSettings = {
+  mobileNumber: "1234567890",
+  phone: "1234567890",
+  helpEmail: "support@infibolt.com",
+  whatsapp: "https://wa.me/1234567890",
+  instagram: "",
+  facebook: "",
+  x: "",
+  youtube: "",
+  linkedin: "",
+};
 
 export async function mockRequest(config) {
   await wait(config.mockDelay || 640);
@@ -28,7 +40,7 @@ export async function mockRequest(config) {
     return { data: { token: token(), user: { name: "Rajesh Kumar", email: data.email || "customer@infibolt.com", phone: "9876543210", role: "customer" } } };
   }
   if (url === "/auth/signup" && method === "post") {
-    return { data: { verificationId: `otp_${Date.now().toString(36)}`, channel: "sms", message: "OTP prepared." } };
+    return { data: { verificationId: `otp_${Date.now().toString(36)}`, channel: "email", message: "Email OTP prepared." } };
   }
   if (url === "/auth/verify-otp" && method === "post") {
     return { data: { token: token(), user: { name: data.name || "INFIBOLT Customer", email: data.email || "customer@infibolt.com", phone: data.phone || "9876543210", role: "customer" } } };
@@ -36,10 +48,10 @@ export async function mockRequest(config) {
   if (url === "/auth/forgot-password") return { data: { resetId: `reset_${Date.now().toString(36)}`, message: "Reset OTP prepared." } };
 
   if (url === "/products") return { data: { items: products, categories, total: products.length } };
-  if (url === "/homepage") return { data: { featuredProducts: products.slice(0, 3), heroProducts: products.slice(0, 1), categories, collections } };
+  if (url === "/homepage") return { data: { featuredProducts: products.slice(0, 4), heroProducts: products.slice(0, 1), categories } };
+  if (url === "/site-settings") return { data: { contactSettings } };
   if (url === "/categories") return { data: { items: categories } };
   if (url.startsWith("/products/")) return { data: products.find((item) => item.slug === url.split("/").pop()) };
-  if (url === "/collections") return { data: { items: collections } };
   if (url === "/launch-notify" && method === "post") return { data: { id: `LAUNCH-${Date.now().toString().slice(-4)}`, status: "Subscribed", message: "Launch updates enabled." } };
 
   if (url === "/support-tickets" && method === "get") return { data: { items: tickets } };

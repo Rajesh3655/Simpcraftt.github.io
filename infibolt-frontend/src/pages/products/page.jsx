@@ -1,17 +1,34 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { CommerceShell, MotionSection, ProductFilters, ProductGrid, ProductGridSkeleton } from "../../components/commerce/CommerceLayout";
 import { ErrorState } from "../../components/AppStates";
 import { useAppStore } from "../../store/appStore";
 
 export default function ProductsPage() {
   const { search } = useLocation();
+  const navigate = useNavigate();
   const { items, categories, status, error } = useAppStore((state) => state.products);
   const loadProducts = useAppStore((state) => state.loadProducts);
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sort, setSort] = useState("featured");
-  const selectedCollection = useMemo(() => new URLSearchParams(search).get("collection"), [search]);
+  const selectedCategoryItem = useMemo(() => {
+    if (selectedCategory === "all") return null;
+    return categories.find((category) => [category.id, category.slug, category.name].filter(Boolean).map((value) => String(value).toLowerCase()).includes(String(selectedCategory).toLowerCase()));
+  }, [categories, selectedCategory]);
+  const breadcrumbItems = useMemo(() => {
+    const items = [
+      { label: "Home", href: "/" },
+      { label: "Products", href: "/products" },
+    ];
+    if (selectedCategoryItem) {
+      items.push({
+        label: selectedCategoryItem.name,
+        href: `/products?category=${selectedCategoryItem.slug || selectedCategoryItem.id}`,
+      });
+    }
+    return items;
+  }, [selectedCategoryItem]);
 
   useEffect(() => {
     loadProducts();
@@ -22,27 +39,50 @@ export default function ProductsPage() {
     setSelectedCategory(category || "all");
   }, [search]);
 
+  const changeCategory = (category) => {
+    setSelectedCategory(category);
+    const params = new URLSearchParams(search);
+    if (category && category !== "all") params.set("category", category);
+    else params.delete("category");
+    const nextSearch = params.toString();
+    navigate(nextSearch ? `/products?${nextSearch}` : "/products", { replace: false });
+  };
+
   const filteredProducts = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
+    const selectedCategoryValues = selectedCategory === "all"
+      ? []
+      : [
+        selectedCategory,
+        selectedCategoryItem?.id,
+        selectedCategoryItem?.slug,
+        selectedCategoryItem?.name,
+      ].filter(Boolean).map(normalizeCategoryValue);
     const result = items.filter((product) => {
-      const categoryMatches = selectedCategory === "all" || product.category === selectedCategory || product.categorySlug === selectedCategory;
-      const collectionMatches = !selectedCollection || product.collection === selectedCollection || product.collectionSlug === selectedCollection;
+      const productCategoryValues = [
+        product.category,
+        product.categorySlug,
+        product.categoryId,
+        product.collection,
+        product.collectionSlug,
+      ].filter(Boolean).map(normalizeCategoryValue);
+      const categoryMatches = selectedCategory === "all" || productCategoryValues.some((value) => selectedCategoryValues.includes(value));
       const textMatches = !normalizedQuery || `${product.name} ${product.summary || ""} ${(product.features || []).join(" ")}`.toLowerCase().includes(normalizedQuery);
-      return categoryMatches && collectionMatches && textMatches;
+      return categoryMatches && textMatches;
     });
     return [...result].sort((a, b) => {
       if (sort === "price-low") return a.price - b.price;
       if (sort === "price-high") return b.price - a.price;
-      if (sort === "rating") return b.rating - a.rating;
       return 0;
     });
-  }, [items, query, selectedCategory, selectedCollection, sort]);
+  }, [items, query, selectedCategory, selectedCategoryItem, sort]);
 
   return (
     <CommerceShell
       eyebrow="Catalogue"
-      title={selectedCollection ? "Curated collection" : "Product universe"}
+      title="Product universe"
       description="Explore premium electronics through focused filters, cinematic product cards, and fast paths into purchase, warranty, and support."
+      breadcrumbItems={breadcrumbItems}
     >
       <MotionSection className="lux-divider px-4 pb-24 sm:px-5">
         <div className="mx-auto max-w-7xl">
@@ -60,7 +100,7 @@ export default function ProductsPage() {
             <ErrorState description={error} onRetry={loadProducts} />
           ) : (
             <>
-              <ProductFilters query={query} onQueryChange={setQuery} selectedCategory={selectedCategory} onCategoryChange={setSelectedCategory} sort={sort} onSortChange={setSort} categoryItems={categories} />
+              <ProductFilters query={query} onQueryChange={setQuery} selectedCategory={selectedCategory} onCategoryChange={changeCategory} sort={sort} onSortChange={setSort} categoryItems={categories} />
               <ProductGrid items={filteredProducts} />
             </>
           )}
@@ -68,4 +108,12 @@ export default function ProductsPage() {
       </MotionSection>
     </CommerceShell>
   );
+}
+
+function normalizeCategoryValue(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 }

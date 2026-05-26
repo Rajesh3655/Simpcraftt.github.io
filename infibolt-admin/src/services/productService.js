@@ -1,9 +1,8 @@
 import { request } from "./api";
 
 export const productService = {
-  list: () => request.get("/admin/products"),
+  list: () => request.get("/admin/products?limit=500"),
   categories: () => request.get("/admin/categories"),
-  collections: () => request.get("/admin/collections"),
   homepageSections: () => request.get("/admin/homepage-sections"),
   create: (payload) => request.post("/admin/products", payload),
   update: (slug, payload) => request.patch(`/admin/products/${slug}`, payload),
@@ -11,7 +10,6 @@ export const productService = {
   reorder: (items) => request.post("/admin/products/reorder", { items }),
   createCategory: (payload) => request.post("/admin/categories", payload),
   updateCategory: (id, payload) => request.patch(`/admin/categories/${id}`, payload),
-  createCollection: (payload) => request.post("/admin/collections", payload),
-  updateCollection: (slug, payload) => request.patch(`/admin/collections/${slug}`, payload),
+  deleteCategory: (id) => request.delete(`/admin/categories/${id}`),
   saveHomepageSection: (payload) => payload.key ? request.patch(`/admin/homepage-sections/${payload.key}`, payload) : request.post("/admin/homepage-sections", payload),
 };

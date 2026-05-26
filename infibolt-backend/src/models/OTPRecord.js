@@ -3,10 +3,13 @@ import { schemaDefaults } from "./base.js";
 
 const schema = new mongoose.Schema(
   {
-    target: { type: String, required: true, lowercase: true, trim: true, maxlength: 180, index: true },
+    email: { type: String, required: true, lowercase: true, trim: true, maxlength: 180, index: true },
+    target: { type: String, lowercase: true, trim: true, maxlength: 180, index: true },
     purpose: { type: String, required: true, enum: ["signup", "login", "email-verification", "password-reset", "warranty"] },
     otpHash: { type: String, required: true, select: false },
     attempts: { type: Number, default: 0, min: 0, select: false },
+    verified: { type: Boolean, default: false, index: true },
+    resendCount: { type: Number, default: 0, min: 0 },
     consumedAt: { type: Date },
     expiresAt: { type: Date, required: true, index: { expireAfterSeconds: 0 } },
     deliveredAt: { type: Date },
@@ -19,6 +22,7 @@ const schema = new mongoose.Schema(
   schemaDefaults
 );
 
+schema.index({ email: 1, purpose: 1, createdAt: -1 });
 schema.index({ target: 1, purpose: 1, createdAt: -1 });
 schema.index({ ip: 1, purpose: 1, createdAt: -1 });
 

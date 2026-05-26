@@ -26,7 +26,18 @@ const initialLoginForm = { email: "", password: "", otp: "", remember: true };
 const initialSignupForm = { name: "", email: "", phone: "", password: "", otp: "" };
 const initialResetForm = { email: "", otp: "", password: "" };
 
-export function AccountAccess({ initialMode = "login", compact = false }) {
+function isEmailOrPhone(value) {
+  const normalized = String(value || "").trim();
+  const phone = normalized.replace(/\D/g, "");
+  return /^\S+@\S+\.\S+$/.test(normalized) || /^[1-9]\d{7,14}$/.test(phone);
+}
+
+function loginIdentifierFrom(value) {
+  const normalized = String(value || "").trim();
+  return /^\S+@\S+\.\S+$/.test(normalized) ? normalized.toLowerCase() : normalized.replace(/\D/g, "");
+}
+
+export function AccountAccess({ initialMode = "login", compact = false, redirectTo = "/profile" }) {
   const navigate = useNavigate();
   const login = useAppStore((state) => state.login);
   const signup = useAppStore((state) => state.signup);
@@ -101,8 +112,7 @@ export function AccountAccess({ initialMode = "login", compact = false }) {
 
   const loginErrors = useMemo(() => {
     const next = {};
-    const mobile = loginForm.email.replace(/\D/g, "");
-    if (!/^\S+@\S+\.\S+$/.test(loginForm.email) && !/^[1-9]\d{7,14}$/.test(mobile)) next.email = "Enter your email address or mobile number.";
+    if (!isEmailOrPhone(loginForm.email)) next.email = "Enter your email address or phone number.";
     if (loginForm.password.length < 8) next.password = "Use at least 8 characters.";
     return next;
   }, [loginForm]);
@@ -111,7 +121,7 @@ export function AccountAccess({ initialMode = "login", compact = false }) {
     const next = {};
     if (!signupForm.name.trim()) next.name = "Full name is required.";
     if (!/^\S+@\S+\.\S+$/.test(signupForm.email)) next.email = "Enter a valid email address.";
-    if (!/^[6-9]\d{9}$/.test(signupForm.phone.replace(/\D/g, ""))) next.phone = "Enter a valid 10 digit mobile number.";
+    if (!/^[1-9]\d{7,14}$/.test(signupForm.phone.replace(/\D/g, ""))) next.phone = "Enter a valid phone number.";
     if (!STRONG_PASSWORD_PATTERN.test(signupForm.password)) next.password = "Use uppercase, lowercase, number, symbol, and 8+ characters.";
     if (signupStep === "otp" && !/^\d{6}$/.test(signupForm.otp)) next.otp = "Enter the 6 digit code.";
     return next;
@@ -119,7 +129,7 @@ export function AccountAccess({ initialMode = "login", compact = false }) {
 
   const resetErrors = useMemo(() => {
     const next = {};
-    if (!/^\S+@\S+\.\S+$/.test(resetForm.email)) next.email = "Enter a valid email address.";
+    if (!isEmailOrPhone(resetForm.email)) next.email = "Enter a valid email address or phone number.";
     if (resetStep === "verify" && !/^\d{6}$/.test(resetForm.otp)) next.otp = "Enter the 6 digit code.";
     if (resetStep === "verify" && resetForm.password.length < 8) next.password = "Use at least 8 characters.";
     return next;
@@ -137,12 +147,11 @@ export function AccountAccess({ initialMode = "login", compact = false }) {
     setTouched(false);
     setServerErrors({});
     setCooldown(0);
-    navigate("/profile");
+    navigate(normalizeRedirectPath(redirectTo), { replace: true });
   };
 
   const loginIdentifier = () => {
-    const value = loginForm.email.trim();
-    return /^\S+@\S+\.\S+$/.test(value) ? value.toLowerCase() : value.replace(/\D/g, "");
+    return loginIdentifierFrom(loginForm.email);
   };
 
   const markServerFields = (scope, message, details) => {
@@ -152,7 +161,7 @@ export function AccountAccess({ initialMode = "login", compact = false }) {
       return;
     }
     if (scope === "signup") {
-      const fields = details?.fields || {};
+      const fields = details?.fields || details || {};
       if (fields.email || fields.phone) {
         setServerErrors({
           ...(fields.email ? { signupEmail: fields.email } : {}),
@@ -160,19 +169,12 @@ export function AccountAccess({ initialMode = "login", compact = false }) {
         });
         return;
       }
-      if (normalized.includes("email") && (normalized.includes("mobile") || normalized.includes("phone"))) {
-        setServerErrors({
-          signupEmail: "This email is already registered.",
-          signupPhone: "This mobile number is already registered.",
-        });
-        return;
-      }
-      if (normalized.includes("mobile") || normalized.includes("phone")) {
-        setServerErrors({ signupPhone: "This mobile number is already registered." });
+      if (normalized.includes("phone")) {
+        setServerErrors({ signupPhone: "This phone number is already registered." });
       } else if (normalized.includes("email")) {
         setServerErrors({ signupEmail: "This email is already registered." });
       } else {
-        setServerErrors({ signupEmail: "Check this email.", signupPhone: "Check this mobile number." });
+        setServerErrors({ signupEmail: "Check this email.", signupPhone: "Check this phone number." });
       }
       return;
     }
@@ -182,7 +184,7 @@ export function AccountAccess({ initialMode = "login", compact = false }) {
       } else if (normalized.includes("password")) {
         setServerErrors({ resetPassword: "Check this password." });
       } else {
-        setServerErrors({ resetEmail: "Check this email address." });
+        setServerErrors({ resetEmail: "Check this email or phone number." });
       }
     }
   };
@@ -213,7 +215,7 @@ export function AccountAccess({ initialMode = "login", compact = false }) {
     } catch (requestError) {
       const message = requestError.message || "We could not open your account.";
       setError(message);
-      markServerFields("login", message, requestError.details);
+      markServerFields("login", message, requestError.fields || requestError.details);
     } finally {
       setStatus("idle");
     }
@@ -240,11 +242,11 @@ export function AccountAccess({ initialMode = "login", compact = false }) {
         setCooldown(result.resendAfterSeconds || 60);
         setSignupStep("otp");
         setTouched(false);
-        toast.success("Code sent", { description: "Verify once to create your INFIBOLT ID." });
+        toast.success("Email code sent", { description: "Verify once to create your INFIBOLT ID." });
       } catch (requestError) {
         const message = requestError.message || "We could not begin signup.";
         setError(message);
-        markServerFields("signup", message, requestError.details);
+        markServerFields("signup", message, requestError.fields || requestError.details);
       } finally {
         setStatus("idle");
       }
@@ -258,9 +260,9 @@ export function AccountAccess({ initialMode = "login", compact = false }) {
     } catch (requestError) {
       const message = requestError.message || "Enter the latest 6 digit code sent to your account.";
       setError(message);
-      if (requestError.details?.fields?.email || requestError.details?.fields?.phone) {
+      if (requestError.fields?.email || requestError.details?.fields?.email) {
         setSignupStep("details");
-        markServerFields("signup", message, requestError.details);
+        markServerFields("signup", message, requestError.fields || requestError.details);
         return;
       }
       setServerErrors({ signupOtp: "Check this code." });
@@ -278,14 +280,14 @@ export function AccountAccess({ initialMode = "login", compact = false }) {
       if (resetErrors.email) return;
       setStatus("loading");
       try {
-        const result = await authService.forgotPassword({ email: resetForm.email.trim().toLowerCase() });
+        const result = await authService.forgotPassword({ identifier: loginIdentifierFrom(resetForm.email) });
         setCooldown(result.resendAfterSeconds || 60);
         setResetStep("verify");
         toast.success("Code sent", { description: "Use it to set a new password." });
       } catch (requestError) {
         const message = requestError.message || "We could not send the reset code.";
         setError(message);
-        markServerFields("reset", message, requestError.details);
+        markServerFields("reset", message, requestError.fields || requestError.details);
       } finally {
         setStatus("idle");
       }
@@ -294,13 +296,13 @@ export function AccountAccess({ initialMode = "login", compact = false }) {
     if (resetErrors.email || resetErrors.otp || resetErrors.password) return;
     setStatus("loading");
     try {
-      await authService.resetPassword({ email: resetForm.email.trim().toLowerCase(), otp: resetForm.otp, password: resetForm.password });
+      await authService.resetPassword({ identifier: loginIdentifierFrom(resetForm.email), otp: resetForm.otp, password: resetForm.password });
       toast.success("Password updated", { description: "Sign in with your new password." });
       returnToLogin(resetForm.email);
     } catch (requestError) {
       const message = requestError.message || "We could not update your password.";
       setError(message);
-      markServerFields("reset", message, requestError.details);
+      markServerFields("reset", message, requestError.fields || requestError.details);
     } finally {
       setStatus("idle");
     }
@@ -317,7 +319,7 @@ export function AccountAccess({ initialMode = "login", compact = false }) {
     } catch (requestError) {
       const message = requestError.message || "We could not resend the code.";
       setError(message);
-      markServerFields("signup", message, requestError.details);
+      markServerFields("signup", message, requestError.fields || requestError.details);
     } finally {
       setStatus("idle");
     }
@@ -327,7 +329,7 @@ export function AccountAccess({ initialMode = "login", compact = false }) {
     if (cooldown > 0 || status === "loading") return;
     setStatus("loading");
     try {
-      const result = await authService.forgotPassword({ email: resetForm.email.trim().toLowerCase() });
+      const result = await authService.forgotPassword({ identifier: loginIdentifierFrom(resetForm.email) });
       setCooldown(result.resendAfterSeconds || 60);
       toast.success("Code resent", { description: "Use the newest code to continue." });
     } finally {
@@ -348,7 +350,7 @@ export function AccountAccess({ initialMode = "login", compact = false }) {
                 {mode === "signup" ? "Create your account" : mode === "reset" ? "Reset password" : "Sign in to your account"}
               </h2>
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                {mode === "signup" ? "Verify your mobile number and keep products, warranty, and support connected." : mode === "reset" ? "Use your email to receive a secure reset code." : "Use your email or mobile number to continue."}
+                {mode === "signup" ? "Add your email and phone. Verification code goes to email only." : mode === "reset" ? "Use your email or phone. The reset code goes to your account email." : "Use your email or phone to continue."}
               </p>
             </div>
           </div>
@@ -378,7 +380,7 @@ export function AccountAccess({ initialMode = "login", compact = false }) {
         <AnimatePresence mode="wait">
           {mode === "login" && (
             <motion.form key="login" {...panelMotion} onSubmit={submitLogin} noValidate className="grid gap-4">
-              <PremiumField icon={Mail} label="Email or mobile" value={loginForm.email} onChange={(email) => { setLoginForm((current) => ({ ...current, email })); clearFieldFeedback("loginEmail", "loginPassword"); }} error={(touched ? loginErrors.email : "") || serverErrors.loginEmail} placeholder="you@example.com or 9876543210" />
+              <PremiumField icon={Mail} label="Email or phone" value={loginForm.email} onChange={(email) => { setLoginForm((current) => ({ ...current, email })); clearFieldFeedback("loginEmail", "loginPassword"); }} error={(touched ? loginErrors.email : "") || serverErrors.loginEmail} placeholder="you@example.com or 9876543210" />
               <PremiumField icon={Lock} label="Password" type="password" value={loginForm.password} onChange={(password) => { setLoginForm((current) => ({ ...current, password })); clearFieldFeedback("loginPassword"); }} error={(touched ? loginErrors.password : "") || serverErrors.loginPassword} placeholder="Your password" />
               <label className="flex items-center justify-between gap-4 text-sm font-medium text-slate-500">
                 <span className="inline-flex items-center gap-2">
@@ -400,13 +402,13 @@ export function AccountAccess({ initialMode = "login", compact = false }) {
                 <>
                   <PremiumField icon={UserRound} label="Full name" value={signupForm.name} onChange={(name) => { setSignupForm((current) => ({ ...current, name })); setError(""); }} error={touched ? signupErrors.name : ""} placeholder="Rajesh Kumar" />
                   <PremiumField icon={Mail} label="Email address" type="email" value={signupForm.email} onChange={(email) => { setSignupForm((current) => ({ ...current, email })); clearFieldFeedback("signupEmail"); }} error={(touched ? signupErrors.email : "") || serverErrors.signupEmail} placeholder="you@example.com" />
-                  <PremiumField icon={Phone} label="Mobile number" inputMode="numeric" value={signupForm.phone} onChange={(phone) => { setSignupForm((current) => ({ ...current, phone })); clearFieldFeedback("signupPhone"); }} error={(touched ? signupErrors.phone : "") || serverErrors.signupPhone} placeholder="9876543210" />
+                  <PremiumField icon={Phone} label="Phone number" inputMode="numeric" value={signupForm.phone} onChange={(phone) => { setSignupForm((current) => ({ ...current, phone })); clearFieldFeedback("signupPhone"); }} error={(touched ? signupErrors.phone : "") || serverErrors.signupPhone} placeholder="9876543210" helper="Used as an alternate login ID. OTP is sent to email." />
                   <PremiumField icon={KeyRound} label="Password" type="password" value={signupForm.password} onChange={(password) => { setSignupForm((current) => ({ ...current, password })); setError(""); }} error={touched ? signupErrors.password : ""} placeholder="Infibolt@123" helper="Use uppercase, lowercase, number, and symbol." />
                 </>
               ) : (
                 <>
                   <PremiumNotice tone="success" title="Verification code sent">
-                    Enter the 6 digit code sent to {signupForm.phone.replace(/\D/g, "")}.
+                    Enter the 6 digit code sent to {signupForm.email.trim().toLowerCase()}.
                   </PremiumNotice>
                   <OtpPanel
                     value={signupForm.otp}
@@ -436,7 +438,7 @@ export function AccountAccess({ initialMode = "login", compact = false }) {
 
           {mode === "reset" && (
             <motion.form key="reset" {...panelMotion} onSubmit={submitReset} noValidate className="grid gap-4">
-              <PremiumField icon={Mail} label="Email address" type="email" value={resetForm.email} onChange={(email) => { setResetForm((current) => ({ ...current, email })); clearFieldFeedback("resetEmail"); }} error={(touched ? resetErrors.email : "") || serverErrors.resetEmail} placeholder="you@example.com" disabled={resetStep === "verify"} />
+              <PremiumField icon={Mail} label="Email or phone" value={resetForm.email} onChange={(email) => { setResetForm((current) => ({ ...current, email })); clearFieldFeedback("resetEmail"); }} error={(touched ? resetErrors.email : "") || serverErrors.resetEmail} placeholder="you@example.com or 9876543210" disabled={resetStep === "verify"} />
               {resetStep === "verify" && (
                 <>
                   <OtpPanel value={resetForm.otp} onChange={(otp) => { setResetForm((current) => ({ ...current, otp })); clearFieldFeedback("resetOtp"); }} error={(touched ? resetErrors.otp : "") || serverErrors.resetOtp} cooldown={cooldown} onResend={resendResetCode} loading={status === "loading"} />
@@ -498,4 +500,10 @@ export function SessionExpiredNotice() {
       For your security, please sign in again to continue managing your account.
     </PremiumNotice>
   );
+}
+
+function normalizeRedirectPath(value) {
+  const target = String(value || "/profile");
+  if (!target.startsWith("/") || target.startsWith("//")) return "/profile";
+  return target;
 }

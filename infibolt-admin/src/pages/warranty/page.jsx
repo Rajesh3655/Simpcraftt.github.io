@@ -1,251 +1,351 @@
-import { CheckCircle2, FileSearch, PackageCheck, ShieldCheck, TicketCheck, Truck, UploadCloud } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Eye, FileText, Search, ShieldCheck, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { EmptyState, PageLoader } from "../../components/AppStates";
 import { uploadUrl } from "../../config/api";
 import { AdminShell } from "../../layouts/AdminLayout";
-import { uploadService } from "../../services/uploadService";
-import { warrantyService } from "../../services/warrantyService";
 import { useAdminStore } from "../../store/appStore";
+import { formatIndiaDateTime } from "../../utils/time";
 
-const ownershipStatuses = ["Active", "Rejected", "Pending Verification"];
-const rmaStatuses = ["Approved", "Rejected", "Pickup Scheduled", "Inspection", "Replacement Approved", "Repaired", "Replaced", "Closed"];
+const warrantyActions = [
+  { label: "Approve", status: "Active", note: "Invoice and serial approved by admin.", tone: "green" },
+  { label: "Pending", status: "Pending Verification", note: "Warranty registration moved to pending review.", tone: "orange" },
+  { label: "Reject", status: "Rejected", note: "Warranty registration rejected by admin.", tone: "red" },
+];
 
 export default function AdminWarrantyPage() {
-  const { claims, rmas, units, status, error } = useAdminStore((state) => state.warranty);
+  const { claims, status, error } = useAdminStore((state) => state.warranty);
   const loadWarranty = useAdminStore((state) => state.loadWarranty);
   const updateWarrantyStatus = useAdminStore((state) => state.updateWarrantyStatus);
   const [updating, setUpdating] = useState("");
-  const [policy, setPolicy] = useState(null);
-  const [policyUpload, setPolicyUpload] = useState({ status: "idle", error: "", fileName: "" });
+  const [selected, setSelected] = useState(null);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("latest");
 
   useEffect(() => {
     loadWarranty();
-    warrantyService.getPolicy().then(setPolicy).catch(() => setPolicy(null));
   }, [loadWarranty]);
 
-  const uploadPolicy = async (file) => {
-    if (!file) return;
-    if (file.type !== "application/pdf" || !file.name.toLowerCase().endsWith(".pdf")) {
-      setPolicyUpload({ status: "error", error: "Upload the warranty policy as a PDF file.", fileName: file.name });
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setPolicyUpload({ status: "error", error: "Warranty policy PDF must be 5 MB or smaller.", fileName: file.name });
-      return;
-    }
-    setPolicyUpload({ status: "loading", error: "", fileName: file.name });
-    try {
-      const upload = await uploadService.uploadWarrantyPolicy(file);
-      const saved = await warrantyService.updatePolicy({
-        title: "INFIBOLT Warranty Policy",
-        url: upload.url || upload.path,
-        filename: upload.filename,
-        originalName: upload.originalName || file.name,
-      });
-      setPolicy(saved);
-      setPolicyUpload({ status: "success", error: "", fileName: file.name });
-      toast.success("Warranty policy published", { description: "Customers must acknowledge this PDF before registration." });
-    } catch (error) {
-      setPolicyUpload({ status: "error", error: error.message || "Policy upload failed.", fileName: file.name });
-    }
-  };
+  const visibleClaims = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    const filtered = claims.filter((item) => {
+      const itemStatus = getWarrantyStatus(item);
+      const matchesStatus = statusFilter === "all" || itemStatus.toLowerCase().includes(statusFilter);
+      if (!matchesStatus) return false;
+      if (!needle) return true;
+      return [
+        item.id,
+        item.product,
+        item.productSlug,
+        item.serial,
+        item.customerName,
+        item.email,
+        item.phone,
+        item.invoiceNumber,
+        item.source,
+        item.sourceDetail,
+        itemStatus,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(needle);
+    });
 
-  const updateStatus = async (id, nextStatus, notes) => {
-    setUpdating(id);
+    return [...filtered].sort((a, b) => {
+      if (sortBy === "oldest") return dateValue(a.registeredAt || a.createdAt) - dateValue(b.registeredAt || b.createdAt);
+      if (sortBy === "status") return getWarrantyStatus(a).localeCompare(getWarrantyStatus(b));
+      if (sortBy === "product") return String(a.product || "").localeCompare(String(b.product || ""));
+      return dateValue(b.registeredAt || b.createdAt) - dateValue(a.registeredAt || a.createdAt);
+    });
+  }, [claims, query, sortBy, statusFilter]);
+
+  const updateStatus = async (item, action) => {
+    setUpdating(`${item.id}-${action.status}`);
     try {
-      await updateWarrantyStatus(id, { status: nextStatus, notes });
-      toast.success("Warranty updated", { description: `${id} moved to ${nextStatus}.` });
+      const updated = await updateWarrantyStatus(item.id, { status: action.status, notes: action.note });
+      setSelected((current) => (current?.id === item.id ? { ...current, ...updated } : current));
+      toast.success("Registered warranty updated", { description: `${item.id} is now ${action.label}.` });
     } finally {
       setUpdating("");
     }
   };
 
   return (
-    <AdminShell title="Warranty Ownership OS" description="Verify product ownership, approve warranty activation, review invoices, and manage RMA replacement workflows.">
-      <div className="space-y-6">
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricCard icon={PackageCheck} label="Ownership Records" value={claims.length} />
-          <MetricCard icon={ShieldCheck} label="Pending Review" value={claims.filter((item) => item.status === "Pending Verification").length} />
-          <MetricCard icon={TicketCheck} label="Active RMAs" value={rmas.filter((item) => !["Closed", "Rejected"].includes(item.status)).length} />
-          <MetricCard icon={FileSearch} label="Serial Units" value={units.length} />
+    <AdminShell section="registeredWarranty" title="Registered Warranty" description="Approve, reject, or keep warranty registrations pending after reviewing invoice and ownership details.">
+      <div className="grid gap-5">
+        {status === "loading" && <PageLoader label="Opening registered warranty queue" />}
+        {status === "error" && <EmptyState title="Registered warranty unavailable" description={error} />}
+
+        <section className="rounded-[1.25rem] border border-slate-900/8 bg-white/76 p-5 shadow-[0_18px_58px_rgba(15,23,42,0.07)] dark:border-white/10 dark:bg-white/[0.035]">
+          <div className="mb-5 flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-slate-950 text-white dark:bg-white dark:text-slate-950">
+              <ShieldCheck className="h-4 w-4" />
+            </span>
+            <h2 className="text-lg font-semibold tracking-tight">Warranty Verification Queue</h2>
+          </div>
+
+          {claims.length > 0 && (
+            <div className="mb-5 grid gap-3 lg:grid-cols-[1fr_200px_220px]">
+              <label className="flex min-h-[46px] items-center gap-3 rounded-full border border-slate-900/10 bg-white px-4 text-sm shadow-sm dark:border-white/10 dark:bg-white/[0.035]">
+                <Search className="h-4 w-4 shrink-0 text-slate-400" />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search product, serial, customer, invoice"
+                  className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400 dark:text-white"
+                />
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+                className="min-h-[46px] rounded-full border border-slate-900/10 bg-white px-4 text-sm font-semibold text-slate-700 outline-none shadow-sm dark:border-white/10 dark:bg-slate-950 dark:text-slate-200"
+              >
+                <option value="all">All status</option>
+                <option value="active">Active</option>
+                <option value="pending">Pending</option>
+                <option value="rejected">Rejected</option>
+              </select>
+              <select
+                value={sortBy}
+                onChange={(event) => setSortBy(event.target.value)}
+                className="min-h-[46px] rounded-full border border-slate-900/10 bg-white px-4 text-sm font-semibold text-slate-700 outline-none shadow-sm dark:border-white/10 dark:bg-slate-950 dark:text-slate-200"
+              >
+                <option value="latest">Latest registered</option>
+                <option value="oldest">Oldest registered</option>
+                <option value="status">Status A-Z</option>
+                <option value="product">Product name</option>
+              </select>
+            </div>
+          )}
+
+          {visibleClaims.length === 0 ? (
+            <EmptyState title="No registered warranties" description="Customer warranty registrations will appear here." />
+          ) : (
+            <div className="-mx-2 overflow-x-auto px-2">
+              <table className="w-full min-w-[940px] border-separate border-spacing-y-2 text-left text-sm">
+                <thead>
+                  <tr>
+                    {["Product", "Customer", "Invoice", "Purchase", "Status", "Details"].map((column) => (
+                      <th key={column} className="px-4 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{column}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleClaims.map((item) => {
+                    const currentStatus = getWarrantyStatus(item);
+                    return (
+                      <tr key={item.id} className="rounded-xl bg-slate-950/[0.025] transition hover:bg-slate-950/[0.045] dark:bg-white/[0.025] dark:hover:bg-white/[0.055]">
+                        <td className="rounded-l-xl px-4 py-4 text-slate-700 dark:text-slate-300">
+                          <span className="block font-semibold text-slate-950 dark:text-white">{item.product || "Product"}</span>
+                          <span className="mt-1 block text-xs font-medium text-slate-500">{item.serial || "-"}</span>
+                        </td>
+                        <td className="px-4 py-4 text-slate-700 dark:text-slate-300">
+                          <span className="block font-medium">{item.customerName || item.email || "Customer"}</span>
+                          <span className="mt-1 block text-xs font-medium text-slate-500">{item.email || item.phone || "-"}</span>
+                        </td>
+                        <td className="px-4 py-4 text-slate-700 dark:text-slate-300">
+                          <span className="block font-medium">{item.invoiceNumber || "Pending"}</span>
+                          <span className="mt-1 block text-xs font-medium text-slate-500">{item.source || "Website"}{item.sourceDetail ? ` / ${item.sourceDetail}` : ""}</span>
+                        </td>
+                        <td className="px-4 py-4 text-slate-700 dark:text-slate-300">
+                          <span className="block font-medium">{formatDate(item.purchaseDate || item.registeredAt)}</span>
+                          <span className="mt-1 block text-xs font-medium text-slate-500">Until {formatDate(item.warrantyUntil)}</span>
+                        </td>
+                        <td className="px-4 py-4 text-slate-700 dark:text-slate-300">
+                          <StatusBadge status={currentStatus} />
+                        </td>
+                        <td className="rounded-r-xl px-4 py-4 text-slate-700 dark:text-slate-300">
+                          <button
+                            type="button"
+                            onClick={() => setSelected(item)}
+                            className="inline-flex min-h-[36px] items-center justify-center gap-2 rounded-full border border-slate-900/10 bg-white px-4 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-700 transition hover:bg-slate-950 hover:text-white dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white dark:hover:text-slate-950"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
-        {status === "loading" && <PageLoader label="Opening warranty operations" />}
-        {status === "error" && <EmptyState title="Warranty queue unavailable" description={error} />}
-
-        <AdminPanel title="Warranty Policy PDF" icon={UploadCloud}>
-          <div className="grid gap-4 lg:grid-cols-[1fr_0.9fr] lg:items-center">
-            <div>
-              <p className="text-sm leading-6 text-slate-600 dark:text-slate-400">
-                Upload the latest INFIBOLT warranty policy. Customers must open and acknowledge this policy before OTP registration.
-              </p>
-              {policy?.url ? (
-                <a href={uploadUrl(policy.url)} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex text-sm font-semibold text-slate-950 underline dark:text-white">
-                  View current policy PDF
-                </a>
-              ) : (
-                <p className="mt-3 text-sm font-semibold text-amber-700 dark:text-amber-300">No warranty policy is published yet.</p>
-              )}
-            </div>
-            <label className={`flex min-h-[112px] cursor-pointer items-center justify-center rounded-2xl border border-dashed px-5 text-center text-sm transition ${
-              policyUpload.status === "error"
-                ? "border-rose-400/60 bg-rose-50 text-rose-800"
-                : policyUpload.status === "success"
-                  ? "border-emerald-400/60 bg-emerald-50 text-emerald-800"
-                  : "border-slate-900/14 bg-white/54 text-slate-500 hover:bg-white dark:border-white/10 dark:bg-white/[0.04]"
-            }`}>
-              <input
-                type="file"
-                accept="application/pdf,.pdf"
-                className="sr-only"
-                onChange={(event) => {
-                  uploadPolicy(event.target.files?.[0]);
-                  event.target.value = "";
-                }}
-              />
-              <span className="grid justify-items-center gap-2">
-                <UploadCloud className="h-5 w-5" />
-                <span className="font-semibold">{policyUpload.status === "loading" ? "Uploading policy..." : "Upload warranty policy PDF"}</span>
-                <span>{policyUpload.fileName || "PDF only. Maximum file size 5 MB."}</span>
-                {policyUpload.error && <span className="font-medium text-rose-700">{policyUpload.error}</span>}
-              </span>
-            </label>
-          </div>
-        </AdminPanel>
-
-        <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <AdminPanel title="Ownership Verification Queue" icon={ShieldCheck}>
-            <div className="grid gap-4">
-              {claims.length === 0 && <EmptyState title="No ownership records" description="Customer registrations and website purchase activations will appear here." />}
-              {claims.map((item) => (
-                <div key={item.id} className="rounded-2xl border border-slate-900/5 bg-white/50 p-4 dark:border-white/5 dark:bg-white/[0.03]">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-3">
-                        <span className="rounded-xl bg-slate-900 p-2 text-white dark:bg-white dark:text-slate-950">
-                          <PackageCheck className="h-4 w-4" />
-                        </span>
-                        <div>
-                          <p className="font-semibold text-slate-900 dark:text-white">{item.product}</p>
-                          <p className="mt-1 text-sm text-slate-500">{item.id} · {item.serial}</p>
-                        </div>
-                      </div>
-                      <div className="mt-4 grid gap-2 text-sm text-slate-600 dark:text-slate-400 md:grid-cols-2">
-                        <span>{item.customerName || item.email}</span>
-                        <span>{item.source} {item.sourceDetail ? `· ${item.sourceDetail}` : ""}</span>
-                        <span>Invoice: {item.invoiceNumber || "Pending"}</span>
-                        <span>Warranty until: {formatDate(item.warrantyUntil)}</span>
-                      </div>
-                    </div>
-                    <StatusPill status={item.warrantyStatus || item.status} />
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {ownershipStatuses.map((nextStatus) => (
-                      <button
-                        key={nextStatus}
-                        type="button"
-                        disabled={updating === item.id}
-                        onClick={() => updateStatus(item.id, nextStatus, nextStatus === "Active" ? "Invoice and serial approved by admin." : "Admin warranty review updated.")}
-                        className="rounded-full border border-slate-900/10 bg-white/70 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-700 transition hover:bg-slate-950 hover:text-white disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300"
-                      >
-                        {nextStatus}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </AdminPanel>
-
-          <AdminPanel title="RMA Replacement Flow" icon={Truck}>
-            <div className="grid gap-4">
-              {rmas.length === 0 && <EmptyState title="No RMA requests" description="Customer warranty claims will appear here with repair and replacement actions." />}
-              {rmas.map((rma) => (
-                <div key={rma.id} className="rounded-2xl border border-slate-900/5 bg-white/50 p-4 dark:border-white/5 dark:bg-white/[0.03]">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-slate-900 dark:text-white">{rma.id}</p>
-                      <p className="mt-1 text-sm text-slate-500">{rma.product} · {rma.serial}</p>
-                    </div>
-                    <StatusPill status={rma.status} />
-                  </div>
-                  <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-400">{rma.issueType}: {rma.issueDescription}</p>
-                  {rma.policyDecision && <p className="mt-3 rounded-xl bg-slate-900/5 p-3 text-sm font-medium text-slate-700 dark:bg-white/5 dark:text-slate-300">{rma.policyDecision}</p>}
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    {rmaStatuses.map((nextStatus) => (
-                      <button
-                        key={nextStatus}
-                        type="button"
-                        disabled={updating === rma.id}
-                        onClick={() => updateStatus(rma.id, nextStatus, `RMA moved to ${nextStatus}.`)}
-                        className="min-h-[38px] rounded-full border border-slate-900/10 bg-white/70 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-700 transition hover:bg-slate-950 hover:text-white disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300"
-                      >
-                        {nextStatus}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </AdminPanel>
-        </section>
-
-        <AdminPanel title="Warranty Decision System" icon={CheckCircle2}>
-          <div className="grid gap-4 md:grid-cols-3">
-            {[
-              ["Serial validation", "INF serial format, duplicate checks, blocked units, and product matching."],
-              ["Invoice review", "Marketplace, Flipkart, Amazon, retail, and offline purchase evidence."],
-              ["Policy decision", "7-day replacement, 6-12 month warranty, exclusions, and RMA timeline."],
-            ].map(([title, text]) => (
-              <div key={title} className="rounded-2xl border border-slate-900/5 bg-white/50 p-5 dark:border-white/5 dark:bg-white/[0.03]">
-                <p className="font-semibold text-slate-900 dark:text-white">{title}</p>
-                <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">{text}</p>
-              </div>
-            ))}
-          </div>
-        </AdminPanel>
+        {selected && <WarrantyDetailsModal item={selected} updating={updating} onUpdate={updateStatus} onClose={() => setSelected(null)} />}
       </div>
     </AdminShell>
   );
 }
 
-function MetricCard({ icon: Icon, label, value }) {
+function WarrantyDetailsModal({ item, updating, onUpdate, onClose }) {
+  const invoiceHref = uploadUrl(item.invoiceUrl || item.invoice);
+  const invoiceIsImage = /\.(png|jpe?g|webp|gif)$/i.test(invoiceHref);
+  const invoiceIsPdf = /\.pdf(?:$|\?)/i.test(invoiceHref);
+  const currentStatus = getWarrantyStatus(item);
+
   return (
-    <div className="premium-surface p-5 dark:bg-white/[0.03]">
-      <Icon className="h-5 w-5 text-slate-500 dark:text-slate-300" />
-      <p className="mt-4 text-3xl font-semibold text-slate-900 dark:text-white">{value}</p>
-      <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-300">{label}</p>
+    <div className="fixed inset-0 z-[999] overflow-y-auto bg-slate-950/42 px-4 py-6 backdrop-blur-sm">
+      <div className="mx-auto max-w-5xl rounded-[1.25rem] border border-white/70 bg-white p-5 shadow-[0_30px_100px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-slate-950 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Warranty details</p>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">{item.product || "Registered product"}</h3>
+            <p className="mt-1 text-sm font-medium text-slate-500">{item.id} / {item.serial || "No serial"}</p>
+          </div>
+          <button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full border border-slate-900/10 bg-white text-slate-600 transition hover:bg-slate-950 hover:text-white dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[1rem] border border-slate-900/8 bg-slate-950/[0.025] p-4 dark:border-white/10 dark:bg-white/[0.035]">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Review decision</p>
+            <div className="mt-2">
+              <StatusBadge status={currentStatus} />
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {warrantyActions.map((action) => (
+              <button
+                key={action.status}
+                type="button"
+                disabled={updating === `${item.id}-${action.status}`}
+                onClick={() => onUpdate(item, action)}
+                className={`inline-flex min-h-[38px] items-center justify-center rounded-full px-5 text-[10px] font-bold uppercase tracking-[0.14em] transition disabled:opacity-50 ${actionClass(action.tone, currentStatus === action.status)}`}
+              >
+                {updating === `${item.id}-${action.status}` ? "Saving" : action.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="grid gap-3">
+            <DetailGrid
+              title="Registration"
+              rows={[
+                ["Status", item.warrantyStatus || item.status || "Pending Verification"],
+                ["Customer", item.customerName || "Customer"],
+                ["Email", item.email || "-"],
+                ["Phone", item.phone || "-"],
+                ["Source", [item.source, item.sourceDetail].filter(Boolean).join(" / ") || "-"],
+                ["Registered", formatDate(item.registeredAt || item.createdAt)],
+              ]}
+            />
+            <DetailGrid
+              title="Product & Warranty"
+              rows={[
+                ["Product", item.product || "-"],
+                ["Product slug", item.productSlug || "-"],
+                ["Serial", item.serial || "-"],
+                ["Purchase date", formatDate(item.purchaseDate)],
+                ["Warranty start", formatDate(item.warrantyStart)],
+                ["Warranty until", formatDate(item.warrantyUntil)],
+              ]}
+            />
+            <DetailGrid
+              title="Invoice"
+              rows={[
+                ["Invoice number", item.invoiceNumber || "-"],
+                ["Invoice file", invoiceHref ? "Available" : "Not uploaded"],
+                ["OTP verified", formatDate(item.otpVerifiedAt)],
+                ["Approved at", formatDate(item.verifiedAt)],
+                ["Rejected at", formatDate(item.rejectedAt)],
+                ["Review note", item.reviewNote || "-"],
+              ]}
+            />
+          </div>
+
+          <div className="rounded-[1rem] border border-slate-900/8 bg-slate-950/[0.025] p-4 dark:border-white/10 dark:bg-white/[0.035]">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Invoice view</p>
+                <p className="mt-1 text-sm font-medium text-slate-600 dark:text-slate-300">{item.invoiceNumber || "No invoice number"}</p>
+              </div>
+              {invoiceHref && (
+                <a href={invoiceHref} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[38px] items-center justify-center gap-2 rounded-full bg-slate-950 px-4 text-[10px] font-bold uppercase tracking-[0.14em] text-white dark:bg-white dark:text-slate-950">
+                  <FileText className="h-3.5 w-3.5" />
+                  {invoiceIsPdf ? "Open PDF" : "Open invoice"}
+                </a>
+              )}
+            </div>
+            {invoiceHref ? (
+              invoiceIsImage ? (
+                <img src={invoiceHref} alt="Warranty invoice" className="max-h-[620px] w-full rounded-xl border border-slate-900/10 bg-white object-contain dark:border-white/10" />
+              ) : invoiceIsPdf ? (
+                <iframe title="Warranty PDF invoice" src={invoiceHref} className="h-[620px] w-full rounded-xl border border-slate-900/10 bg-white dark:border-white/10" />
+              ) : (
+                <div className="grid min-h-[420px] place-items-center rounded-xl border border-dashed border-slate-900/14 bg-white/70 p-6 text-center dark:border-white/10 dark:bg-white/[0.025]">
+                  <div>
+                    <FileText className="mx-auto h-9 w-9 text-slate-400" />
+                    <p className="mt-3 text-sm font-semibold text-slate-800 dark:text-slate-100">Preview unavailable for this file type</p>
+                    <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">Upload a PDF or image invoice to preview it inside this panel.</p>
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="grid min-h-[320px] place-items-center rounded-xl border border-dashed border-slate-900/14 bg-white/70 text-center dark:border-white/10 dark:bg-white/[0.025]">
+                <div>
+                  <FileText className="mx-auto h-8 w-8 text-slate-400" />
+                  <p className="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-200">No invoice uploaded</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-function AdminPanel({ title, icon: Icon, children }) {
+function DetailGrid({ title, rows }) {
   return (
-    <section className="premium-surface p-5 dark:bg-white/[0.03] sm:p-6">
-      <div className="mb-5 flex items-center gap-3">
-        <span className="rounded-xl bg-slate-900/5 p-2 text-slate-900 dark:bg-white/10 dark:text-white">
-          <Icon className="h-5 w-5" />
-        </span>
-        <h2 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">{title}</h2>
-      </div>
-      {children}
+    <section className="rounded-[1rem] border border-slate-900/8 bg-white/72 p-4 dark:border-white/10 dark:bg-white/[0.025]">
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">{title}</p>
+      <dl className="mt-3 grid gap-2">
+        {rows.map(([label, value]) => (
+          <div key={label} className="grid gap-1 rounded-xl bg-slate-950/[0.025] p-3 sm:grid-cols-[130px_1fr] dark:bg-white/[0.035]">
+            <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{label}</dt>
+            <dd className="text-sm font-medium text-slate-700 dark:text-slate-200">{value}</dd>
+          </div>
+        ))}
+      </dl>
     </section>
   );
 }
 
-function StatusPill({ status }) {
+function StatusBadge({ status }) {
   const normalized = String(status || "").toLowerCase();
-  const tone =
-    normalized.includes("active") || normalized.includes("approved") || normalized.includes("repaired") || normalized.includes("replaced")
-      ? "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
-      : normalized.includes("rejected") || normalized.includes("expired")
-        ? "bg-rose-500/10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300"
-        : "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300";
-  return <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${tone}`}>{status}</span>;
+  const tone = normalized.includes("reject")
+    ? "bg-rose-500/10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300"
+    : normalized.includes("pending") || normalized.includes("review") || normalized.includes("verification")
+      ? "bg-amber-500/10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
+      : "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300";
+  return <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${tone}`}>{status}</span>;
+}
+
+function actionClass(tone, active) {
+  const variants = {
+    green: active ? "bg-emerald-600 text-white" : "border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-600 hover:text-white",
+    orange: active ? "bg-amber-500 text-white" : "border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-500 hover:text-white",
+    red: active ? "bg-rose-600 text-white" : "border border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-600 hover:text-white",
+  };
+  return variants[tone] || variants.orange;
+}
+
+function getWarrantyStatus(item) {
+  return item?.warrantyStatus || item?.status || "Pending Verification";
+}
+
+function dateValue(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
 function formatDate(value) {
-  if (!value) return "After approval";
-  return new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
+  return formatIndiaDateTime(value);
 }

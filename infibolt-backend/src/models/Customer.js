@@ -21,7 +21,6 @@ const schema = new mongoose.Schema(
     resetTokenExpiresAt: { type: Date, select: false },
     emailVerificationTokenHash: { type: String, select: false },
     emailVerifiedAt: { type: Date },
-    phoneVerifiedAt: { type: Date },
   },
   schemaDefaults
 );

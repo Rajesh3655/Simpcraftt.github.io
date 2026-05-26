@@ -5,31 +5,10 @@ export const platformStatus = {
 };
 
 export const categories = [
-  { id: "audio", name: "Audio", description: "Cinematic sound for focused work and deep listening." },
-  { id: "wearables", name: "Wearables", description: "Health, time, and everyday intelligence in premium hardware." },
-  { id: "charging", name: "Charging", description: "Fast, clean power systems for modern device ecosystems." },
-  { id: "home-tech", name: "Home Tech", description: "Connected lifestyle tools for premium everyday spaces." },
-];
-
-export const collections = [
-  {
-    slug: "launch-edition",
-    name: "Launch Edition",
-    description: "Our first signature product family, built for early adopters.",
-    productSlugs: ["aura-audio-pro", "nova-watch-x", "echo-charge-max"],
-  },
-  {
-    slug: "desk-essentials",
-    name: "Desk Essentials",
-    description: "Minimal devices for premium workstations and creator setups.",
-    productSlugs: ["echo-charge-max", "lumen-hub-studio"],
-  },
-  {
-    slug: "mobility-kit",
-    name: "Mobility Kit",
-    description: "Portable power and connected accessories for travel.",
-    productSlugs: ["nova-watch-x", "pulse-pack-slim"],
-  },
+  { id: "audio", name: "Audio", icon: "headphones", description: "Cinematic sound for focused work and deep listening.", desktopMenuVisible: true, sortOrder: 1 },
+  { id: "wearables", name: "Wearables", icon: "watch", description: "Health, time, and everyday intelligence in premium hardware.", desktopMenuVisible: true, sortOrder: 2 },
+  { id: "charging", name: "Charging", icon: "zap", description: "Fast, clean power systems for modern device ecosystems.", desktopMenuVisible: true, sortOrder: 3 },
+  { id: "home-tech", name: "Home Tech", icon: "home", description: "Connected lifestyle tools for premium everyday spaces.", desktopMenuVisible: true, sortOrder: 4 },
 ];
 
 export const products = [
@@ -37,11 +16,11 @@ export const products = [
     slug: "aura-audio-pro",
     name: "Aura Audio Pro",
     category: "audio",
-    collection: "launch-edition",
     price: 7999,
     rating: 4.8,
     reviewCount: 214,
     badge: "Flagship",
+    desktopMenuFeatured: true,
     status: "ready",
     summary: "Hybrid active noise cancellation with a cinematic, low-distortion soundstage.",
     description:
@@ -71,7 +50,6 @@ export const products = [
     slug: "nova-watch-x",
     name: "Nova Watch X",
     category: "wearables",
-    collection: "launch-edition",
     price: 11999,
     rating: 4.7,
     reviewCount: 168,
@@ -105,7 +83,6 @@ export const products = [
     slug: "echo-charge-max",
     name: "Echo Charge Max",
     category: "charging",
-    collection: "launch-edition",
     price: 3499,
     rating: 4.6,
     reviewCount: 91,
@@ -139,7 +116,6 @@ export const products = [
     slug: "lumen-hub-studio",
     name: "Lumen Hub Studio",
     category: "home-tech",
-    collection: "desk-essentials",
     price: 5999,
     rating: 4.5,
     reviewCount: 63,
@@ -172,7 +148,6 @@ export const products = [
     slug: "pulse-pack-slim",
     name: "Pulse Pack Slim",
     category: "charging",
-    collection: "mobility-kit",
     price: 2499,
     rating: 4.4,
     reviewCount: 52,
@@ -224,7 +199,6 @@ export const faqs = [
 
 export const getProductBySlug = (slug) => products.find((product) => product.slug === slug);
 export const getCategoryById = (id) => categories.find((category) => category.id === id);
-export const getCollectionBySlug = (slug) => collections.find((collection) => collection.slug === slug);
 export const formatPrice = (price) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(price);
 

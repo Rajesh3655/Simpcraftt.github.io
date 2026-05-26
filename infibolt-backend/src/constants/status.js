@@ -17,5 +17,5 @@ export const WARRANTY_STATUS = [
   "Resolved",
 ];
 export const RMA_STATUS = ["Requested", "Approved", "Rejected", "Pickup Scheduled", "In Transit", "Inspection", "Repair Approved", "Replacement Approved", "Repaired", "Replaced", "Closed"];
-export const SUPPORT_STATUS = ["Open", "In Progress", "Replied", "Resolved", "Closed"];
+export const SUPPORT_STATUS = ["Open", "Read", "In Progress", "Replied", "Resolved", "Closed"];
 export const PRIORITIES = ["Low", "Normal", "High", "Urgent"];

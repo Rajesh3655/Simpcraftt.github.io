@@ -4,7 +4,19 @@ import { apiConfig } from "../config/api";
 import { mockRequest } from "./mockApi";
 
 let csrfToken = null;
+let refreshPromise = null;
 const unsafeMethods = new Set(["post", "put", "patch", "delete"]);
+const toastIds = {
+  sessionExpired: "admin-session-expired",
+  csrfFailed: "admin-csrf-failed",
+};
+
+const sessionExpiredEvent = "infibolt-admin-session-expired";
+
+export function dismissAuthToasts() {
+  toast.dismiss(toastIds.sessionExpired);
+  toast.dismiss(toastIds.csrfFailed);
+}
 
 export const api = axios.create({
   baseURL: apiConfig.baseURL,
@@ -31,19 +43,36 @@ api.interceptors.request.use(async (config) => {
 
 api.interceptors.response.use(
   (response) => response.data,
-  (error) => {
+  async (error) => {
     if (error.__mockResponse) return Promise.resolve(error.response.data);
     const status = error.response?.status;
     const message = error.response?.data?.message || error.message || "Something went wrong.";
+    const details = error.response?.data?.details || [];
+    const fields = error.response?.data?.fields || {};
+    const detailMessage = formatValidationDetail(details[0]);
+
+    if (status === 401 && shouldAttemptRefresh(error.config)) {
+      try {
+        await refreshAdminSession();
+        const retryConfig = { ...error.config, __isRetryRequest: true };
+        return api(retryConfig);
+      } catch {
+        notifySessionExpired();
+        return Promise.reject({ status, message: "Admin session expired", details, fields });
+      }
+    }
+
     if (status === 401) {
-      toast.error("Admin session expired", { description: "Please login again." });
+      notifySessionExpired();
     } else if (status === 403 && message.includes("CSRF")) {
       csrfToken = null;
-      toast.error("Security check failed", { description: "Please retry the action." });
+      toast.error("Security check failed", { id: toastIds.csrfFailed, description: "Please retry the action." });
+    } else if (status === 422) {
+      toast.error("Validation failed", { description: detailMessage || "Please check the required product fields." });
     } else {
       toast.error("Admin request failed", { description: message });
     }
-    return Promise.reject({ status, message });
+    return Promise.reject({ status, message, details, fields });
   }
 );
 
@@ -54,3 +83,37 @@ export const request = {
   patch: (url, data, config) => api.patch(url, data, config),
   delete: (url, config) => api.delete(url, config),
 };
+
+function formatValidationDetail(detail) {
+  if (!detail) return "";
+  const field = String(detail.path || detail.param || "Field")
+    .replace(/^marketplace\./, "Marketplace ")
+    .replace(/([A-Z])/g, " $1")
+    .replace(/[._]/g, " ")
+    .trim();
+  const label = field ? field.charAt(0).toUpperCase() + field.slice(1) : "Field";
+  return detail.msg && detail.msg !== "Invalid value" ? `${label}: ${detail.msg}` : `${label} is invalid.`;
+}
+
+function shouldAttemptRefresh(config = {}) {
+  if (!config || config.__isRetryRequest) return false;
+  const url = String(config.url || "");
+  return url.startsWith("/admin/") && !url.includes("/admin/auth/login") && !url.includes("/admin/auth/refresh") && !url.includes("/admin/auth/logout");
+}
+
+async function refreshAdminSession() {
+  if (!refreshPromise) {
+    refreshPromise = api.post("/admin/auth/refresh").finally(() => {
+      refreshPromise = null;
+    });
+  }
+  await refreshPromise;
+  dismissAuthToasts();
+}
+
+function notifySessionExpired() {
+  dismissAuthToasts();
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(sessionExpiredEvent));
+  }
+}

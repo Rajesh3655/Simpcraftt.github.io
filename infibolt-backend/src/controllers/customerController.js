@@ -12,10 +12,11 @@ import { RMARequest } from "../models/RMARequest.js";
 import { SiteSetting } from "../models/SiteSetting.js";
 import { SupportTicket } from "../models/SupportTicket.js";
 import { WarrantyClaim } from "../models/WarrantyClaim.js";
+import { getContactSettings } from "../services/siteSettingsService.js";
 import { writeAuditLog } from "../middleware/audit.js";
 import { env } from "../config/env.js";
 import { hashPassword, hashToken, randomToken, verifyPassword } from "../utils/crypto.js";
-import { clearAuthCookies, verifyRefreshToken } from "../utils/cookies.js";
+import { clearAuthCookies, refreshCookieCandidates, verifyRefreshToken } from "../utils/cookies.js";
 import { createHttpError } from "../utils/httpError.js";
 import { ok, productDetails, sanitizeUser } from "../utils/response.js";
 import { createSession, revokeUserSessions, rotateRefreshSession } from "../services/sessionService.js";
@@ -43,6 +44,24 @@ function publicProductFilter(extra = {}) {
   return { $and: and };
 }
 
+function homepageProductFilter(extra = {}) {
+  const and = [
+    { $or: [{ status: { $in: storefrontStatuses } }, { homepageVisible: true }, { heroVisible: true }, { featured: true }] },
+    { productPageVisible: { $ne: false } },
+    { $or: [{ visibility: "public" }, { visibility: { $exists: false } }] },
+  ];
+  if (extra.category) and.push({ $or: [{ category: extra.category }, { categorySlug: extra.category }] });
+  if (extra.collection) and.push({ collectionVisible: { $ne: false } }, { $or: [{ collection: extra.collection }, { collectionSlug: extra.collection }] });
+  return { $and: and };
+}
+
+function selectedHomepageProductFilter(extra = {}) {
+  const and = [{ productPageVisible: { $ne: false } }, { $or: [{ visibility: "public" }, { visibility: { $exists: false } }] }];
+  if (extra.category) and.push({ $or: [{ category: extra.category }, { categorySlug: extra.category }] });
+  if (extra.collection) and.push({ collectionVisible: { $ne: false } }, { $or: [{ collection: extra.collection }, { collectionSlug: extra.collection }] });
+  return { $and: and };
+}
+
 function issueId(prefix) {
   return `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 }
@@ -63,21 +82,18 @@ async function recordFailedLogin(user) {
 
 function resolveAccountIdentifier(data) {
   const raw = String(data.identifier || data.email || "").trim();
-  const mobile = raw.replace(/\D/g, "");
-  if (/^\S+@\S+\.\S+$/.test(raw)) {
-    return { query: { email: raw.toLowerCase() }, audit: raw.toLowerCase(), otpTarget: raw.toLowerCase() };
-  }
-  if (/^[1-9]\d{7,14}$/.test(mobile)) {
-    return { query: { phone: mobile }, audit: mobile, otpTarget: mobile };
-  }
-  throw createHttpError(422, "Enter a valid email address or mobile number.");
+  const email = raw.toLowerCase();
+  const phone = raw.replace(/\D/g, "");
+  if (/^\S+@\S+\.\S+$/.test(raw)) return { query: { email }, audit: email };
+  if (/^[1-9]\d{7,14}$/.test(phone)) return { query: { phone }, audit: phone };
+  throw createHttpError(422, "Enter a valid email address or phone number.");
 }
 
 async function getSignupConflictFields(email, phone) {
   const existingCustomers = await Customer.find({ $or: [{ email }, { phone }] }).select("email phone").lean();
   return existingCustomers.reduce((fields, customer) => {
     if (customer.email === email) fields.email = "This email is already registered.";
-    if (customer.phone === phone) fields.phone = "This mobile number is already registered.";
+    if (customer.phone === phone) fields.phone = "This phone number is already registered.";
     return fields;
   }, {});
 }
@@ -85,11 +101,24 @@ async function getSignupConflictFields(email, phone) {
 function assertSignupIdentityAvailable(fields) {
   const conflictKeys = Object.keys(fields);
   if (!conflictKeys.length) return;
-  const message =
-    conflictKeys.length > 1
-      ? "Email and mobile number are already registered."
-      : fields.email || fields.phone || "Account details already exist.";
+  const message = conflictKeys.length > 1 ? "Email and phone number are already registered." : fields.email || fields.phone || "Account details already exist.";
   throw createHttpError(409, message, { fields });
+}
+
+async function resolvePasswordResetAccount(identifier) {
+  const resolved = resolveAccountIdentifier({ identifier });
+  return Customer.findOne(resolved.query).select("+passwordHash +resetTokenHash +resetTokenExpiresAt");
+}
+
+async function syncCustomerEmailAcrossRecords({ customerId, previousEmail, nextEmail }) {
+  await Promise.all([
+    ProductOwnership.updateMany({ $or: [{ customerId }, { email: previousEmail }] }, { email: nextEmail }),
+    RMARequest.updateMany({ $or: [{ customerId }, { email: previousEmail }] }, { email: nextEmail }),
+    WarrantyClaim.updateMany({ $or: [{ customerId }, { email: previousEmail }] }, { email: nextEmail }),
+    SupportTicket.updateMany({ email: previousEmail }, { email: nextEmail }),
+    NewsletterSubscriber.updateMany({ email: previousEmail }, { email: nextEmail }),
+    LaunchLead.updateMany({ email: previousEmail }, { email: nextEmail }),
+  ]);
 }
 
 export async function login(req, res) {
@@ -98,6 +127,7 @@ export async function login(req, res) {
   const identifier = resolveAccountIdentifier(data);
   const user = await Customer.findOne(identifier.query).select("+passwordHash +failedLoginCount +lockUntil +refreshTokenHash");
   if (!user) throw createHttpError(401, "Invalid email or password.");
+  if (user.status === "Locked") throw createHttpError(423, "Account is disabled. Contact INFIBOLT support.");
   await assertUnlocked(user);
   if (!user.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
     await recordFailedLogin(user);
@@ -115,21 +145,21 @@ export async function signup(req, res) {
   const data = matchedData(req);
   const phone = String(data.phone || "").replace(/\D/g, "");
   assertSignupIdentityAvailable(await getSignupConflictFields(data.email, phone));
-  const otp = await issueOtp({ target: phone, purpose: "signup", metadata: { name: data.name, email: data.email }, req });
+  const otp = await issueOtp({ email: data.email, purpose: "signup", metadata: { name: data.name, email: data.email, phone }, req });
   await writeAuditLog(req, "customer.signup.requested", { email: data.email, phone });
   return ok(res, {
     verificationId: otp.id,
-    channel: "sms",
+    channel: "email",
     expiresInSeconds: otp.expiresInSeconds,
     resendAfterSeconds: otp.resendAfterSeconds,
-    message: "OTP sent successfully.",
+    message: "Email OTP sent successfully.",
   }, 202);
 }
 
 export async function verifyOtp(req, res) {
   const data = matchedData(req);
   const phone = String(data.phone || "").replace(/\D/g, "");
-  await verifyOtpCode({ target: phone, purpose: "signup", otp: data.otp, verificationId: data.verificationId, req });
+  await verifyOtpCode({ email: data.email, purpose: "signup", otp: data.otp, verificationId: data.verificationId, req });
   assertSignupIdentityAvailable(await getSignupConflictFields(data.email, phone));
   const passwordHash = await hashPassword(data.password);
   const user = await Customer.findOneAndUpdate(
@@ -141,6 +171,7 @@ export async function verifyOtp(req, res) {
       passwordHash,
       status: "Verified",
       role: "customer",
+      emailVerifiedAt: new Date(),
     },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   ).select("+refreshTokenHash");
@@ -150,34 +181,36 @@ export async function verifyOtp(req, res) {
 }
 
 export async function forgotPassword(req, res) {
-  const { email } = matchedData(req);
-  const user = await Customer.findOne({ email }).select("+resetTokenHash +resetTokenExpiresAt");
+  const data = matchedData(req);
+  const identifier = data.identifier || data.email;
+  const user = await resolvePasswordResetAccount(identifier);
   let resendAfterSeconds = env.otpResendCooldownSeconds;
   if (user) {
     const token = randomToken(24);
     user.resetTokenHash = hashToken(token);
     user.resetTokenExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
     await user.save();
-    const otp = await issueOtp({ target: email, purpose: "password-reset", metadata: { resetTokenHint: token.slice(0, 8) }, ttlMinutes: 15, req });
+    const otp = await issueOtp({ email: user.email, purpose: "password-reset", metadata: { resetTokenHint: token.slice(0, 8) }, ttlMinutes: 15, req });
     resendAfterSeconds = otp.resendAfterSeconds;
-    await writeAuditLog(req, "customer.password_reset.requested", { email });
+    await writeAuditLog(req, "customer.password_reset.requested", { identifier, email: user.email });
   }
   return ok(res, { message: "If the account exists, an OTP has been sent.", resendAfterSeconds });
 }
 
 export async function resetPassword(req, res) {
-  const { email, otp, password } = matchedData(req);
-  await verifyOtpCode({ target: email, purpose: "password-reset", otp, req });
-  const user = await Customer.findOne({ email }).select("+passwordHash +resetTokenHash +resetTokenExpiresAt");
+  const data = matchedData(req);
+  const identifier = data.identifier || data.email;
+  const user = await resolvePasswordResetAccount(identifier);
   if (!user) throw createHttpError(404, "Account not found.");
-  user.passwordHash = await hashPassword(password);
+  await verifyOtpCode({ email: user.email, purpose: "password-reset", otp: data.otp, req });
+  user.passwordHash = await hashPassword(data.password);
   user.resetTokenHash = undefined;
   user.resetTokenExpiresAt = undefined;
   user.failedLoginCount = 0;
   user.lockUntil = undefined;
   await user.save();
   await revokeUserSessions(user);
-  await writeAuditLog(req, "customer.password_reset.completed", { email });
+  await writeAuditLog(req, "customer.password_reset.completed", { identifier, email: user.email });
   return ok(res, { reset: true });
 }
 
@@ -187,20 +220,21 @@ export async function requestLoginOtp(req, res) {
   const identifier = resolveAccountIdentifier(data);
   const user = await Customer.findOne(identifier.query).select("+passwordHash +failedLoginCount +lockUntil");
   if (!user) throw createHttpError(401, "Invalid email or password.");
+  if (user.status === "Locked") throw createHttpError(423, "Account is disabled. Contact INFIBOLT support.");
   await assertUnlocked(user);
   if (!user.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
     await recordFailedLogin(user);
     await writeAuditLog(req, "customer.login_otp.failed", { identifier: identifier.audit });
     throw createHttpError(401, "Invalid email or password.");
   }
-  const otp = await issueOtp({ target: identifier.otpTarget, purpose: "login", metadata: { userId: String(user._id) }, req });
+  const otp = await issueOtp({ email: user.email, purpose: "login", metadata: { userId: String(user._id), identifier: identifier.audit }, req });
   await writeAuditLog(req, "customer.login_otp.requested", { identifier: identifier.audit });
   return ok(res, {
     otpRequired: true,
     verificationId: otp.id,
     expiresInSeconds: otp.expiresInSeconds,
     resendAfterSeconds: otp.resendAfterSeconds,
-    message: "Login OTP sent successfully.",
+    message: "Login email OTP sent successfully.",
   }, 202);
 }
 
@@ -208,16 +242,16 @@ export async function verifyLoginOtp(req, res) {
   const data = matchedData(req);
   const { otp } = data;
   const identifier = resolveAccountIdentifier(data);
-  await verifyOtpCode({ target: identifier.otpTarget, purpose: "login", otp, req });
   const user = await Customer.findOne(identifier.query).select("+refreshTokenHash");
   if (!user) throw createHttpError(404, "Account not found.");
+  await verifyOtpCode({ email: user.email, purpose: "login", otp, req });
   await createSession(req, res, user);
   await writeAuditLog(req, "customer.login_otp.verified", { identifier: identifier.audit });
   return ok(res, { user: sanitizeUser(user) });
 }
 
 export async function refresh(req, res) {
-  const refreshToken = req.signedCookies?.infibolt_refresh;
+  const refreshToken = refreshCookieCandidates("customer").map((name) => req.signedCookies?.[name]).find(Boolean);
   if (!refreshToken) throw createHttpError(401, "Refresh token missing.");
   const payload = verifyRefreshToken(refreshToken);
   if (payload.role !== "customer") throw createHttpError(403, "Invalid session role.");
@@ -233,7 +267,7 @@ export async function logout(req, res) {
     await revokeUserSessions(user);
     await writeAuditLog(req, "customer.logout");
   }
-  clearAuthCookies(res);
+  clearAuthCookies(res, req.user?.role || "customer");
   return ok(res, { loggedOut: true });
 }
 
@@ -291,15 +325,25 @@ export async function listFeaturedProducts(_req, res) {
 }
 
 export async function getHomepageProducts(_req, res) {
-  const [sections, heroProducts, featuredProducts, newLaunches, bestsellers, categories, collections] = await Promise.all([
-    HomepageSection.find({ enabled: true }).sort({ sortOrder: 1 }).lean(),
-    Product.find({ ...publicProductFilter(), heroVisible: true }).sort({ sortOrder: 1, updatedAt: -1 }).limit(6).lean(),
-    Product.find({ ...publicProductFilter(), featured: true }).sort({ sortOrder: 1, updatedAt: -1 }).limit(12).lean(),
+  const sections = await HomepageSection.find({ enabled: true }).sort({ sortOrder: 1 }).lean();
+  const featuredSection = sections.find((section) => section.key === "home-featured");
+  const selectedFeaturedSlugs = featuredSection?.productSlugs?.length ? featuredSection.productSlugs.slice(0, 4) : [];
+  const [heroProducts, featuredProductsRaw, newLaunches, bestsellers, categories, collections] = await Promise.all([
+    Product.find({ ...homepageProductFilter(), heroVisible: true }).sort({ sortOrder: 1, updatedAt: -1 }).limit(6).lean(),
+    Product.find(selectedFeaturedSlugs.length ? { ...selectedHomepageProductFilter(), slug: { $in: selectedFeaturedSlugs } } : { ...homepageProductFilter(), $or: [{ featured: true }, { homepageVisible: true }] }).sort({ sortOrder: 1, updatedAt: -1 }).limit(4).lean(),
     Product.find({ ...publicProductFilter(), newLaunch: true }).sort({ sortOrder: 1, updatedAt: -1 }).limit(12).lean(),
     Product.find({ ...publicProductFilter(), bestseller: true }).sort({ sortOrder: 1, updatedAt: -1 }).limit(12).lean(),
     Category.find({ enabled: { $ne: false } }).sort({ sortOrder: 1, name: 1 }).lean(),
     Collection.find({ enabled: { $ne: false }, homepageVisible: true }).sort({ sortOrder: 1, name: 1 }).lean(),
   ]);
+  const featuredProducts = selectedFeaturedSlugs.length
+    ? [...featuredProductsRaw].sort((a, b) => selectedFeaturedSlugs.indexOf(a.slug) - selectedFeaturedSlugs.indexOf(b.slug))
+    : featuredProductsRaw;
+  if (selectedFeaturedSlugs.length && featuredProducts.length < 1) {
+    const fallbackFeatured = await Product.find({ ...homepageProductFilter(), $or: [{ featured: true }, { homepageVisible: true }] }).sort({ sortOrder: 1, updatedAt: -1 }).limit(4).lean();
+    if (fallbackFeatured.length) featuredProducts.push(...fallbackFeatured);
+    else featuredProducts.push(...(await Product.find(homepageProductFilter()).sort({ sortOrder: 1, updatedAt: -1 }).limit(4).lean()));
+  }
 
   const fallbackHero = heroProducts.length ? heroProducts : featuredProducts.slice(0, 3);
   return ok(res, {
@@ -316,6 +360,10 @@ export async function getHomepageProducts(_req, res) {
 export async function getWarrantyPolicy(_req, res) {
   const setting = await SiteSetting.findOne({ key: "warrantyPolicy" }).lean();
   return ok(res, setting?.value || null);
+}
+
+export async function getPublicSiteSettings(_req, res) {
+  return ok(res, { contactSettings: await getContactSettings() });
 }
 
 export async function getProfile(req, res) {
@@ -347,44 +395,11 @@ export async function updateProfile(req, res) {
 }
 
 export async function requestProfileContactUpdate(req, res) {
-  const data = matchedData(req, { locations: ["body"] });
-  if (!data.email && !data.phone) throw createHttpError(422, "Email or mobile number is required.");
-  const field = data.email ? "email" : "phone";
-  const target = field === "email" ? data.email : String(data.phone).replace(/\D/g, "");
-  if (field === "email") {
-    const existing = await Customer.findOne({ email: target, _id: { $ne: req.user._id } }).lean();
-    if (existing) throw createHttpError(409, "This email is already used by another account.");
-  }
-  if (field === "phone") {
-    const existing = await Customer.findOne({ phone: target, _id: { $ne: req.user._id } }).lean();
-    if (existing) throw createHttpError(409, "This mobile number is already used by another account.");
-  }
-  const otp = await issueOtp({ target, purpose: "email-verification", metadata: { customerId: String(req.user._id), field }, req });
-  await writeAuditLog(req, "customer.profile_contact_update.requested", { field, target });
-  return ok(res, { verificationId: otp.id, field, target, expiresInSeconds: otp.expiresInSeconds }, 202);
+  throw createHttpError(403, "Email and phone number cannot be changed from profile settings.");
 }
 
 export async function verifyProfileContactUpdate(req, res) {
-  const data = matchedData(req, { locations: ["body"] });
-  if (!data.email && !data.phone) throw createHttpError(422, "Email or mobile number is required.");
-  const field = data.email ? "email" : "phone";
-  const target = field === "email" ? data.email : String(data.phone).replace(/\D/g, "");
-  await verifyOtpCode({ target, purpose: "email-verification", otp: data.otp, verificationId: data.verificationId, req });
-  const previousValue = req.user[field];
-  const update = field === "email" ? { email: target, emailVerifiedAt: new Date() } : { phone: target, phoneVerifiedAt: new Date() };
-  const customer = await Customer.findByIdAndUpdate(req.user._id, update, { new: true, runValidators: true });
-  await CustomerChangeLog.create({
-    customerId: req.user._id,
-    field,
-    previousValue,
-    nextValue: target,
-    verified: true,
-    actorEmail: customer.email,
-    ip: req.ip,
-    userAgent: req.get("user-agent"),
-  });
-  await writeAuditLog(req, "customer.profile_contact_update.verified", { field });
-  return ok(res, { ...sanitizeUser(customer), address: customer.address, city: customer.city, state: customer.state });
+  throw createHttpError(403, "Email and phone number cannot be changed from profile settings.");
 }
 
 export async function createLead(req, res) {
@@ -395,25 +410,24 @@ export async function createLead(req, res) {
 export async function requestLaunchNotification(req, res) {
   const data = matchedData(req, { locations: ["body"] });
   const email = data.email || undefined;
-  const phone = data.phone ? String(data.phone).replace(/\D/g, "") : undefined;
-  if (!email && !phone) throw createHttpError(422, "Enter an email or mobile number for launch updates.");
+  if (!email) throw createHttpError(422, "Enter an email for launch updates.");
   const lead = await LaunchLead.findOneAndUpdate(
     {
       productSlug: data.productSlug,
-      ...(email ? { email } : { phone }),
+      email,
     },
     {
       id: issueId("LAUNCH"),
       product: data.product,
       productSlug: data.productSlug,
       email,
-      phone,
+      phone: undefined,
       source: data.source || "Product page",
       status: "Subscribed",
     },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
-  await writeAuditLog(req, "launch_notification.requested", { productSlug: data.productSlug, email, phone });
+  await writeAuditLog(req, "launch_notification.requested", { productSlug: data.productSlug, email });
   return ok(res, { id: lead.id, status: lead.status, message: "Launch updates enabled." }, 202);
 }
 
@@ -481,7 +495,7 @@ export async function createWarrantyClaim(req, res) {
   const productInfo = await resolveProductForOwnership({ product: data.product, productSlug: data.productSlug });
   await assertSerialAvailable(serial, req.user?._id, productInfo.productSlug);
   const { start, end } = warrantyEndFromPurchase(data.purchaseDate);
-  const otpTarget = req.user?.phone || req.user?.email || data.email;
+  const otpTarget = req.user?.email || data.email;
   const draft = {
     customerId: String(req.user?._id || ""),
     customerName: data.customer || req.user?.name,
@@ -497,7 +511,7 @@ export async function createWarrantyClaim(req, res) {
     warrantyStart: start,
     warrantyUntil: end,
   };
-  const otp = await issueOtp({ target: otpTarget, purpose: "warranty", metadata: { draft }, req });
+  const otp = await issueOtp({ email: otpTarget, purpose: "warranty", metadata: { draft }, req });
   await writeAuditLog(req, "ownership.registration.otp_requested", { serial, source });
   return ok(res, {
     id: otp.id,
@@ -507,14 +521,14 @@ export async function createWarrantyClaim(req, res) {
     otpRequired: true,
     expiresInSeconds: otp.expiresInSeconds,
     resendAfterSeconds: otp.resendAfterSeconds,
-    message: "Warranty OTP sent successfully.",
+    message: "Warranty email OTP sent successfully.",
   }, 202);
 }
 
 export async function verifyWarrantyOtp(req, res) {
   const { id, otp } = matchedData(req);
-  const otpTarget = req.user?.phone || req.user?.email;
-  const record = await verifyOtpCode({ target: otpTarget, purpose: "warranty", otp, verificationId: id, req });
+  const otpTarget = req.user?.email;
+  const record = await verifyOtpCode({ email: otpTarget, purpose: "warranty", otp, verificationId: id, req });
   const draft = record.metadata?.draft;
   if (!draft?.serial || !draft?.product) throw createHttpError(422, "Warranty registration details expired. Please start again.");
   const serial = assertValidSerial(draft.serial);
@@ -543,7 +557,7 @@ export async function verifyWarrantyOtp(req, res) {
     warrantyUntil: draft.warrantyUntil,
     status: "Pending Verification",
     warrantyStatus: "Pending Verification",
-    timeline: [{ status: "Pending Verification", note: "Mobile OTP verified. Waiting for admin invoice review.", actorEmail: draft.email || req.user?.email }],
+    timeline: [{ status: "Pending Verification", note: "Email OTP verified. Waiting for admin invoice review.", actorEmail: draft.email || req.user?.email }],
   });
   await ownership.save();
   await writeAuditLog(req, "ownership.otp.verified", { ownershipId: ownership.id, serial: ownership.serial });

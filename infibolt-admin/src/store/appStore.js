@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { adminService } from "../services/adminService";
+import { dismissAuthToasts } from "../services/api";
 import { authService } from "../services/authService";
 import { productService } from "../services/productService";
 import { supportService } from "../services/supportService";
@@ -13,7 +14,13 @@ export const useAdminStore = create((set, get) => ({
   },
   overview: { data: null, status: "idle", error: null },
   products: { items: [], status: "idle", error: null },
+  categories: { items: [], status: "idle", error: null },
+  homepageSections: { items: [], status: "idle", error: null },
+  newsletter: { subscribers: [], leads: [], status: "idle", error: null },
   users: { items: [], status: "idle", error: null },
+  otpAudit: { records: [], events: [], status: "idle", error: null },
+  auditLogs: { items: [], status: "idle", error: null },
+  settings: { data: null, status: "idle", error: null },
   support: { tickets: [], status: "idle", error: null },
   warranty: { claims: [], rmas: [], units: [], status: "idle", error: null },
   notifications: [
@@ -26,6 +33,7 @@ export const useAdminStore = create((set, get) => ({
     set((state) => ({ auth: { ...state.auth, status: "loading", error: null } }));
     try {
       const result = await authService.login(credentials);
+      dismissAuthToasts();
       set({ auth: { user: result.user, status: "authenticated", error: null } });
       return result;
     } catch (error) {
@@ -33,13 +41,25 @@ export const useAdminStore = create((set, get) => ({
       throw error;
     }
   },
+  expireSession: () => {
+    set((state) => ({
+      auth: {
+        ...state.auth,
+        user: null,
+        status: "session-expired",
+        error: "Your admin session has timed out.",
+      },
+    }));
+  },
   hydrateSession: async () => {
+    set((state) => ({ auth: { ...state.auth, status: "loading", error: null } }));
     try {
       const result = await authService.me();
+      dismissAuthToasts();
       set({ auth: { user: result.user, status: "authenticated", error: null } });
       return result;
     } catch {
-      set((state) => ({ auth: { ...state.auth, user: null, status: "idle" } }));
+      set((state) => ({ auth: { ...state.auth, user: null, status: "unauthenticated" } }));
       return null;
     }
   },
@@ -47,8 +67,27 @@ export const useAdminStore = create((set, get) => ({
     try {
       await authService.logout();
     } finally {
-      set((state) => ({ auth: { ...state.auth, user: null, status: "idle" } }));
+      set((state) => ({ auth: { ...state.auth, user: null, status: "unauthenticated" } }));
     }
+  },
+  clearLocalSession: () => {
+    set((state) => ({ auth: { ...state.auth, user: null, status: "unauthenticated", error: null } }));
+  },
+  loadAdminWorkspace: async () => {
+    const loaders = [
+      get().loadOverview(),
+      get().loadProducts(),
+      get().loadCategories(),
+      get().loadHomepageSections(),
+      get().loadUsers(),
+      get().loadWarranty(),
+      get().loadSupport(),
+      get().loadNewsletter(),
+      get().loadAuditLogs(),
+      get().loadOtpAudit(),
+      get().loadSettings(),
+    ];
+    await Promise.allSettled(loaders);
   },
   loadOverview: async () => {
     set((state) => ({ overview: { ...state.overview, status: "loading", error: null } }));
@@ -74,20 +113,131 @@ export const useAdminStore = create((set, get) => ({
     set({ products: { items: [result, ...current.filter((item) => item.slug !== payload.slug)], status: "success", error: null } });
     return result;
   },
+  deleteProduct: async (slug) => {
+    await productService.delete(slug);
+    set((state) => ({
+      products: {
+        ...state.products,
+        items: state.products.items.filter((item) => item.slug !== slug),
+        status: "success",
+        error: null,
+      },
+    }));
+  },
+  loadCategories: async () => {
+    set((state) => ({ categories: { ...state.categories, status: "loading", error: null } }));
+    try {
+      const result = await productService.categories();
+      set({ categories: { items: result.items || [], status: "success", error: null } });
+    } catch (error) {
+      set((state) => ({ categories: { ...state.categories, status: "error", error: error.message || "Unable to load categories." } }));
+    }
+  },
+  loadHomepageSections: async () => {
+    set((state) => ({ homepageSections: { ...state.homepageSections, status: "loading", error: null } }));
+    try {
+      const result = await productService.homepageSections();
+      set({ homepageSections: { items: result.items || [], status: "success", error: null } });
+    } catch (error) {
+      set((state) => ({ homepageSections: { ...state.homepageSections, status: "error", error: error.message || "Unable to load homepage sections." } }));
+    }
+  },
   loadUsers: async () => {
     set((state) => ({ users: { ...state.users, status: "loading", error: null } }));
-    const result = await adminService.users();
-    set({ users: { items: result.items || [], status: "success", error: null } });
+    try {
+      const result = await adminService.users();
+      set({ users: { items: result.items || [], status: "success", error: null } });
+    } catch (error) {
+      set((state) => ({ users: { ...state.users, status: "error", error: error.message || "Unable to load users." } }));
+    }
+  },
+  loadOtpAudit: async () => {
+    set((state) => ({ otpAudit: { ...state.otpAudit, status: "loading", error: null } }));
+    try {
+      const result = await adminService.otpAudit();
+      set({ otpAudit: { records: result.records || [], events: result.events || [], status: "success", error: null } });
+    } catch (error) {
+      set((state) => ({ otpAudit: { ...state.otpAudit, status: "error", error: error.message || "Unable to load OTP audit." } }));
+    }
+  },
+  resendActivation: async (id) => adminService.resendActivation(id),
+  updateCustomerSecurityStatus: async (id, status) => {
+    const result = await adminService.updateCustomerSecurityStatus(id, status);
+    set((state) => ({ users: { ...state.users, items: state.users.items.map((item) => ((item._id || item.id) === id ? { ...item, ...result } : item)) } }));
+    return result;
   },
   loadSupport: async () => {
     set((state) => ({ support: { ...state.support, status: "loading", error: null } }));
-    const result = await supportService.listTickets();
-    set({ support: { tickets: result.items || [], status: "success", error: null } });
+    try {
+      const result = await supportService.listTickets();
+      set({ support: { tickets: result.items || [], status: "success", error: null } });
+    } catch (error) {
+      set((state) => ({ support: { ...state.support, status: "error", error: error.message || "Unable to load support tickets." } }));
+    }
+  },
+  markSupportRead: async (id) => {
+    const result = await supportService.markRead(id);
+    set((state) => ({
+      support: {
+        ...state.support,
+        tickets: state.support.tickets.map((ticket) => ((ticket.id || ticket._id) === id ? { ...ticket, ...result } : ticket)),
+      },
+    }));
+    return result;
   },
   loadWarranty: async () => {
     set((state) => ({ warranty: { ...state.warranty, status: "loading", error: null } }));
-    const result = await warrantyService.listClaims();
-    set({ warranty: { claims: result.items || [], rmas: result.rmas || [], units: result.units || [], status: "success", error: null } });
+    try {
+      const result = await warrantyService.listClaims();
+      set({ warranty: { claims: result.items || [], rmas: result.rmas || [], units: result.units || [], status: "success", error: null } });
+    } catch (error) {
+      set((state) => ({ warranty: { ...state.warranty, status: "error", error: error.message || "Unable to load warranty claims." } }));
+    }
+  },
+  loadNewsletter: async () => {
+    set((state) => ({ newsletter: { ...state.newsletter, status: "loading", error: null } }));
+    try {
+      const [subscribers, leads] = await Promise.all([adminService.newsletterSubscribers(), adminService.launchLeads()]);
+      set({
+        newsletter: {
+          subscribers: subscribers.items || [],
+          leads: leads.items || [],
+          status: "success",
+          error: null,
+        },
+      });
+    } catch (error) {
+      set((state) => ({ newsletter: { ...state.newsletter, status: "error", error: error.message || "Unable to load marketing data." } }));
+    }
+  },
+  loadAuditLogs: async () => {
+    set((state) => ({ auditLogs: { ...state.auditLogs, status: "loading", error: null } }));
+    try {
+      const result = await adminService.auditLogs();
+      set({ auditLogs: { items: result.items || [], status: "success", error: null } });
+    } catch (error) {
+      set((state) => ({ auditLogs: { ...state.auditLogs, status: "error", error: error.message || "Unable to load audit logs." } }));
+    }
+  },
+  loadSettings: async () => {
+    set((state) => ({ settings: { ...state.settings, status: "loading", error: null } }));
+    try {
+      const result = await adminService.settings();
+      set({ settings: { data: result, status: "success", error: null } });
+    } catch (error) {
+      set((state) => ({ settings: { ...state.settings, status: "error", error: error.message || "Unable to load settings." } }));
+    }
+  },
+  updateContactSettings: async (payload) => {
+    const result = await adminService.updateContactSettings(payload);
+    set((state) => ({
+      settings: {
+        data: { ...(state.settings.data || {}), contactSettings: result },
+        status: "success",
+        error: null,
+      },
+    }));
+    return result;
   },
   updateWarrantyStatus: async (id, payload) => {
     const result = await warrantyService.updateStatus(id, payload);

@@ -16,11 +16,14 @@ import { SiteSetting } from "../models/SiteSetting.js";
 import { SupportTicket } from "../models/SupportTicket.js";
 import { WarrantyClaim } from "../models/WarrantyClaim.js";
 import { AuditLog } from "../models/AuditLog.js";
+import { OTPRecord } from "../models/OTPRecord.js";
 import { hashToken, verifyPassword } from "../utils/crypto.js";
-import { clearAuthCookies, verifyRefreshToken } from "../utils/cookies.js";
+import { clearAuthCookies, refreshCookieCandidates, verifyRefreshToken } from "../utils/cookies.js";
 import { createHttpError } from "../utils/httpError.js";
 import { ok, sanitizeUser } from "../utils/response.js";
 import { createSession, revokeUserSessions, rotateRefreshSession } from "../services/sessionService.js";
+import { issueOtp } from "../services/otpService.js";
+import { getContactSettings, saveContactSettings } from "../services/siteSettingsService.js";
 import { assertSerialAvailable, assertValidSerial, ensureProductUnit, resolveProductForOwnership, syncUnitOwner, warrantyEndFromPurchase } from "../services/ownershipService.js";
 
 const maxFailedLogins = 5;
@@ -64,10 +67,10 @@ export async function adminLogin(req, res) {
 }
 
 export async function adminRefresh(req, res) {
-  const refreshToken = req.signedCookies?.infibolt_refresh;
+  const refreshToken = refreshCookieCandidates("admin").map((name) => req.signedCookies?.[name]).find(Boolean);
   if (!refreshToken) throw createHttpError(401, "Refresh token missing.");
   const payload = verifyRefreshToken(refreshToken);
-  if (!["admin", "super-admin"].includes(payload.role)) throw createHttpError(403, "Invalid session role.");
+  if (payload.role !== "admin") throw createHttpError(403, "Invalid session role.");
   const user = await AdminUser.findById(payload.sub).select("+refreshTokenHash");
   if (!user || user.refreshTokenHash !== hashToken(refreshToken)) throw createHttpError(401, "Refresh token has been invalidated.");
   await rotateRefreshSession(req, res, user, refreshToken);
@@ -80,7 +83,7 @@ export async function adminLogout(req, res) {
     await revokeUserSessions(user);
     await writeAuditLog(req, "admin.logout");
   }
-  clearAuthCookies(res);
+  clearAuthCookies(res, user?.role || "admin");
   return ok(res, { loggedOut: true });
 }
 
@@ -113,7 +116,7 @@ export async function overview(_req, res) {
 
 export async function listAdminProducts(_req, res) {
   const page = Math.max(Number(_req.query.page || 1), 1);
-  const limit = Math.min(Math.max(Number(_req.query.limit || 50), 1), 100);
+  const limit = Math.min(Math.max(Number(_req.query.limit || 50), 1), 500);
   const filter = {};
   if (_req.query.category) filter.category = _req.query.category;
   if (_req.query.status) filter.status = _req.query.status;
@@ -130,8 +133,16 @@ export async function listAdminProducts(_req, res) {
 
 export async function createProduct(req, res) {
   const data = matchedData(req, { locations: ["body"], includeOptionals: true });
-  const slug = data.slug || slugify(data.name);
-  const product = await Product.create({ ...data, slug });
+  const slug = data.slug;
+  let product;
+  try {
+    product = await Product.create({ ...data, slug });
+  } catch (error) {
+    if (error?.code === 11000) {
+      throw createHttpError(409, `A product with slug "${slug}" already exists. Use a different product name or slug.`);
+    }
+    throw error;
+  }
   await writeAuditLog(req, "admin.product.created", { slug });
   return ok(res, product, 201);
 }
@@ -207,6 +218,43 @@ export async function listUsers(_req, res) {
   return ok(res, { items });
 }
 
+export async function listOtpAuditLogs(_req, res) {
+  const [records, events] = await Promise.all([
+    OTPRecord.find()
+      .select("email purpose +attempts verified resendCount consumedAt expiresAt deliveredAt deliveryStatus provider ip createdAt updatedAt metadata")
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .lean(),
+    AuditLog.find({ event: /^otp\./ }).sort({ createdAt: -1 }).limit(200).lean(),
+  ]);
+  return ok(res, { records, events });
+}
+
+export async function resendActivationEmail(req, res) {
+  const customer = await Customer.findById(req.params.id);
+  if (!customer) throw createHttpError(404, "Customer not found.");
+  if (customer.status === "Locked") throw createHttpError(423, "This account is disabled.");
+  const otp = await issueOtp({
+    email: customer.email,
+    purpose: customer.emailVerifiedAt ? "login" : "email-verification",
+    metadata: { customerId: String(customer._id), source: "admin-resend-activation" },
+    req,
+  });
+  await writeAuditLog(req, "admin.customer_activation_email.resent", { customerId: String(customer._id), email: customer.email });
+  return ok(res, { sent: true, email: customer.email, verificationId: otp.id, resendAfterSeconds: otp.resendAfterSeconds }, 202);
+}
+
+export async function updateCustomerSecurityStatus(req, res) {
+  const { status } = matchedData(req, { locations: ["body"] });
+  const customer = await Customer.findById(req.params.id).select("+refreshTokenHash");
+  if (!customer) throw createHttpError(404, "Customer not found.");
+  customer.status = status;
+  if (status === "Locked") await revokeUserSessions(customer);
+  else await customer.save();
+  await writeAuditLog(req, "admin.customer_security_status.updated", { customerId: String(customer._id), email: customer.email, status });
+  return ok(res, sanitizeUser(customer));
+}
+
 export async function listNewsletterSubscribers(_req, res) {
   const items = await NewsletterSubscriber.find().sort({ updatedAt: -1 }).lean();
   return ok(res, { items });
@@ -260,10 +308,34 @@ export async function listSupportTicketsAdmin(_req, res) {
   return ok(res, { items: await SupportTicket.find().sort({ updatedAt: -1 }).lean() });
 }
 
+export async function markSupportTicketRead(req, res) {
+  const ticket = await SupportTicket.findOneAndUpdate(
+    { id: req.params.id },
+    { status: "Read" },
+    { new: true, runValidators: true }
+  ).lean();
+  if (!ticket) throw createHttpError(404, "Support ticket not found.");
+  await writeAuditLog(req, "admin.support_ticket.read", { ticketId: req.params.id });
+  return ok(res, ticket);
+}
+
 export const analytics = overview;
 
 export async function settings(_req, res) {
-  return ok(res, { featureToggles: await FeatureToggle.find().lean() });
+  const [featureToggles, contactSettings] = await Promise.all([
+    FeatureToggle.find().lean(),
+    getContactSettings(),
+  ]);
+  return ok(res, { featureToggles, contactSettings });
+}
+
+export async function updateContactSettings(req, res) {
+  const data = matchedData(req, { locations: ["body"], includeOptionals: true });
+  const value = await saveContactSettings(data);
+  await writeAuditLog(req, "admin.contact_settings.updated", {
+    fields: Object.keys(data).filter((key) => data[key] !== undefined),
+  });
+  return ok(res, value);
 }
 
 export async function getWarrantyPolicyAdmin(_req, res) {
@@ -296,22 +368,80 @@ export async function listCategoriesAdmin(_req, res) {
 
 export async function createCategory(req, res) {
   const data = matchedData(req, { locations: ["body"], includeOptionals: true });
-  const category = await Category.create({ ...data, id: data.id || data.slug || slugify(data.name), slug: data.slug || data.id || slugify(data.name) });
+  const slug = slugify(data.slug || data.id || data.name);
+  const existing = await Category.findOne({ $or: [{ id: slug }, { slug }] }).lean();
+  if (existing) throw createHttpError(409, `Category "${data.name}" already exists. Use a different category name or slug.`);
+  const category = await Category.create(categoryPayload(data, slug));
   await writeAuditLog(req, "admin.category.created", { id: category.id });
   return ok(res, category, 201);
 }
 
 export async function updateCategory(req, res) {
   const data = matchedData(req, { locations: ["body"], includeOptionals: true });
-  const category = await Category.findOneAndUpdate({ id: req.params.id }, data, { new: true, runValidators: true });
+  const nextSlug = data.slug || data.id ? slugify(data.slug || data.id) : "";
+  if (nextSlug && nextSlug !== req.params.id) {
+    const existing = await Category.findOne({ $or: [{ id: nextSlug }, { slug: nextSlug }] }).lean();
+    if (existing) throw createHttpError(409, `Category slug "${nextSlug}" is already used.`);
+  }
+  const category = await Category.findOneAndUpdate(
+    { $or: [{ id: req.params.id }, { slug: req.params.id }] },
+    categoryPayload(data, nextSlug || undefined, true),
+    { new: true, runValidators: true }
+  );
   if (!category) throw createHttpError(404, "Category not found.");
   await writeAuditLog(req, "admin.category.updated", { id: category.id });
   return ok(res, category);
 }
 
+function categoryPayload(data, slug, partial = false) {
+  const payload = {};
+  const assign = (key, value) => {
+    if (value !== undefined && value !== null) payload[key] = value;
+  };
+  const has = (key) => Object.prototype.hasOwnProperty.call(data, key);
+
+  if (slug) {
+    payload.id = slug;
+    payload.slug = slug;
+  }
+  if (has("name")) assign("name", data.name?.trim());
+  if (has("description")) assign("description", data.description?.trim() || "");
+  if (has("icon")) assign("icon", data.icon?.trim() || "");
+  if (has("image")) assign("image", data.image);
+  if (has("heroBanner")) assign("heroBanner", data.heroBanner);
+  if (has("enabled")) assign("enabled", data.enabled);
+  if (has("featured")) assign("featured", data.featured);
+  if (has("desktopMenuVisible")) assign("desktopMenuVisible", data.desktopMenuVisible);
+  if (has("sortOrder")) assign("sortOrder", data.sortOrder);
+  if (has("featuredProducts")) assign("featuredProducts", data.featuredProducts);
+
+  if (!partial) {
+    payload.enabled = data.enabled !== false;
+    payload.featured = Boolean(data.featured);
+    payload.desktopMenuVisible = Boolean(data.desktopMenuVisible);
+    payload.sortOrder = Number(data.sortOrder || 0);
+    payload.featuredProducts = Array.isArray(data.featuredProducts) ? data.featuredProducts : [];
+  }
+
+  return payload;
+}
+
 export async function deleteCategory(req, res) {
-  const category = await Category.findOneAndDelete({ id: req.params.id });
+  const category = await Category.findOne({ $or: [{ id: req.params.id }, { slug: req.params.id }] });
   if (!category) throw createHttpError(404, "Category not found.");
+  const productCount = await Product.countDocuments({
+    $or: [
+      { category: category.id },
+      { category: category.slug },
+      { category: category.name },
+      { categorySlug: category.id },
+      { categorySlug: category.slug },
+    ],
+  });
+  if (productCount > 0) {
+    throw createHttpError(409, `Delete products from this category first. ${productCount} product${productCount === 1 ? "" : "s"} still use it.`);
+  }
+  await category.deleteOne();
   await writeAuditLog(req, "admin.category.deleted", { id: category.id });
   return ok(res, { deleted: true, category });
 }
@@ -370,13 +500,18 @@ export async function updateWarrantyStatus(req, res) {
   const ownership = await ProductOwnership.findOne({ id: req.params.id });
   if (ownership) {
     if (data.status) {
-      ownership.status = data.status === "Active" ? "Active" : data.status === "Rejected" ? "Rejected" : ownership.status;
+      ownership.status = ["Active", "Rejected", "Pending Verification"].includes(data.status) ? data.status : ownership.status;
       ownership.warrantyStatus = data.status;
       if (data.status === "Active") {
         ownership.verifiedAt = new Date();
+        ownership.rejectedAt = undefined;
         await syncUnitOwner({ serial: ownership.serial, ownership });
       }
       if (data.status === "Rejected") ownership.rejectedAt = new Date();
+      if (data.status === "Pending Verification") {
+        ownership.verifiedAt = undefined;
+        ownership.rejectedAt = undefined;
+      }
       ownership.timeline.push({ status: data.status, note: data.notes || "Admin warranty update", actorEmail: req.user.email });
     }
     if (data.notes) ownership.reviewNote = data.notes;

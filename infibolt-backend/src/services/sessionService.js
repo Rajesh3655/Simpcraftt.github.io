@@ -22,7 +22,7 @@ export async function createSession(req, res, user, familyId = randomToken(18)) 
 
   user.refreshTokenHash = tokenHash;
   await user.save();
-  setAuthCookies(res, { accessToken, refreshToken });
+  setAuthCookies(res, { accessToken, refreshToken, role: user.role });
   return { refreshToken, tokenHash, familyId };
 }
 

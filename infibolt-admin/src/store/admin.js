@@ -117,7 +117,6 @@ export const featureToggles = [
 export const databaseCollections = [
   "products",
   "categories",
-  "collections",
   "users",
   "marketplace_links",
   "marketplace_clicks",

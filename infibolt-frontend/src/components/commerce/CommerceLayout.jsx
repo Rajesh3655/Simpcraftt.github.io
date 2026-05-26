@@ -5,12 +5,14 @@ import {
   CircleHelp,
   CreditCard,
   FileUp,
-  Grid2X2,
   Heart,
   Headphones,
+  Linkedin,
   Lock,
+  Mail,
   Home,
   PackageCheck,
+  Phone,
   Search,
   Send,
   Shield,
@@ -18,16 +20,15 @@ import {
   ShoppingBag,
   SlidersHorizontal,
   Sparkles,
-  Star,
   TicketCheck,
   UserRound,
+  Youtube,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router";
 import { toast } from "sonner";
 import {
   categories,
-  collections,
   faqs,
   formatPrice,
   getCategoryById,
@@ -37,11 +38,11 @@ import { useAppStore } from "../../store/appStore";
 import { productService } from "../../services/productService";
 import { uploadUrl } from "../../config/api";
 import { request } from "../../services/api";
+import { defaultContactSettings, siteService } from "../../services/siteService";
 
 const navItems = [
   { label: "Home", href: "/" },
   { label: "Products", href: "/products" },
-  { label: "Collections", href: "/collections" },
   { label: "Warranty", href: "/warranty" },
   { label: "Support", href: "/support" },
 ];
@@ -49,7 +50,6 @@ const navItems = [
 const bottomNavItems = [
   { label: "Home", href: "/", icon: Home },
   { label: "Products", href: "/products", icon: Headphones },
-  { label: "Collections", href: "/collections", icon: Grid2X2 },
   { label: "Warranty", href: "/warranty", icon: Shield },
   { label: "Help", href: "/support", icon: CircleHelp },
 ];
@@ -57,7 +57,6 @@ const bottomNavItems = [
 const breadcrumbLabelMap = {
   cart: "Launch partners",
   checkout: "Products",
-  collections: "Collections",
   contact: "Contact",
   faq: "FAQ",
   home: "Home",
@@ -249,6 +248,7 @@ export function CommerceShell({
   description,
   seoTitle,
   seoDescription,
+  breadcrumbItems,
 }) {
   const { pathname } = useLocation();
   const authUser = useAppStore((state) => state.auth.user);
@@ -337,7 +337,7 @@ export function CommerceShell({
               alt="INFIBOLT logo"
               className="h-[22px] w-[22px] shrink-0 object-contain dark:invert"
             />
-            <span className="truncate text-[13px] font-bold uppercase leading-none tracking-[0.22em] text-[#111827] dark:text-white">
+            <span className="truncate text-[14px] font-extrabold uppercase leading-none tracking-[0.24em] text-[#111827] dark:text-white">
               INFIBOLT
             </span>
           </Link>
@@ -348,7 +348,7 @@ export function CommerceShell({
                 key={item.href}
                 to={item.href}
                 prefetch="intent"
-                onMouseEnter={() => setActiveMega(item.href === "/products" || item.href === "/collections" ? item.href : null)}
+                onMouseEnter={() => setActiveMega(item.href === "/products" ? item.href : null)}
                 className={`relative rounded-full px-1.5 py-1 text-sm font-semibold tracking-normal transition-colors duration-300 ${
                   pathname === item.href
                     ? "text-slate-950 lg:dark:text-white"
@@ -391,7 +391,7 @@ export function CommerceShell({
       {!hideMobileBottomNav && <MobileBottomNav pathname={pathname} visible={showMobileBottomNav} />}
 
       <div className={`flex flex-col flex-1 pt-[65px] lg:pt-[73px] ${hideMobileBottomNav ? "pb-0" : "pb-24 lg:pb-0"}`}>
-        {title && <PageHero eyebrow={eyebrow} title={title} description={description} />}
+        {title && <PageHero eyebrow={eyebrow} title={title} description={description} breadcrumbItems={breadcrumbItems} />}
         <main id="main-content" className="relative z-10 flex-1">{children}</main>
         <CommerceFooter />
       </div>
@@ -407,7 +407,7 @@ function MobileBottomNav({ pathname, visible = true }) {
         visible ? "translate-y-0" : "translate-y-[120%]"
       }`}
     >
-      <div className="mx-auto grid w-full max-w-[720px] grid-cols-5 rounded-[1.2rem] border border-white/70 bg-white/90 p-1 shadow-[0_14px_42px_rgba(15,23,42,0.13)] backdrop-blur-2xl">
+      <div className="mx-auto grid w-full max-w-[720px] grid-cols-4 rounded-[1.2rem] border border-white/70 bg-white/90 p-1 shadow-[0_14px_42px_rgba(15,23,42,0.13)] backdrop-blur-2xl">
         {bottomNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
@@ -479,23 +479,37 @@ function IconLink({ href, label, children, active = false }) {
 }
 
 function MegaMenu({ active }) {
-  const isOpen = active === "/products" || active === "/collections";
-  const [menuData, setMenuData] = useState({ products, categories, collections });
-  const featured = (menuData.products.filter((product) => product.featured || product.homepageVisible).length
-    ? menuData.products.filter((product) => product.featured || product.homepageVisible)
-    : menuData.products).slice(0, 3);
+  const isOpen = active === "/products";
+  const [menuData, setMenuData] = useState({ products: [], categories: [] });
+  const visibleCategories = [...menuData.categories]
+    .filter((category) => category.desktopMenuVisible === true)
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || String(a.name).localeCompare(String(b.name)))
+    .slice(0, 4);
+  const featured = [...menuData.products]
+    .filter((product) => product.desktopMenuFeatured === true)
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || String(a.name).localeCompare(String(b.name)))
+    .slice(0, 4);
+  const featuredGridClass = featured.length <= 1
+    ? "max-w-[300px] grid-cols-1 justify-self-start"
+    : featured.length === 2
+      ? "max-w-[620px] grid-cols-2 justify-self-start"
+      : featured.length === 3
+        ? "max-w-[680px] grid-cols-3 justify-self-start"
+        : "max-w-[820px] grid-cols-4 justify-self-start";
 
   useEffect(() => {
     if (!isOpen) return undefined;
     let alive = true;
-    Promise.all([productService.list(), productService.categories(), productService.collections()]).then(([productResult, categoryResult, collectionResult]) => {
+    Promise.all([productService.list(), productService.categories()]).then(([productResult, categoryResult]) => {
       if (!alive) return;
       setMenuData({
-        products: productResult.items?.length ? productResult.items : products,
-        categories: categoryResult.items?.length ? categoryResult.items : categories,
-        collections: collectionResult.items?.length ? collectionResult.items : collections,
+        products: productResult.items || [],
+        categories: categoryResult.items || [],
       });
-    }).catch(() => {});
+    }).catch(() => {
+      if (!alive) return;
+      setMenuData({ products: [], categories: [] });
+    });
     return () => {
       alive = false;
     };
@@ -504,17 +518,17 @@ function MegaMenu({ active }) {
   return (
     <div
       className={`hidden overflow-hidden border-t border-slate-900/[0.06] bg-white/92 shadow-[0_34px_80px_rgba(15,23,42,0.12)] backdrop-blur-2xl transition-all duration-300 lg:block dark:border-white/10 dark:bg-[#08090b]/92 ${
-        isOpen ? "max-h-[430px] opacity-100" : "max-h-0 opacity-0"
+        isOpen ? "max-h-[560px] opacity-100" : "max-h-0 opacity-0"
       }`}
     >
-      <div className="mx-auto grid max-w-[1400px] grid-cols-[0.85fr_1.15fr] gap-12 px-12 py-8">
+      <div className="mx-auto grid max-w-[1400px] grid-cols-[0.72fr_1.28fr] gap-8 px-10 py-7 xl:px-12 xl:py-8">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-            {active === "/collections" ? "Curated ecosystems" : "Product universe"}
+            Product universe
           </p>
           <div className="mt-5 grid gap-2">
-            {(active === "/collections" ? menuData.collections : menuData.categories).map((item) => {
-              const href = active === "/collections" ? `/products?collection=${item.slug}` : `/products?category=${item.id}`;
+            {visibleCategories.map((item) => {
+              const href = `/products?category=${item.id || item.slug}`;
               return (
                 <Link
                   key={item.slug ?? item.id}
@@ -532,21 +546,21 @@ function MegaMenu({ active }) {
             })}
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className={`grid gap-3 xl:gap-4 ${featuredGridClass}`}>
           {featured.map((product) => (
             <Link
               key={product.slug}
               to={`/products/${product.slug}`}
               prefetch="intent"
-              className="group overflow-hidden rounded-2xl border border-slate-900/8 bg-slate-50/80 p-2 transition duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_18px_48px_rgba(15,23,42,0.11)] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
+              className="group min-w-0 overflow-hidden rounded-2xl border border-slate-900/8 bg-slate-50/80 p-1.5 transition duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_18px_48px_rgba(15,23,42,0.11)] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] xl:p-2"
             >
-              <div className="aspect-[4/3] overflow-hidden rounded-xl bg-slate-100 dark:bg-white/[0.05]">
+              <div className="aspect-square overflow-hidden rounded-xl bg-slate-100 dark:bg-white/[0.05] xl:aspect-[4/3]">
                 <CinematicImage src={product.image} alt={product.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.025]" />
               </div>
-              <div className="p-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">{product.badge}</p>
-                <h3 className="mt-2 text-sm font-semibold leading-tight text-slate-950 dark:text-white">{product.name}</h3>
-                <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{formatPrice(product.price)}</p>
+              <div className="p-2 xl:p-3">
+                <p className="truncate text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400 xl:text-[10px] xl:tracking-[0.18em]">{product.badge}</p>
+                <h3 className="mt-1.5 line-clamp-2 text-xs font-semibold leading-tight text-slate-950 dark:text-white xl:mt-2 xl:text-sm">{product.name}</h3>
+                <p className="mt-1.5 text-[11px] leading-5 text-slate-500 dark:text-slate-400 xl:mt-2 xl:text-xs">{formatPrice(product.price)}</p>
               </div>
             </Link>
           ))}
@@ -556,10 +570,11 @@ function MegaMenu({ active }) {
   );
 }
 
-export function PageHero({ eyebrow, title, description, action }) {
+export function PageHero({ eyebrow, title, description, action, breadcrumbItems }) {
   const { pathname } = useLocation();
   const isHome = pathname === "/";
   const crumbs = useMemo(() => {
+    if (breadcrumbItems?.length) return breadcrumbItems;
     const segments = pathname.split("/").filter(Boolean);
     const items = [{ label: "Home", href: "/" }];
     let current = "";
@@ -575,22 +590,23 @@ export function PageHero({ eyebrow, title, description, action }) {
       });
     });
     return items;
-  }, [pathname]);
+  }, [breadcrumbItems, pathname]);
 
   return (
-    <section className={`relative z-10 flex flex-col overflow-hidden ${isHome ? "min-h-[30vh] justify-end pb-12 pt-16 sm:pt-20 lg:min-h-[50vh] lg:pb-20 lg:pt-28" : "border-b border-slate-900/[0.06] bg-white/35 pb-7 pt-7 sm:pt-9 lg:pb-10 lg:pt-12 dark:border-white/10 dark:bg-white/[0.02]"}`}>
-      <div className="mx-auto w-full max-w-[1400px] px-5 sm:px-6 lg:px-12">
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.62, ease: [0.22, 1, 0.36, 1] }} className="max-w-4xl">
-          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 sm:mb-4 sm:text-[11px] dark:text-slate-300">{eyebrow}</p>
-          {crumbs.length > 1 && <Breadcrumbs items={crumbs} />}
-          <h1 className={`font-semibold text-slate-900 dark:text-white ${isHome ? "text-4xl leading-[0.98] sm:text-5xl lg:text-[5.25rem] lg:leading-[0.94]" : "max-w-3xl text-[2rem] leading-[1.12] sm:text-[2.55rem] sm:leading-[1.08] lg:text-[3.25rem]"}`}>
-            {title}
-          </h1>
-          {description && <p className={`mt-4 max-w-2xl leading-relaxed text-slate-600 dark:text-slate-400 ${isHome ? "text-base font-light sm:text-lg lg:text-xl" : "text-[0.95rem] font-normal sm:text-base"}`}>{description}</p>}
-          {action && <div className="mt-8 flex flex-wrap items-center gap-3 sm:gap-4 lg:mt-16 lg:gap-6">{action}</div>}
-        </motion.div>
-      </div>
-    </section>
+    <>
+      {!isHome && crumbs.length > 1 && <BreadcrumbBar items={crumbs} />}
+      <section className={`relative z-10 flex flex-col overflow-hidden ${isHome ? "min-h-[30vh] justify-end pb-12 pt-16 sm:pt-20 lg:min-h-[50vh] lg:pb-20 lg:pt-28" : "border-b border-slate-900/[0.06] bg-white/35 pb-7 pt-7 sm:pt-9 lg:pb-10 lg:pt-12 dark:border-white/10 dark:bg-white/[0.02]"}`}>
+        <div className="mx-auto w-full max-w-[1400px] px-5 sm:px-6 lg:px-12">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.62, ease: [0.22, 1, 0.36, 1] }} className="max-w-4xl">
+            <h1 className={`font-semibold text-slate-900 dark:text-white ${isHome ? "text-4xl leading-[0.98] sm:text-5xl lg:text-[5.25rem] lg:leading-[0.94]" : "max-w-3xl text-[2rem] leading-[1.12] sm:text-[2.55rem] sm:leading-[1.08] lg:text-[3.25rem]"}`}>
+              {title}
+            </h1>
+            {description && <p className={`mt-4 max-w-2xl leading-relaxed text-slate-600 dark:text-slate-400 ${isHome ? "text-base font-light sm:text-lg lg:text-xl" : "text-[0.95rem] font-normal sm:text-base"}`}>{description}</p>}
+            {action && <div className="mt-8 flex flex-wrap items-center gap-3 sm:gap-4 lg:mt-16 lg:gap-6">{action}</div>}
+          </motion.div>
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -644,7 +660,7 @@ function SubmitButton({ children }) {
   );
 }
 
-export function ProductGrid({ items = products, columns = "default" }) {
+export function ProductGrid({ items = [], columns = "default" }) {
   const columnClass = columns === "featured" ? "lg:grid-cols-2 xl:grid-cols-3" : "lg:grid-cols-3 xl:grid-cols-4";
 
   if (!items.length) {
@@ -652,7 +668,7 @@ export function ProductGrid({ items = products, columns = "default" }) {
       <div className="rounded-2xl border border-slate-900/10 bg-slate-50 p-8 text-center dark:border-white/10 dark:bg-white/[0.02]">
         <Search className="mx-auto h-6 w-6 text-slate-400" />
         <h2 className="mt-4 text-xl font-semibold tracking-tight text-slate-900 dark:text-white">No products match this view</h2>
-        <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-500 dark:text-slate-400">Try a different category, collection, or search phrase. New product stories will appear here as the catalogue grows.</p>
+        <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-500 dark:text-slate-400">Try a different category or search phrase. New product stories will appear here as the catalogue grows.</p>
       </div>
     );
   }
@@ -660,8 +676,7 @@ export function ProductGrid({ items = products, columns = "default" }) {
   return (
     <motion.div
       initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, margin: "-50px" }}
+      animate="visible"
       variants={{
         visible: {
           transition: { staggerChildren: 0.1 }
@@ -728,9 +743,6 @@ export function ProductCard({ product }) {
             <span className="text-[8px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300 sm:text-[10px] sm:tracking-[0.2em]">
               {category?.name}
             </span>
-            <span className="flex items-center gap-1 text-[10px] font-medium text-slate-400 dark:text-slate-400 sm:gap-1.5 sm:text-xs">
-              {product.rating} <Star className="h-3 w-3 fill-current text-amber-400 sm:h-3.5 sm:w-3.5" />
-            </span>
           </div>
           <h3 className="line-clamp-2 text-[1.02rem] font-semibold leading-tight tracking-normal text-slate-900 transition-colors duration-200 group-hover:text-slate-700 sm:text-[1.16rem] md:text-[1.25rem] dark:text-white dark:group-hover:text-slate-200">{product.name}</h3>
           <p className="mt-1.5 line-clamp-2 min-h-[2.25rem] text-[0.74rem] leading-5 text-slate-600 dark:text-slate-400 sm:mt-2.5 sm:min-h-[3rem] sm:text-[0.88rem] sm:leading-relaxed">{product.summary}</p>
@@ -755,7 +767,6 @@ export function ProductFilters({ selectedCategory, onCategoryChange, query, onQu
     ["featured", "Featured"],
     ["price-low", "Price: Low to High"],
     ["price-high", "Price: High to Low"],
-    ["rating", "Top Rated"],
   ];
   const selectedSortLabel = sortOptions.find(([value]) => value === sort)?.[1] ?? "Featured";
 
@@ -812,19 +823,23 @@ export function ProductFilters({ selectedCategory, onCategoryChange, query, onQu
       </div>
 
       {/* Bottom Row: Sliding Category Pills */}
-      <div className="relative -mx-4 sm:mx-0">
-        <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-2 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-          {[{ id: "all", name: "All Products" }, ...categoryItems].map((category) => (
+      <div className="relative -mx-4 overflow-hidden sm:mx-0">
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-10 bg-gradient-to-l from-white via-white/90 to-transparent dark:from-[#111318] dark:via-[#111318]/90" />
+        <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-2 pr-14 scroll-px-4 sm:px-0 sm:pr-10 sm:scroll-px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+          {[{ id: "all", name: "All Products" }, ...categoryItems].map((category) => {
+            const categoryValue = category.id === "all" ? "all" : category.slug || category.id || category.name;
+            const isSelected = selectedCategory === categoryValue || selectedCategory === category.id || selectedCategory === category.slug || selectedCategory === category.name;
+            return (
             <button
-              key={category.id}
-              onClick={() => onCategoryChange(category.id)}
-              className={`relative snap-start whitespace-nowrap rounded-full px-6 py-2.5 text-sm font-medium transition-colors ${
-                selectedCategory === category.id
+              key={categoryValue}
+              onClick={() => onCategoryChange(categoryValue)}
+              className={`relative min-w-max snap-start whitespace-nowrap rounded-full px-6 py-2.5 text-sm font-medium transition-colors ${
+                isSelected
                   ? "text-slate-900 dark:text-white"
                   : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
               }`}
             >
-              {selectedCategory === category.id && (
+              {isSelected && (
                 <motion.div
                   layoutId="active-category-pill"
                   className="absolute inset-0 rounded-full bg-white shadow-sm border border-slate-200 dark:bg-white/10 dark:border-white/10"
@@ -833,7 +848,7 @@ export function ProductFilters({ selectedCategory, onCategoryChange, query, onQu
               )}
               <span className="relative z-10">{category.name}</span>
             </button>
-          ))}
+          );})}
         </div>
       </div>
     </div>
@@ -879,7 +894,7 @@ export function BuyPanel({ product }) {
         product: product.name,
         productSlug: product.slug,
         source: "Product purchase card",
-        ...(value.includes("@") ? { email: value } : { phone: value }),
+        email: value,
       });
       toast.success("Launch updates enabled", { description: "We will alert you when partner availability changes." });
       setNotifyValue("");
@@ -928,12 +943,12 @@ export function BuyPanel({ product }) {
         <SecondaryButton href="/warranty">Register Product</SecondaryButton>
       </div>
       <form onSubmit={submitNotify} className="mt-5 grid gap-3 rounded-2xl border border-slate-900/8 bg-white/48 p-3 dark:border-white/10 dark:bg-white/[0.035]">
-        <label className="sr-only" htmlFor={`notify-${product.slug}`}>Email or mobile for launch updates</label>
+        <label className="sr-only" htmlFor={`notify-${product.slug}`}>Email for launch updates</label>
         <input
           id={`notify-${product.slug}`}
           value={notifyValue}
           onChange={(event) => setNotifyValue(event.target.value)}
-          placeholder="Email or mobile for availability alerts"
+          placeholder="Email for availability alerts"
           className="min-h-[46px] rounded-full border border-slate-900/10 bg-white px-4 text-sm font-medium outline-none focus:border-slate-950 dark:border-white/10 dark:bg-slate-950 dark:text-white"
         />
         <button type="submit" disabled={submitting || !notifyValue.trim()} className="min-h-[46px] rounded-full bg-slate-950 px-5 text-[11px] font-bold uppercase tracking-[0.15em] text-white transition hover:bg-slate-800 disabled:opacity-50 dark:bg-white dark:text-slate-950">
@@ -942,7 +957,7 @@ export function BuyPanel({ product }) {
       </form>
       <div className="mt-7 grid grid-cols-3 gap-3 border-t border-slate-900/8 pt-5 text-center dark:border-white/10">
         {[
-          `${product.warrantyMonths || 12} month warranty`,
+          "Warranty support",
           `${product.replacementDays || 7} day support`,
           "Ownership profile",
         ].map((item) => (
@@ -1093,7 +1108,7 @@ export function WarrantyForm() {
           <ShieldCheck className="mt-1 h-5 w-5 shrink-0" />
           <div>
             <h3 className="font-semibold">Warranty verification system ready</h3>
-            <p className="mt-2 text-sm leading-relaxed opacity-85">Use this flow for product details, serial number, invoice upload, and OTP verification.</p>
+            <p className="mt-2 text-sm leading-relaxed opacity-85">Use this flow for product details, serial number, invoice upload, and email OTP verification.</p>
           </div>
         </div>
       </div>
@@ -1125,7 +1140,7 @@ export function WarrantyForm() {
       <div className="grid gap-5 md:grid-cols-[1fr_220px]">
         <Field name="otp" label="OTP verification" placeholder="6-digit code" disabled />
         <div className="rounded-xl border border-slate-900/10 bg-white/50 p-4 text-sm text-slate-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400">
-          Mobile OTP verification protects every warranty claim.
+          Email OTP verification protects every warranty claim.
         </div>
       </div>
       <label className="flex items-center gap-4 text-sm font-medium text-slate-600 dark:text-slate-400 py-4">
@@ -1258,52 +1273,26 @@ export function FeatureBand() {
   );
 }
 
-export function CollectionGrid({ items = collections }) {
-  const MotionLink = motion.create(Link);
+function BreadcrumbBar({ items }) {
   return (
-    <div className="grid gap-6 md:grid-cols-3">
-      {items.map((collection) => (
-        <MotionLink
-          key={collection.slug}
-          to={`/products?collection=${collection.slug}`}
-          whileHover={{ y: -3, scale: 1.005 }}
-          whileTap={{ scale: 0.995 }}
-          transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-          className="group relative flex flex-col justify-between overflow-hidden rounded-2xl bg-slate-50 p-8 transition-colors duration-300 hover:bg-white dark:bg-white/[0.02] dark:hover:bg-white/[0.04] border border-black/5 dark:border-white/5 min-h-[300px]"
-        >
-          
-          <div className="relative z-10">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">{collection.productSlugs?.length || 0} products</p>
-            <h3 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 md:text-3xl dark:text-white">{collection.name}</h3>
-            <p className="mt-4 leading-relaxed text-slate-600 dark:text-slate-400">{collection.description}</p>
-          </div>
-          <div className="relative z-10 mt-8 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider transition-transform duration-500 group-hover:translate-x-1 text-slate-900 dark:text-white">
-            Explore <ArrowRight className="h-4 w-4" />
-          </div>
-        </MotionLink>
-      ))}
-    </div>
-  );
-}
-
-function Breadcrumbs({ items }) {
-  return (
-    <nav aria-label="Breadcrumb" className="mb-4 hidden flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 sm:mb-5 sm:text-[11px] sm:tracking-[0.16em] lg:flex dark:text-slate-300">
-      {items.map((item, index) => {
-        const isLast = index === items.length - 1;
-        return (
-          <span key={`${item.href}-${item.label}`} className="inline-flex items-center gap-2">
-            {isLast ? (
-              <span className="text-slate-900 dark:text-white">{item.label}</span>
-            ) : (
-              <Link to={item.href} className="hover:text-slate-900 dark:hover:text-white transition-colors">
-                {item.label}
-              </Link>
-            )}
-            {!isLast && <span className="opacity-50">/</span>}
-          </span>
-        );
-      })}
+    <nav aria-label="Breadcrumb" className="border-b border-black/[0.06] bg-white/86 px-4 backdrop-blur-xl sm:px-6">
+      <div className="mx-auto flex min-h-[40px] max-w-[1400px] items-center gap-2 overflow-x-auto whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.22em] text-[#111316] sm:min-h-[42px] lg:px-12">
+        {items.map((item, index) => {
+          const isLast = index === items.length - 1;
+          return (
+            <span key={`${item.href}-${item.label}`} className="inline-flex items-center gap-2">
+              {isLast ? (
+                <span>{item.label}</span>
+              ) : (
+                <Link to={item.href} className="transition hover:text-slate-500">
+                  {item.label}
+                </Link>
+              )}
+              {!isLast && <span className="text-slate-400">/</span>}
+            </span>
+          );
+        })}
+      </div>
     </nav>
   );
 }
@@ -1314,19 +1303,16 @@ export function useFilteredProducts() {
   const [sort, setSort] = useState("featured");
 
   const filteredProducts = useMemo(() => {
-    const collectionFilter = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("collection") : null;
     const normalizedQuery = query.trim().toLowerCase();
     const result = products.filter((product) => {
       const categoryMatches = selectedCategory === "all" || product.category === selectedCategory;
       const textMatches = !normalizedQuery || `${product.name} ${product.summary} ${product.features.join(" ")}`.toLowerCase().includes(normalizedQuery);
-      const collectionMatches = !collectionFilter || product.collection === collectionFilter;
-      return categoryMatches && textMatches && collectionMatches;
+      return categoryMatches && textMatches;
     });
 
     return [...result].sort((a, b) => {
       if (sort === "price-low") return a.price - b.price;
       if (sort === "price-high") return b.price - a.price;
-      if (sort === "rating") return b.rating - a.rating;
       return 0;
     });
   }, [query, selectedCategory, sort]);
@@ -1348,6 +1334,22 @@ export function useFilteredProducts() {
 function CommerceFooter() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("idle");
+  const [contact, setContact] = useState(defaultContactSettings);
+
+  useEffect(() => {
+    let mounted = true;
+    siteService
+      .settings()
+      .then((result) => {
+        if (mounted) setContact(result.contactSettings);
+      })
+      .catch(() => {
+        if (mounted) setContact(defaultContactSettings);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const subscribe = async (event) => {
     event.preventDefault();
@@ -1377,7 +1379,7 @@ function CommerceFooter() {
               alt="INFIBOLT logo"
               className="h-7 w-7 shrink-0 object-contain dark:invert"
             />
-            <span className="text-sm font-bold uppercase tracking-[0.22em] text-slate-900 dark:text-white">
+            <span className="text-[15px] font-extrabold uppercase tracking-[0.24em] text-slate-900 dark:text-white">
               INFIBOLT
             </span>
           </Link>
@@ -1386,6 +1388,21 @@ function CommerceFooter() {
             A premium product ecosystem for marketplace-first launches,
             ownership, warranty, and connected support.
           </p>
+          <div className="mt-4 grid gap-2 text-sm font-medium text-slate-600 dark:text-slate-400">
+            {contact.helpEmail && (
+              <a href={`mailto:${contact.helpEmail}`} className="inline-flex items-center gap-2 transition hover:text-slate-950 dark:hover:text-white">
+                <Mail className="h-4 w-4" />
+                {contact.helpEmail}
+              </a>
+            )}
+            {contactPhone(contact) && (
+              <a href={`tel:${contactPhone(contact).replace(/\s+/g, "")}`} className="inline-flex items-center gap-2 transition hover:text-slate-950 dark:hover:text-white">
+                <Phone className="h-4 w-4" />
+                {contactPhone(contact)}
+              </a>
+            )}
+          </div>
+          <FooterSocialLinks contact={contact} />
           <form onSubmit={subscribe} className="mt-5 flex max-w-sm gap-2">
             <input
               type="email"
@@ -1405,7 +1422,6 @@ function CommerceFooter() {
           title="Shop"
           links={[
             ["Products", "/products"],
-            ["Collections", "/collections"],
             ["Warranty Registration", "/warranty"],
             ["Launch Support", "/support"],
           ]}
@@ -1441,6 +1457,87 @@ function CommerceFooter() {
         </p>
       </div>
     </footer>
+  );
+}
+
+function FooterSocialLinks({ contact }) {
+  const links = [
+    ["WhatsApp", contact.whatsapp, BrandWhatsapp],
+    ["Instagram", contact.instagram, BrandInstagram],
+    ["Facebook", contact.facebook, BrandFacebook],
+    ["X", contact.x, BrandX],
+    ["YouTube", contact.youtube, Youtube, "text-[#ff0000]"],
+    ["LinkedIn", contact.linkedin, Linkedin],
+  ].filter(([, href]) => href);
+
+  if (!links.length) return null;
+
+  return (
+    <div className="mt-5 flex flex-wrap items-center gap-4">
+      {links.map(([label, href, Icon, colorClass]) => (
+        <a
+          key={label}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={label}
+          className="inline-flex text-[#0a66c2] transition hover:-translate-y-0.5 hover:opacity-80"
+        >
+          <Icon className={`h-7 w-7 ${colorClass || ""}`} />
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function contactPhone(contact) {
+  return contact?.mobileNumber || contact?.phone || "";
+}
+
+function BrandWhatsapp({ className = "" }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <path fill="#25D366" d="M12.04 2.02A9.9 9.9 0 0 0 3.6 17.1L2.4 21.6l4.62-1.18a9.9 9.9 0 1 0 5.02-18.4Z" />
+      <path fill="#fff" d="M17.73 14.55c-.26-.13-1.55-.76-1.79-.85-.24-.09-.42-.13-.6.13-.18.26-.69.85-.84 1.02-.15.18-.31.2-.57.07-.26-.13-1.1-.4-2.1-1.29-.78-.69-1.3-1.55-1.45-1.81-.15-.26-.02-.4.12-.53.12-.12.26-.31.39-.46.13-.15.18-.26.26-.44.09-.18.04-.33-.02-.46-.07-.13-.6-1.44-.82-1.97-.22-.52-.44-.45-.6-.46h-.51c-.18 0-.46.07-.7.33-.24.26-.92.9-.92 2.19s.94 2.54 1.07 2.71c.13.18 1.85 2.82 4.48 3.96.63.27 1.12.43 1.5.55.63.2 1.2.17 1.66.1.51-.08 1.55-.63 1.77-1.24.22-.61.22-1.13.15-1.24-.06-.11-.24-.18-.5-.31Z" />
+    </svg>
+  );
+}
+
+function BrandInstagram({ className = "" }) {
+  const gradientId = "infibolt-instagram-gradient";
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <defs>
+        <linearGradient id={gradientId} x1="4" x2="20" y1="20" y2="4" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FEDA75" />
+          <stop offset="0.35" stopColor="#FA7E1E" />
+          <stop offset="0.58" stopColor="#D62976" />
+          <stop offset="0.78" stopColor="#962FBF" />
+          <stop offset="1" stopColor="#4F5BD5" />
+        </linearGradient>
+      </defs>
+      <rect width="18" height="18" x="3" y="3" rx="5" fill={`url(#${gradientId})`} />
+      <circle cx="12" cy="12" r="4.1" fill="none" stroke="#fff" strokeWidth="1.8" />
+      <circle cx="17" cy="7" r="1.2" fill="#fff" />
+    </svg>
+  );
+}
+
+function BrandFacebook({ className = "" }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <circle cx="12" cy="12" r="10" fill="#1877F2" />
+      <path fill="#fff" d="M13.56 21.86v-7.68h2.58l.39-3h-2.97V9.27c0-.87.24-1.46 1.49-1.46h1.59V5.13A21.2 21.2 0 0 0 14.32 5c-2.3 0-3.87 1.4-3.87 3.98v2.2H7.86v3h2.59v7.68h3.11Z" />
+    </svg>
+  );
+}
+
+function BrandX({ className = "" }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      <rect width="20" height="20" x="2" y="2" rx="10" fill="#000" />
+      <path fill="#fff" d="M13.38 10.9 18.78 5h-1.28l-4.69 5.13L9.06 5H4.75l5.66 7.75L4.75 19h1.28l4.95-5.43L14.94 19h4.31l-5.87-8.1Zm-1.75 1.92-.58-.78L6.5 5.91h1.95l3.69 4.98.57.78 4.79 6.46h-1.95l-3.92-5.31Z" />
+    </svg>
   );
 }
 

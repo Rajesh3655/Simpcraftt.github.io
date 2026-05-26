@@ -9,15 +9,17 @@ const unsafeMethods = new Set(["post", "put", "patch", "delete"]);
 function getFriendlyApiError(error) {
   const status = error.response?.status;
   const details = error.response?.data?.details;
+  const fields = error.response?.data?.fields || details?.fields || {};
   const validationMessage = Array.isArray(details) ? details.map((detail) => detail.msg).filter(Boolean).join(" ") : "";
   const serverMessage = validationMessage || error.response?.data?.message;
 
-  if (serverMessage) return { status, message: serverMessage, details };
+  if (serverMessage) return { status, message: serverMessage, details, fields };
   if (error.code === "ECONNABORTED") {
     return {
       status,
       message: "The server took too long to respond. Please try again in a moment.",
       details,
+      fields,
     };
   }
   if (!error.response) {
@@ -25,6 +27,7 @@ function getFriendlyApiError(error) {
       status,
       message: "We could not reach the Infibolt server. Please make sure the backend is running and try again.",
       details,
+      fields,
     };
   }
   if (status >= 500) {
@@ -32,12 +35,14 @@ function getFriendlyApiError(error) {
       status,
       message: "The Infibolt server had a temporary issue. Please try again.",
       details,
+      fields,
     };
   }
   return {
     status,
     message: error.message || "Something went wrong. Please try again.",
     details,
+    fields,
   };
 }
 
@@ -68,18 +73,19 @@ api.interceptors.response.use(
   (response) => response.data,
   (error) => {
     if (error.__mockResponse) return Promise.resolve(error.response.data);
-    const { status, message, details } = getFriendlyApiError(error);
+    const { status, message, details, fields } = getFriendlyApiError(error);
     if (!error.config?.skipGlobalErrorToast) {
+      const toastId = status ? `api-error-${status}` : "api-error-network";
       if (status === 401) {
-        toast.error("Please sign in again", { description: "Your account session expired for safety." });
+        toast.error("Please sign in again", { id: toastId, description: "Your account session expired for safety." });
       } else if (status === 403 && message.includes("CSRF")) {
         csrfToken = null;
-        toast.error("Please try once more", { description: "We refreshed the page safety check." });
+        toast.error("Please try once more", { id: toastId, description: "We refreshed the page safety check." });
       } else {
-        toast.error("We could not complete that", { description: message });
+        toast.error("We could not complete that", { id: toastId, description: message });
       }
     }
-    return Promise.reject({ status, message, details });
+    return Promise.reject({ status, message, details, fields });
   }
 );
 

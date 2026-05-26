@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-export function OtpInput({ value, onChange, disabled = false, error }) {
+export function OtpInput({ value, onChange, disabled = false, error, className = "" }) {
   const refs = useRef([]);
   const digits = Array.from({ length: 6 }, (_, index) => value[index] || "");
 
@@ -35,8 +35,8 @@ export function OtpInput({ value, onChange, disabled = false, error }) {
   };
 
   return (
-    <div className="grid gap-2">
-      <div className="grid grid-cols-6 gap-2 sm:gap-3">
+    <div className={`grid gap-2 ${className}`}>
+      <div className="flex w-full flex-wrap gap-2 sm:gap-3">
         {digits.map((digit, index) => (
           <input
             key={index}
@@ -54,7 +54,7 @@ export function OtpInput({ value, onChange, disabled = false, error }) {
               setDigit(index, event.clipboardData.getData("text"));
             }}
             onKeyDown={onKeyDown(index)}
-            className={`aspect-square min-h-[48px] rounded-2xl border bg-white/72 text-center text-lg font-semibold tracking-normal text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] outline-none transition duration-200 focus:border-slate-900/22 focus:bg-white focus:ring-4 focus:ring-slate-900/[0.055] disabled:opacity-60 dark:bg-white/[0.04] dark:text-white dark:focus:border-white ${
+            className={`h-12 w-12 shrink-0 rounded-2xl border bg-white/72 text-center text-lg font-semibold tracking-normal text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] outline-none transition duration-200 focus:border-slate-900/22 focus:bg-white focus:ring-4 focus:ring-slate-900/[0.055] disabled:opacity-60 dark:bg-white/[0.04] dark:text-white dark:focus:border-white sm:h-14 sm:w-14 ${
               error ? "border-rose-500/35 bg-rose-50/70" : "border-slate-900/10 dark:border-white/10"
             }`}
           />

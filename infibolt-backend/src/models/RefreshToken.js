@@ -4,7 +4,7 @@ import { schemaDefaults } from "./base.js";
 const schema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
-    role: { type: String, required: true, enum: ["customer", "admin", "super-admin"] },
+    role: { type: String, required: true, enum: ["customer", "admin"] },
     tokenHash: { type: String, required: true, unique: true, select: false },
     familyId: { type: String, required: true, index: true },
     replacedByHash: { type: String, select: false },

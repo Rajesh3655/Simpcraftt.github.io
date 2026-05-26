@@ -21,14 +21,35 @@ import { WarrantyClaim } from "../models/WarrantyClaim.js";
 
 export async function connectDatabase() {
   mongoose.set("strictQuery", true);
-  await mongoose.connect(`${env.mongoUri}/${env.mongoDb}`, {
+  await mongoose.connect(mongoConnectionString(), {
     serverSelectionTimeoutMS: 4000,
     autoIndex: env.nodeEnv !== "production",
   });
   if (!env.isProduction || env.allowProductionSeed) {
     await seedDevelopmentData();
   }
-  console.log(`[db] Mongoose connected: ${env.mongoDb}`);
+  if (!env.isProduction) {
+    console.info(`[db] Mongoose connected: ${env.mongoDb}`);
+  }
+}
+
+export function mongoConnectionString() {
+  const uri = env.mongoUri.trim();
+  if (!uri) {
+    throw new Error("Missing MONGODB_URI.");
+  }
+  if (!env.mongoDb) return uri;
+
+  try {
+    const parsed = new URL(uri);
+    if (parsed.pathname && parsed.pathname !== "/") return uri;
+    parsed.pathname = `/${env.mongoDb}`;
+    return parsed.toString();
+  } catch {
+    const [base, query] = uri.split("?", 2);
+    const normalizedBase = base.replace(/\/+$/, "");
+    return `${normalizedBase}/${env.mongoDb}${query ? `?${query}` : ""}`;
+  }
 }
 
 export async function seedDevelopmentData() {

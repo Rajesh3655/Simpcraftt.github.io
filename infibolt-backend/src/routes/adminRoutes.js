@@ -25,11 +25,16 @@ import {
   listNewsletterSubscribers,
   listSupportTicketsAdmin,
   listUsers,
+  listOtpAuditLogs,
   listWarrantyClaimsAdmin,
+  markSupportTicketRead,
   overview,
   reorderProducts,
   replySupportTicket,
+  resendActivationEmail,
   settings,
+  updateContactSettings,
+  updateCustomerSecurityStatus,
   updateCategory,
   updateCollection,
   upsertHomepageSection,
@@ -57,44 +62,49 @@ const uploadedOrUrl = (value) => {
 
 const urlOrEmpty = (value) => {
   if (!value) return true;
-  if (/^https?:\/\//i.test(value)) return true;
+  if (/^https?:\/\//i.test(value)) {
+    const parsed = new URL(value);
+    if (["http:", "https:"].includes(parsed.protocol)) return true;
+  }
   throw new Error("Must be a valid URL.");
 };
 
 const productValidation = (partial = false) => {
-  const optional = partial ? { nullable: true } : false;
+  const optional = partial ? { nullable: true, checkFalsy: true } : { nullable: true, checkFalsy: true };
   const field = (name) => (partial ? body(name).optional(optional) : body(name));
   return [
-    field("name").trim().isLength({ min: 2, max: 120 }),
-    body("slug").optional({ nullable: true }).trim().matches(/^[a-z0-9-]+$/),
-    field("category").trim().isLength({ min: 2, max: 60 }),
-    body("categorySlug").optional({ nullable: true }).trim().matches(/^[a-z0-9-]+$/),
-    body("collection").optional({ nullable: true }).trim().isLength({ max: 80 }),
-    body("collectionSlug").optional({ nullable: true }).trim().matches(/^[a-z0-9-]+$/),
-    body("sku").optional({ nullable: true }).trim().isLength({ max: 80 }),
-    body("serialPrefix").optional({ nullable: true }).trim().isLength({ max: 30 }),
-    field("price").isFloat({ min: 0 }).toFloat(),
-    body("comparePrice").optional({ nullable: true }).isFloat({ min: 0 }).toFloat(),
-    body("stock").optional({ nullable: true }).isInt({ min: 0 }).toInt(),
-    body("rating").optional({ nullable: true }).isFloat({ min: 0, max: 5 }).toFloat(),
-    body("reviewCount").optional({ nullable: true }).isInt({ min: 0 }).toInt(),
-    body("badge").optional({ nullable: true }).trim().isLength({ max: 40 }),
-    body("status").optional({ nullable: true }).isIn(["Draft", "Preview", "Ready", "Published", "Prototype", "Archived", "Hidden", "Out of Stock", "Upcoming", "Discontinued"]),
-    body("featured").optional({ nullable: true }).isBoolean().toBoolean(),
-    body("newLaunch").optional({ nullable: true }).isBoolean().toBoolean(),
-    body("bestseller").optional({ nullable: true }).isBoolean().toBoolean(),
-    body("trending").optional({ nullable: true }).isBoolean().toBoolean(),
-    body("homepageVisible").optional({ nullable: true }).isBoolean().toBoolean(),
-    body("heroVisible").optional({ nullable: true }).isBoolean().toBoolean(),
-    body("collectionVisible").optional({ nullable: true }).isBoolean().toBoolean(),
-    body("productPageVisible").optional({ nullable: true }).isBoolean().toBoolean(),
-    body("mobileFeatured").optional({ nullable: true }).isBoolean().toBoolean(),
-    body("supportWarrantyEnabled").optional({ nullable: true }).isBoolean().toBoolean(),
-    body("sortOrder").optional({ nullable: true }).isInt().toInt(),
-    body("visibility").optional({ nullable: true }).isIn(["public", "private", "admin-only"]),
-    field("summary").trim().isLength({ min: 5, max: 500 }),
+    field("name").trim().isLength({ min: 2, max: 120 }).withMessage("Enter 2 to 120 characters."),
+    (partial ? body("slug").optional(optional) : body("slug")).trim().matches(/^[a-z0-9-]+$/).withMessage("Use lowercase letters, numbers, and hyphens only."),
+    field("category").trim().isLength({ min: 2, max: 60 }).withMessage("Select a valid category."),
+    body("categorySlug").optional(optional).trim().matches(/^[a-z0-9-]+$/),
+    body("collection").optional(optional).trim().isLength({ max: 80 }),
+    body("collectionSlug").optional(optional).trim().matches(/^[a-z0-9-]+$/),
+    body("sku").optional(optional).trim().isLength({ max: 80 }),
+    body("serialPrefix").optional(optional).trim().isLength({ max: 30 }),
+    field("price").isFloat({ min: 0 }).withMessage("Enter a valid price.").toFloat(),
+    body("comparePrice").optional(optional).isFloat({ min: 0 }).toFloat(),
+    body("stock").optional(optional).isInt({ min: 0 }).toInt(),
+    body("rating").optional(optional).isFloat({ min: 0, max: 5 }).toFloat(),
+    body("reviewCount").optional(optional).isInt({ min: 0 }).toInt(),
+    body("badge").optional(optional).trim().isLength({ max: 40 }),
+    body("subtitle").optional(optional).trim().isLength({ max: 180 }),
+    body("status").optional(optional).isIn(["Draft", "Preview", "Ready", "Published", "Prototype", "Archived", "Hidden", "Out of Stock", "Upcoming", "Discontinued"]),
+    body("featured").optional(optional).isBoolean().toBoolean(),
+    body("newLaunch").optional(optional).isBoolean().toBoolean(),
+    body("bestseller").optional(optional).isBoolean().toBoolean(),
+    body("trending").optional(optional).isBoolean().toBoolean(),
+    body("homepageVisible").optional(optional).isBoolean().toBoolean(),
+    body("heroVisible").optional(optional).isBoolean().toBoolean(),
+    body("desktopMenuFeatured").optional(optional).isBoolean().toBoolean(),
+    body("collectionVisible").optional(optional).isBoolean().toBoolean(),
+    body("productPageVisible").optional(optional).isBoolean().toBoolean(),
+    body("mobileFeatured").optional(optional).isBoolean().toBoolean(),
+    body("supportWarrantyEnabled").optional(optional).isBoolean().toBoolean(),
+    body("sortOrder").optional(optional).isInt().toInt(),
+    body("visibility").optional(optional).isIn(["public", "private", "admin-only"]),
+    field("summary").trim().isLength({ min: 5, max: 500 }).withMessage("Enter 5 to 500 characters."),
     body("shortDescription").optional({ nullable: true }).trim().isLength({ max: 500 }),
-    body("description").optional({ nullable: true }).trim().isLength({ max: 2000 }),
+    body("description").optional({ nullable: true }).trim().isLength({ max: 2000 }).withMessage("Keep the description under 2000 characters."),
     body("fullDescription").optional({ nullable: true }).trim().isLength({ max: 6000 }),
     body("image").optional({ nullable: true }).custom(uploadedOrUrl),
     body("coverImage").optional({ nullable: true }).custom(uploadedOrUrl),
@@ -108,12 +118,37 @@ const productValidation = (partial = false) => {
     body("variants").optional({ nullable: true }).isArray({ max: 20 }),
     body("variants.*").optional({ nullable: true }).trim().isLength({ max: 80 }),
     body("features").optional({ nullable: true }).isArray({ max: 20 }),
-    body("features.*").optional({ nullable: true }).trim().isLength({ max: 180 }),
+    body("features.*").optional({ nullable: true }).trim().isLength({ max: 180 }).withMessage("Each highlight must be under 180 characters."),
     body("highlights").optional({ nullable: true }).isArray({ max: 20 }),
     body("highlights.*").optional({ nullable: true }).trim().isLength({ max: 180 }),
+    body("premiumHighlights").optional({ nullable: true }).isArray({ max: 5 }),
+    body("premiumHighlights.*.label").optional({ nullable: true }).trim().isLength({ max: 80 }),
+    body("premiumHighlights.*.icon").optional({ nullable: true }).trim().isLength({ max: 40 }),
+    body("premiumHighlights.*.order").optional({ nullable: true }).isInt().toInt(),
+    body("storySection.title").optional({ nullable: true }).trim().isLength({ max: 140 }),
+    body("storySection.subtitle").optional({ nullable: true }).trim().isLength({ max: 360 }),
+    body("storySection.backgroundImage").optional({ nullable: true }).custom(uploadedOrUrl),
+    body("storySection.alignment").optional({ nullable: true }).isIn(["left", "center", "right"]),
+    body("specs").optional({ nullable: true }).isObject(),
+    body("specs.*").optional({ nullable: true }).trim().isLength({ max: 300 }),
     body("specifications").optional({ nullable: true }).isArray({ max: 40 }),
-    body("featureBlocks").optional({ nullable: true }).isArray({ max: 12 }),
+    body("specifications.*.label").optional({ nullable: true }).trim().isLength({ max: 100 }),
+    body("specifications.*.value").optional({ nullable: true }).trim().isLength({ max: 300 }),
+    body("specifications.*.group").optional({ nullable: true }).trim().isLength({ max: 80 }),
+    body("specifications.*.order").optional({ nullable: true }).isInt().toInt(),
+    body("featureBlocks").optional({ nullable: true }).isArray({ max: 4 }),
+    body("featureBlocks.*.title").optional({ nullable: true }).trim().isLength({ max: 120 }),
+    body("featureBlocks.*.body").optional({ nullable: true }).trim().isLength({ max: 600 }),
+    body("featureBlocks.*.description").optional({ nullable: true }).trim().isLength({ max: 600 }),
+    body("featureBlocks.*.image").optional({ nullable: true }).custom(uploadedOrUrl),
+    body("featureBlocks.*.order").optional({ nullable: true }).isInt().toInt(),
+    body("faqs").optional({ nullable: true }).isArray({ max: 12 }),
+    body("faqs.*.question").optional({ nullable: true }).trim().isLength({ max: 180 }),
+    body("faqs.*.answer").optional({ nullable: true }).trim().isLength({ max: 800 }),
+    body("faqs.*.order").optional({ nullable: true }).isInt().toInt(),
     body("recommendations").optional({ nullable: true }).isArray({ max: 12 }),
+    body("relatedProducts").optional({ nullable: true }).isArray({ max: 4 }),
+    body("relatedProducts.*").optional({ nullable: true }).trim().matches(/^[a-z0-9-]+$/),
     body("warrantyMonths").optional({ nullable: true }).isInt({ min: 0, max: 120 }).toInt(),
     body("replacementDays").optional({ nullable: true }).isInt({ min: 0, max: 365 }).toInt(),
     body("supportPriority").optional({ nullable: true }).isIn(["Low", "Normal", "High", "Flagship"]),
@@ -126,12 +161,13 @@ const productValidation = (partial = false) => {
     body("amazonLink").optional({ nullable: true }).custom(urlOrEmpty),
     body("flipkartLink").optional({ nullable: true }).custom(urlOrEmpty),
     body("externalBuyEnabled").optional({ nullable: true }).isBoolean().toBoolean(),
-    body("marketplace.amazon").optional({ nullable: true }).custom(urlOrEmpty),
-    body("marketplace.flipkart").optional({ nullable: true }).custom(urlOrEmpty),
-    body("marketplace.croma").optional({ nullable: true }).custom(urlOrEmpty),
-    body("marketplace.relianceDigital").optional({ nullable: true }).custom(urlOrEmpty),
+    body("marketplace.amazon").optional({ nullable: true }).custom(urlOrEmpty).withMessage("Enter a valid URL or leave it blank."),
+    body("marketplace.flipkart").optional({ nullable: true }).custom(urlOrEmpty).withMessage("Enter a valid URL or leave it blank."),
+    body("marketplace.croma").optional({ nullable: true }).custom(urlOrEmpty).withMessage("Enter a valid URL or leave it blank."),
+    body("marketplace.relianceDigital").optional({ nullable: true }).custom(urlOrEmpty).withMessage("Enter a valid URL or leave it blank."),
     body("marketplace.retail").optional({ nullable: true }).custom(uploadedOrUrl),
     body("marketplace.custom").optional({ nullable: true }).custom(urlOrEmpty),
+    body("marketplace.customLabel").optional({ nullable: true }).trim().isLength({ max: 80 }),
     body("marketplace.externalBuyEnabled").optional({ nullable: true }).isBoolean().toBoolean(),
     body("marketplace.visible").optional({ nullable: true }).isBoolean().toBoolean(),
     body("marketplace.priority").optional({ nullable: true }).isIn(["Amazon", "Flipkart", "Croma", "Reliance Digital", "Retail", "Custom"]),
@@ -153,6 +189,7 @@ const categoryValidation = (partial = false) => {
   body("description").optional({ nullable: true }).trim().isLength({ max: 800 }),
   body("enabled").optional({ nullable: true }).isBoolean().toBoolean(),
   body("featured").optional({ nullable: true }).isBoolean().toBoolean(),
+  body("desktopMenuVisible").optional({ nullable: true }).isBoolean().toBoolean(),
   body("sortOrder").optional({ nullable: true }).isInt().toInt(),
   body("featuredProducts").optional({ nullable: true }).isArray({ max: 40 }),
   ];
@@ -201,8 +238,27 @@ adminRoutes.use(protectAdmin);
 adminRoutes.get("/overview", asyncHandler(overview));
 adminRoutes.get("/analytics", asyncHandler(analytics));
 adminRoutes.get("/settings", asyncHandler(settings));
+adminRoutes.put(
+  "/contact-settings",
+  [
+    body("mobileNumber").optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 30 }),
+    body("phone").optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 30 }),
+    body("helpEmail").optional({ nullable: true, checkFalsy: true }).isEmail().normalizeEmail(),
+    body("whatsapp").optional({ nullable: true, checkFalsy: true }).trim().custom(urlOrEmpty),
+    body("instagram").optional({ nullable: true, checkFalsy: true }).trim().custom(urlOrEmpty),
+    body("facebook").optional({ nullable: true, checkFalsy: true }).trim().custom(urlOrEmpty),
+    body("x").optional({ nullable: true, checkFalsy: true }).trim().custom(urlOrEmpty),
+    body("youtube").optional({ nullable: true, checkFalsy: true }).trim().custom(urlOrEmpty),
+    body("linkedin").optional({ nullable: true, checkFalsy: true }).trim().custom(urlOrEmpty),
+  ],
+  validate,
+  asyncHandler(updateContactSettings)
+);
 adminRoutes.get("/users", asyncHandler(listUsers));
+adminRoutes.get("/users/otp-audit", asyncHandler(listOtpAuditLogs));
 adminRoutes.get("/users/export", asyncHandler(exportUsers));
+adminRoutes.post("/users/:id/resend-activation", [param("id").isMongoId()], validate, asyncHandler(resendActivationEmail));
+adminRoutes.patch("/users/:id/security-status", [param("id").isMongoId(), body("status").isIn(["Pending", "Verified", "Locked"])], validate, asyncHandler(updateCustomerSecurityStatus));
 adminRoutes.get("/newsletter-subscribers", asyncHandler(listNewsletterSubscribers));
 adminRoutes.get("/launch-leads", asyncHandler(listLaunchLeads));
 adminRoutes.get("/audit-logs", asyncHandler(listAuditLogs));
@@ -261,6 +317,7 @@ adminRoutes.post(
   asyncHandler(createWebsitePurchaseOwnership)
 );
 adminRoutes.get("/support-tickets", asyncHandler(listSupportTicketsAdmin));
+adminRoutes.patch("/support-tickets/:id/read", [param("id").trim().isLength({ min: 3, max: 80 })], validate, asyncHandler(markSupportTicketRead));
 adminRoutes.patch("/support-tickets/:id/reply", [param("id").trim().isLength({ min: 3, max: 80 }), body("message").trim().isLength({ min: 2, max: 3000 }), body("status").optional().isIn(["Open", "In Progress", "Replied", "Resolved"])], validate, asyncHandler(replySupportTicket));
 adminRoutes.post("/support-tickets/:id/reply", [param("id").trim().isLength({ min: 3, max: 80 }), body("message").trim().isLength({ min: 2, max: 3000 }), body("status").optional().isIn(["Open", "In Progress", "Replied", "Resolved", "Closed"])], validate, asyncHandler(replySupportTicket));
 

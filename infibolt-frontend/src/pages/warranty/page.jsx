@@ -1,8 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Clock3, HelpCircle, ImageUp, PackageCheck, UploadCloud } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router";
 import { toast } from "sonner";
-import { EmptyState, PageLoader } from "../../components/AppStates";
+import { EmptyState } from "../../components/AppStates";
 import { CommerceShell, MotionSection } from "../../components/commerce/CommerceLayout";
 import { AccountAccess } from "../../components/customer/AccountAccess";
 import {
@@ -16,6 +17,7 @@ import {
 } from "../../components/customer/PremiumAccount";
 import { OtpInput } from "../../components/OtpInput";
 import { uploadUrl } from "../../config/api";
+import { productService } from "../../services/productService";
 import { uploadService } from "../../services/uploadService";
 import { warrantyService } from "../../services/warrantyService";
 import { products } from "../../store/commerce";
@@ -44,14 +46,24 @@ const initialWarrantyForm = {
   invoiceUrl: "",
 };
 
+const warrantyFormForProduct = (productSlug = "") => {
+  const selected = products.find((item) => item.slug === productSlug) || products[0];
+  return {
+    ...initialWarrantyForm,
+    product: selected?.name || initialWarrantyForm.product,
+    productSlug: selected?.slug || initialWarrantyForm.productSlug,
+  };
+};
+
 const otpDestination = (ownership, profile) => (
-  ownership?.otpTarget || profile?.phone || profile?.email || "your verified account"
+  ownership?.otpTarget || profile?.email || "your verified email"
 );
 
 export default function WarrantyPage() {
+  const location = useLocation();
   const auth = useAppStore((state) => state.auth);
   const profile = useAppStore((state) => state.profile);
-  const { claims, rmas, status, error } = useAppStore((state) => state.warranty);
+  const { claims, rmas } = useAppStore((state) => state.warranty);
   const loadWarrantyClaims = useAppStore((state) => state.loadWarrantyClaims);
   const createWarrantyClaim = useAppStore((state) => state.createWarrantyClaim);
   const verifyWarrantyOtp = useAppStore((state) => state.verifyWarrantyOtp);
@@ -60,6 +72,7 @@ export default function WarrantyPage() {
   const [registrationStep, setRegistrationStep] = useState("details");
   const [activeOwnership, setActiveOwnership] = useState(null);
   const [otp, setOtp] = useState("");
+  const [otpCooldown, setOtpCooldown] = useState(0);
   const [otpError, setOtpError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [claiming, setClaiming] = useState("");
@@ -73,7 +86,10 @@ export default function WarrantyPage() {
   const [policyViewed, setPolicyViewed] = useState(false);
   const [policyError, setPolicyError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
-  const [form, setForm] = useState(initialWarrantyForm);
+  const warrantyProductSlug = useMemo(() => new URLSearchParams(location.search).get("product") || "", [location.search]);
+  const warrantyReturnTo = `${location.pathname}${location.search || ""}`;
+  const [linkedProduct, setLinkedProduct] = useState(null);
+  const [form, setForm] = useState(() => warrantyFormForProduct(warrantyProductSlug));
 
   useEffect(() => {
     if (auth.user) loadWarrantyClaims();
@@ -85,20 +101,75 @@ export default function WarrantyPage() {
       .catch(() => setWarrantyPolicy(null));
   }, []);
 
+  useEffect(() => {
+    if (!warrantyProductSlug) return;
+    const selected = products.find((item) => item.slug === warrantyProductSlug);
+    if (selected) {
+      setLinkedProduct(null);
+      setActiveMode("register");
+      setForm((current) => (
+        current.productSlug === selected.slug
+          ? current
+          : { ...current, product: selected.name, productSlug: selected.slug }
+      ));
+      return;
+    }
+
+    let cancelled = false;
+    productService.detail(warrantyProductSlug)
+      .then((product) => {
+        if (cancelled || !product?.slug) return;
+        setLinkedProduct(product);
+        setActiveMode("register");
+        setForm((current) => (
+          current.productSlug === product.slug
+            ? current
+            : { ...current, product: product.name || product.title || product.slug, productSlug: product.slug }
+        ));
+      })
+      .catch(() => {
+        if (!cancelled) setLinkedProduct(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [warrantyProductSlug]);
+
   const registeredProducts = useMemo(() => claims, [claims]);
   const rmaByOwnership = useMemo(() => rmas.reduce((map, rma) => ({ ...map, [rma.ownershipId]: rma }), {}), [rmas]);
+  const selectedWarrantyProduct = useMemo(
+    () => (
+      linkedProduct?.slug === warrantyProductSlug
+        ? linkedProduct
+        : products.find((item) => item.slug === warrantyProductSlug)
+    ),
+    [linkedProduct, warrantyProductSlug],
+  );
+  const warrantyProductOptions = useMemo(() => {
+    const baseProducts = products.slice(0, 8);
+    if (selectedWarrantyProduct?.slug && !baseProducts.some((item) => item.slug === selectedWarrantyProduct.slug)) {
+      return [selectedWarrantyProduct, ...baseProducts];
+    }
+    return baseProducts;
+  }, [selectedWarrantyProduct]);
   const formErrors = {
     serial: form.serial && form.serial.trim().length < 3 ? "Enter the serial number printed on the product, box, or invoice." : "",
     purchaseDate: form.purchaseDate && new Date(form.purchaseDate) > new Date() ? "Purchase date cannot be in the future." : "",
   };
   const warrantyOtpDestination = otpDestination(activeOwnership, profile);
 
+  useEffect(() => {
+    if (otpCooldown <= 0) return undefined;
+    const timer = window.setInterval(() => setOtpCooldown((current) => Math.max(current - 1, 0)), 1000);
+    return () => window.clearInterval(timer);
+  }, [otpCooldown]);
+
   if (!auth.user) {
     return (
       <CommerceShell seoTitle="Warranty" seoDescription="Sign in to manage INFIBOLT product ownership and warranty.">
         <AccountAtmosphere>
           <MotionSection className="grid min-h-[calc(100svh-73px)] place-items-center px-5 py-12 sm:px-6 sm:py-16 lg:py-20">
-            <AccountAccess initialMode="login" />
+            <AccountAccess initialMode="login" redirectTo={warrantyReturnTo} />
           </MotionSection>
         </AccountAtmosphere>
       </CommerceShell>
@@ -106,7 +177,7 @@ export default function WarrantyPage() {
   }
 
   const setProduct = (productName) => {
-    const selected = products.find((item) => item.name === productName);
+    const selected = warrantyProductOptions.find((item) => (item.name || item.title || item.slug) === productName);
     setForm((current) => ({ ...current, product: productName, productSlug: selected?.slug || current.productSlug }));
   };
 
@@ -120,7 +191,11 @@ export default function WarrantyPage() {
     setPolicyViewed(false);
     setPolicyError("");
     setFieldErrors({});
-    setForm(initialWarrantyForm);
+    setForm(
+      selectedWarrantyProduct?.slug
+        ? { ...initialWarrantyForm, product: selectedWarrantyProduct.name || selectedWarrantyProduct.title || selectedWarrantyProduct.slug, productSlug: selectedWarrantyProduct.slug }
+        : warrantyFormForProduct(warrantyProductSlug),
+    );
   };
 
   const changeMode = (nextMode) => {
@@ -156,13 +231,37 @@ export default function WarrantyPage() {
       });
       setActiveOwnership(ownership);
       setRegistrationStep("otp");
+      setOtpCooldown(ownership.resendAfterSeconds || 60);
       setOtp("");
-      toast.success("OTP sent", { description: `Verify ${otpDestination(ownership, profile)} to continue registration.` });
+      toast.success("Email OTP sent", { description: `Verify ${otpDestination(ownership, profile)} to continue registration.` });
     } catch (requestError) {
       const fields = requestError.details?.fields || {};
       setFieldErrors(fields);
       setOtpError(fields.serial || requestError.message || "Registration could not start.");
       if (fields.policyAccepted) setPolicyError(fields.policyAccepted);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const resendWarrantyOtp = async () => {
+    if (otpCooldown > 0 || submitting) return;
+    setSubmitting(true);
+    setOtpError("");
+    try {
+      const ownership = await createWarrantyClaim({
+        ...form,
+        serial: form.serial.trim().toUpperCase(),
+        customer: profile.name,
+        email: profile.email,
+        policyAccepted,
+      });
+      setActiveOwnership(ownership);
+      setOtp("");
+      setOtpCooldown(ownership.resendAfterSeconds || 60);
+      toast.success("Code resent", { description: "Use the newest email OTP to continue registration." });
+    } catch (requestError) {
+      setOtpError(requestError.message || "We could not resend the warranty code.");
     } finally {
       setSubmitting(false);
     }
@@ -306,7 +405,7 @@ export default function WarrantyPage() {
                     <SoftStatus>Register product</SoftStatus>
                     <h2 className="mt-4 text-2xl font-semibold tracking-normal text-slate-950">Activate ownership care</h2>
                     <p className="mt-2 max-w-2xl text-sm font-light leading-7 text-slate-600">
-                      Register Amazon, Flipkart, marketplace, or retail purchases with serial validation, invoice context, and mobile OTP.
+                      Register Amazon, Flipkart, marketplace, or retail purchases with serial validation, invoice context, and email OTP.
                     </p>
                   </div>
                   <StepPills active={registrationStep} />
@@ -316,7 +415,7 @@ export default function WarrantyPage() {
                   {registrationStep === "details" && (
                     <motion.form key="details" {...stepMotion} onSubmit={submitRegistration} className="grid gap-4">
                       <div className="grid gap-4 md:grid-cols-2">
-                        <PremiumSelect label="Product" value={form.product} onChange={setProduct} options={products.slice(0, 8).map((item) => item.name)} />
+                        <PremiumSelect label="Product" value={form.product} onChange={setProduct} options={warrantyProductOptions.map((item) => item.name || item.title || item.slug)} />
                         <div className="grid gap-2">
                           <PremiumField label="Serial number" value={form.serial} onChange={(serial) => { setForm((current) => ({ ...current, serial: serial.toUpperCase() })); setOtpError(""); setFieldErrors((current) => ({ ...current, serial: "" })); }} error={formErrors.serial || fieldErrors.serial || ""} placeholder="INF-HX01-24A8K92" required />
                           <p className="px-1 text-xs font-medium leading-5 text-slate-500">
@@ -344,24 +443,25 @@ export default function WarrantyPage() {
                         }}
                       />
                       <PremiumButton loading={submitting} type="submit" disabled={Boolean(formErrors.serial || formErrors.purchaseDate)}>
-                        {submitting ? "Sending OTP..." : "Verify and register"}
+                        {submitting ? "Sending email OTP..." : "Verify and register"}
                       </PremiumButton>
                     </motion.form>
                   )}
 
                   {registrationStep === "otp" && (
                     <motion.form key="otp" {...stepMotion} onSubmit={submitOtp} className="grid gap-4">
-                      <PremiumNotice tone="success" title="Mobile verification">
+                      <PremiumNotice tone="success" title="Email verification">
                         Enter the OTP sent to {warrantyOtpDestination} before invoice review begins.
                       </PremiumNotice>
                       <div className="rounded-[1.25rem] border border-slate-900/8 bg-white/58 p-4">
                         <div className="mb-3 flex items-center justify-between gap-3">
-                          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Warranty OTP</span>
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500"><Clock3 className="h-3.5 w-3.5" /> Ready</span>
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Warranty email OTP</span>
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500"><Clock3 className="h-3.5 w-3.5" /> {otpCooldown > 0 ? `${otpCooldown}s` : "Ready"}</span>
                         </div>
                         <OtpInput value={otp} onChange={(value) => { setOtp(value); setOtpError(""); }} disabled={submitting} error={otpError} />
                       </div>
                       <PremiumButton loading={submitting} type="submit">{submitting ? "Checking..." : "Submit for review"}</PremiumButton>
+                      <button type="button" onClick={resendWarrantyOtp} disabled={otpCooldown > 0 || submitting} className="text-left text-sm font-semibold text-slate-500 transition hover:text-slate-950 disabled:opacity-50">Resend email code</button>
                       <button type="button" onClick={() => setRegistrationStep("details")} className="text-left text-sm font-semibold text-slate-500 transition hover:text-slate-950">Edit registration details</button>
                     </motion.form>
                   )}
@@ -421,8 +521,6 @@ export default function WarrantyPage() {
               )}
             </div>
 
-            {status === "loading" && <PageLoader label="Opening warranty records" />}
-            {status === "error" && <EmptyState title="Warranty ecosystem unavailable" description={error} />}
           </div>
         </MotionSection>
       </AccountAtmosphere>
