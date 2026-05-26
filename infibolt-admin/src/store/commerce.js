@@ -193,7 +193,7 @@ export const faqs = [
   },
   {
     question: "How do I activate warranty after marketplace purchase?",
-    answer: "Create an Infibolt account, register the product serial and invoice, then your ownership profile unlocks warranty and support workflows.",
+    answer: "Create an Infibolt account, register the product serial and invoice, then your ownership profile connects warranty and support care.",
   },
 ];
 

@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Clock3, KeyRound, Lock, Mail, Phone, UserRound } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { OtpInput } from "../OtpInput";
@@ -25,6 +25,8 @@ const panelMotion = {
 const initialLoginForm = { email: "", password: "", otp: "", remember: true };
 const initialSignupForm = { name: "", email: "", phone: "", password: "", otp: "" };
 const initialResetForm = { email: "", otp: "", password: "" };
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+let googleScriptPromise;
 
 function isEmailOrPhone(value) {
   const normalized = String(value || "").trim();
@@ -37,10 +39,34 @@ function loginIdentifierFrom(value) {
   return /^\S+@\S+\.\S+$/.test(normalized) ? normalized.toLowerCase() : normalized.replace(/\D/g, "");
 }
 
+function loadGoogleIdentityScript() {
+  if (typeof window === "undefined") return Promise.reject(new Error("Google sign in is only available in the browser."));
+  if (window.google?.accounts?.id) return Promise.resolve(window.google);
+  if (!googleScriptPromise) {
+    googleScriptPromise = new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+      if (existing) {
+        existing.addEventListener("load", () => resolve(window.google), { once: true });
+        existing.addEventListener("error", () => reject(new Error("Google sign in could not load.")), { once: true });
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.onload = () => resolve(window.google);
+      script.onerror = () => reject(new Error("Google sign in could not load."));
+      document.head.appendChild(script);
+    });
+  }
+  return googleScriptPromise;
+}
+
 export function AccountAccess({ initialMode = "login", compact = false, redirectTo = "/profile" }) {
   const navigate = useNavigate();
   const login = useAppStore((state) => state.login);
   const signup = useAppStore((state) => state.signup);
+  const googleLogin = useAppStore((state) => state.googleLogin);
   const verifyOtp = useAppStore((state) => state.verifyOtp);
   const [mode, setMode] = useState(initialMode);
   const [status, setStatus] = useState("idle");
@@ -136,8 +162,9 @@ export function AccountAccess({ initialMode = "login", compact = false, redirect
   }, [resetForm, resetStep]);
 
   const hasServerErrors = Object.keys(serverErrors).length > 0;
+  const loginErrorTitle = error.toLowerCase().includes("locked") || error.toLowerCase().includes("disabled") ? "Account locked" : "Sign in could not continue";
 
-  const finishAuth = (message) => {
+  const finishAuth = useCallback((message) => {
     toast.success(message, { description: "Your INFIBOLT account is ready." });
     setSignupStep("details");
     setResetStep("request");
@@ -148,7 +175,7 @@ export function AccountAccess({ initialMode = "login", compact = false, redirect
     setServerErrors({});
     setCooldown(0);
     navigate(normalizeRedirectPath(redirectTo), { replace: true });
-  };
+  }, [navigate, redirectTo]);
 
   const loginIdentifier = () => {
     return loginIdentifierFrom(loginForm.email);
@@ -215,11 +242,34 @@ export function AccountAccess({ initialMode = "login", compact = false, redirect
     } catch (requestError) {
       const message = requestError.message || "We could not open your account.";
       setError(message);
-      markServerFields("login", message, requestError.fields || requestError.details);
+      if (requestError.status === 423) {
+        setServerErrors({});
+      } else {
+        markServerFields("login", message, requestError.fields || requestError.details);
+      }
     } finally {
       setStatus("idle");
     }
   };
+
+  const submitGoogleCredential = useCallback(async (credential) => {
+    if (!credential) return;
+    setError("");
+    setServerErrors({});
+    setStatus("loading");
+    try {
+      await googleLogin({ credential });
+      finishAuth(mode === "signup" ? "Account created" : "Welcome back");
+    } catch (requestError) {
+      setError(requestError.message || "Google sign in could not continue.");
+    } finally {
+      setStatus("idle");
+    }
+  }, [finishAuth, googleLogin, mode]);
+
+  const handleGoogleError = useCallback((message) => {
+    setError(message);
+  }, []);
 
   const submitSignup = async (event) => {
     event.preventDefault();
@@ -377,6 +427,17 @@ export function AccountAccess({ initialMode = "login", compact = false, redirect
           {mode === "reset" && <StepDots active={resetStep === "verify" ? 1 : 0} />}
         </div>
 
+        {googleClientId && mode !== "reset" && signupStep === "details" && (
+          <div className="mb-5 grid gap-4">
+            <GoogleAuthButton mode={mode} disabled={status === "loading"} onCredential={submitGoogleCredential} onError={handleGoogleError} />
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+              <span className="h-px bg-slate-900/8" />
+              <span>or</span>
+              <span className="h-px bg-slate-900/8" />
+            </div>
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           {mode === "login" && (
             <motion.form key="login" {...panelMotion} onSubmit={submitLogin} noValidate className="grid gap-4">
@@ -389,7 +450,7 @@ export function AccountAccess({ initialMode = "login", compact = false, redirect
                 </span>
                 <button type="button" onClick={() => openMode("reset")} className="text-slate-950 transition hover:text-slate-600">Forgot password</button>
               </label>
-              {error && !hasServerErrors ? <PremiumNotice tone="error" title="Sign in could not continue">{error}</PremiumNotice> : null}
+              {error && !hasServerErrors ? <PremiumNotice tone="error" title={loginErrorTitle}>{error}</PremiumNotice> : null}
               <PremiumButton loading={status === "loading"} type="submit">
                 {status === "loading" ? "Checking..." : "Sign in"}
               </PremiumButton>
@@ -402,7 +463,7 @@ export function AccountAccess({ initialMode = "login", compact = false, redirect
                 <>
                   <PremiumField icon={UserRound} label="Full name" value={signupForm.name} onChange={(name) => { setSignupForm((current) => ({ ...current, name })); setError(""); }} error={touched ? signupErrors.name : ""} placeholder="Rajesh Kumar" />
                   <PremiumField icon={Mail} label="Email address" type="email" value={signupForm.email} onChange={(email) => { setSignupForm((current) => ({ ...current, email })); clearFieldFeedback("signupEmail"); }} error={(touched ? signupErrors.email : "") || serverErrors.signupEmail} placeholder="you@example.com" />
-                  <PremiumField icon={Phone} label="Phone number" inputMode="numeric" value={signupForm.phone} onChange={(phone) => { setSignupForm((current) => ({ ...current, phone })); clearFieldFeedback("signupPhone"); }} error={(touched ? signupErrors.phone : "") || serverErrors.signupPhone} placeholder="9876543210" helper="Used as an alternate login ID. OTP is sent to email." />
+                  <PremiumField icon={Phone} label="Phone number" inputMode="numeric" value={signupForm.phone} onChange={(phone) => { setSignupForm((current) => ({ ...current, phone })); clearFieldFeedback("signupPhone"); }} error={(touched ? signupErrors.phone : "") || serverErrors.signupPhone} placeholder="9876543210" />
                   <PremiumField icon={KeyRound} label="Password" type="password" value={signupForm.password} onChange={(password) => { setSignupForm((current) => ({ ...current, password })); setError(""); }} error={touched ? signupErrors.password : ""} placeholder="Infibolt@123" helper="Use uppercase, lowercase, number, and symbol." />
                 </>
               ) : (
@@ -473,6 +534,44 @@ function OtpPanel({ value, onChange, error, cooldown, onResend, loading }) {
       <button type="button" onClick={onResend} disabled={cooldown > 0 || loading} className="premium-button inline-flex min-h-[42px] items-center justify-center rounded-full border border-slate-900/10 bg-white/58 px-4 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700 disabled:opacity-50">
         Resend code
       </button>
+    </div>
+  );
+}
+
+function GoogleAuthButton({ mode, disabled, onCredential, onError }) {
+  const buttonRef = useRef(null);
+
+  useEffect(() => {
+    if (!googleClientId || !buttonRef.current) return undefined;
+    let cancelled = false;
+    loadGoogleIdentityScript()
+      .then((google) => {
+        if (cancelled || !buttonRef.current) return;
+        buttonRef.current.innerHTML = "";
+        google.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: (response) => onCredential(response.credential),
+        });
+        const width = Math.floor(buttonRef.current.getBoundingClientRect().width || 320);
+        google.accounts.id.renderButton(buttonRef.current, {
+          theme: "outline",
+          size: "large",
+          shape: "pill",
+          text: mode === "signup" ? "signup_with" : "signin_with",
+          width: Math.min(Math.max(width, 240), 400),
+        });
+      })
+      .catch((error) => onError(error.message || "Google sign in could not load."));
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, onCredential, onError]);
+
+  if (!googleClientId) return null;
+
+  return (
+    <div className={`min-h-[44px] overflow-hidden rounded-full ${disabled ? "pointer-events-none opacity-60" : ""}`}>
+      <div ref={buttonRef} className="flex min-h-[44px] justify-center" />
     </div>
   );
 }

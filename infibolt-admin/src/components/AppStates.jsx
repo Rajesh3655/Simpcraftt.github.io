@@ -4,7 +4,7 @@ import { useAdminStore } from "../store/appStore";
 
 export function PageLoader({ label = "Loading admin workspace" }) {
   return (
-    <div className="premium-surface grid min-h-[260px] place-items-center p-8 dark:bg-white/[0.03]">
+    <div className="premium-surface grid min-h-[260px] place-items-center overflow-hidden p-8 dark:bg-white/[0.03]">
       <div className="w-full max-w-sm">
         <div className="premium-shimmer mx-auto h-2 w-28 rounded-full bg-slate-200 dark:bg-white/10" />
         <div className="premium-shimmer mx-auto mt-5 h-20 w-full rounded-2xl bg-slate-200/80 dark:bg-white/10" />
@@ -15,12 +15,12 @@ export function PageLoader({ label = "Loading admin workspace" }) {
 }
 
 export function SkeletonBlock({ className = "" }) {
-  return <div className={`premium-shimmer rounded-2xl bg-slate-200/80 dark:bg-white/10 ${className}`} />;
+  return <div className={`premium-shimmer rounded-[1.15rem] bg-slate-200/80 dark:bg-white/10 ${className}`} />;
 }
 
 export function EmptyState({ title = "No records yet", description, action }) {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-900/15 bg-white/60 p-8 text-center dark:border-white/15 dark:bg-white/[0.03]">
+    <div className="rounded-[1.35rem] border border-dashed border-slate-900/15 bg-white/64 p-8 text-center shadow-[0_12px_34px_rgba(15,23,42,0.04)] dark:border-white/15 dark:bg-white/[0.03]">
       <Inbox className="mx-auto h-8 w-8 text-slate-400" />
       <h2 className="mt-4 text-xl font-semibold tracking-tight text-slate-900 dark:text-white">{title}</h2>
       {description && <p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-slate-500">{description}</p>}
@@ -31,7 +31,7 @@ export function EmptyState({ title = "No records yet", description, action }) {
 
 export function ErrorState({ title = "Could not load data", description, onRetry }) {
   return (
-    <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-6 text-red-900 dark:text-red-100">
+    <div className="rounded-[1.25rem] border border-red-500/20 bg-red-500/5 p-6 text-red-900 shadow-[0_12px_34px_rgba(190,18,60,0.055)] dark:text-red-100">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-3">
           <AlertCircle className="mt-1 h-5 w-5 shrink-0" />
@@ -66,7 +66,7 @@ export function AdminProtectedRoute({ children }) {
         <div className="max-w-md rounded-2xl border border-slate-900/10 bg-white/80 p-8 text-center shadow-sm">
           <LockKeyhole className="mx-auto h-8 w-8 text-slate-900" />
           <h1 className="mt-5 text-2xl font-semibold tracking-tight text-slate-900">Admin login required</h1>
-          <p className="mt-3 text-sm leading-7 text-slate-500">Admin routes are protected by secure backend session validation.</p>
+          <p className="mt-3 text-sm leading-7 text-slate-500">Protected workspace access is validated with a secure session.</p>
           <Link to="/auth/login" className="mt-6 inline-flex min-h-[44px] items-center justify-center rounded-full bg-slate-900 px-6 text-xs font-bold uppercase tracking-[0.16em] text-white">
             Login
           </Link>

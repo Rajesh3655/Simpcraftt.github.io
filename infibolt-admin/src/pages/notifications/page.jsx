@@ -7,7 +7,7 @@ export default function NotificationsPage() {
   const notifications = useAdminStore((state) => state.notifications);
   const markNotificationRead = useAdminStore((state) => state.markNotificationRead);
   return (
-    <AdminShell title="Notifications" description="Operational alerts for warranty, support, product, and analytics workflows.">
+    <AdminShell title="Notifications" description="Important alerts for warranty, support, product, and performance activity.">
       {notifications.length === 0 ? <EmptyState title="No notifications" description="Admin alerts will appear here." /> : (
         <div className="grid gap-3">
           {notifications.map((item) => (

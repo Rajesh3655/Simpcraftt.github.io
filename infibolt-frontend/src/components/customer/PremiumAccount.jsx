@@ -50,6 +50,7 @@ export function PremiumField({
   textarea = false,
   required = false,
   inputMode,
+  autoComplete,
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
@@ -77,6 +78,7 @@ export function PremiumField({
             required={required}
             disabled={disabled}
             inputMode={inputMode}
+            autoComplete={autoComplete}
             type={inputType}
             value={value}
             onChange={(event) => onChange(event.target.value)}

@@ -25,7 +25,7 @@ const defaultProductFaqs = [
   },
   {
     question: "Can I raise support claims after marketplace purchase?",
-    answer: "Yes. Once ownership is registered, warranty claims and product support are handled through Infibolt support workflows.",
+    answer: "Yes. Once ownership is registered, warranty care and product support stay connected to the customer account.",
     order: 2,
   },
 ];

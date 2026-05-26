@@ -387,7 +387,7 @@ export default function WarrantyPage() {
   };
 
   return (
-    <CommerceShell seoTitle="Warranty" seoDescription="Premium INFIBOLT ownership, warranty, and RMA ecosystem.">
+    <CommerceShell seoTitle="Warranty" seoDescription="Premium INFIBOLT ownership, warranty, and product care.">
       <AccountAtmosphere>
         <MotionSection className="px-4 pb-28 pt-6 sm:px-6 md:px-8 md:pb-20 lg:pt-10">
           <div className="mx-auto grid max-w-7xl gap-5">
@@ -405,7 +405,7 @@ export default function WarrantyPage() {
                     <SoftStatus>Register product</SoftStatus>
                     <h2 className="mt-4 text-2xl font-semibold tracking-normal text-slate-950">Activate ownership care</h2>
                     <p className="mt-2 max-w-2xl text-sm font-light leading-7 text-slate-600">
-                      Register Amazon, Flipkart, marketplace, or retail purchases with serial validation, invoice context, and email OTP.
+                      Link Amazon, Flipkart, marketplace, or retail purchases to your INFIBOLT account with secure email verification.
                     </p>
                   </div>
                   <StepPills active={registrationStep} />
@@ -451,7 +451,7 @@ export default function WarrantyPage() {
                   {registrationStep === "otp" && (
                     <motion.form key="otp" {...stepMotion} onSubmit={submitOtp} className="grid gap-4">
                       <PremiumNotice tone="success" title="Email verification">
-                        Enter the OTP sent to {warrantyOtpDestination} before invoice review begins.
+                        Enter the OTP sent to {warrantyOtpDestination} to protect this ownership record.
                       </PremiumNotice>
                       <div className="rounded-[1.25rem] border border-slate-900/8 bg-white/58 p-4">
                         <div className="mb-3 flex items-center justify-between gap-3">
@@ -460,7 +460,7 @@ export default function WarrantyPage() {
                         </div>
                         <OtpInput value={otp} onChange={(value) => { setOtp(value); setOtpError(""); }} disabled={submitting} error={otpError} />
                       </div>
-                      <PremiumButton loading={submitting} type="submit">{submitting ? "Checking..." : "Submit for review"}</PremiumButton>
+                      <PremiumButton loading={submitting} type="submit">{submitting ? "Checking..." : "Complete verification"}</PremiumButton>
                       <button type="button" onClick={resendWarrantyOtp} disabled={otpCooldown > 0 || submitting} className="text-left text-sm font-semibold text-slate-500 transition hover:text-slate-950 disabled:opacity-50">Resend email code</button>
                       <button type="button" onClick={() => setRegistrationStep("details")} className="text-left text-sm font-semibold text-slate-500 transition hover:text-slate-950">Edit registration details</button>
                     </motion.form>
@@ -468,11 +468,11 @@ export default function WarrantyPage() {
 
                   {registrationStep === "submitted" && (
                     <motion.div key="submitted" {...stepMotion} className="grid gap-4">
-                      <PremiumNotice tone="success" title="Registration in review">
-                        {activeOwnership?.product || "Your product"} is waiting for admin invoice review. Claim warranty will unlock after approval.
+                      <PremiumNotice tone="success" title="Ownership details received">
+                        {activeOwnership?.product || "Your product"} is now connected to your account. Warranty care will be available once the invoice and serial details are confirmed.
                       </PremiumNotice>
-                      <PremiumNotice title="Claim not available yet">
-                        You can register another product now. This product will appear in claim warranty after admin approval.
+                      <PremiumNotice title="Care access is being prepared">
+                        You can register another product now. This device will appear in warranty care after verification is complete.
                       </PremiumNotice>
                       <PremiumButton type="button" onClick={resetRegistrationDraft}>
                         Register another product
@@ -486,9 +486,9 @@ export default function WarrantyPage() {
               {activeMode === "claim" && (
               <AccountCard className="p-5 sm:p-7 xl:col-span-2">
                 <div className="mb-6">
-                  <SoftStatus>Warranty claim</SoftStatus>
-                  <h2 className="mt-4 text-2xl font-semibold tracking-normal text-slate-950">Claim warranty for a registered product</h2>
-                  <p className="mt-2 text-sm font-light leading-7 text-slate-600">Choose from your registered products. Claim requests open only after admin approval.</p>
+                  <SoftStatus>Warranty care</SoftStatus>
+                  <h2 className="mt-4 text-2xl font-semibold tracking-normal text-slate-950">Get care for a registered product</h2>
+                  <p className="mt-2 text-sm font-light leading-7 text-slate-600">Choose a verified product to begin warranty support with your ownership details already connected.</p>
                 </div>
                 {registeredProducts.length ? (
                   <RegisteredProductList
@@ -515,7 +515,7 @@ export default function WarrantyPage() {
                     onSubmitClaim={submitRma}
                   />
                 ) : (
-                  <EmptyState title="No registered products yet" description="Register a product first. After admin approval, warranty claim options will appear here." />
+                  <EmptyState title="No registered products yet" description="Register a product first. Warranty care appears here after ownership verification." />
                 )}
               </AccountCard>
               )}
@@ -533,9 +533,9 @@ function WarrantyHero({ profile, activeMode, onModeChange }) {
     <section className="relative overflow-hidden rounded-[1.45rem] border border-slate-900/8 bg-white/76 p-5 shadow-[0_22px_70px_rgba(15,23,42,0.08)] backdrop-blur-2xl sm:p-7 lg:p-8">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_86%_0%,rgba(14,165,233,0.16),transparent_40%),linear-gradient(135deg,rgba(255,255,255,0.94),rgba(248,250,252,0.74))]" />
       <div className="relative">
-        <SoftStatus>Warranty center</SoftStatus>
-        <h1 className="mt-4 max-w-3xl text-[2rem] font-semibold leading-[1.05] tracking-normal text-slate-950 sm:text-[2.75rem]">Register or claim warranty.</h1>
-        <p className="mt-4 max-w-2xl text-sm font-light leading-7 text-slate-600 sm:text-base">Register marketplace and retail products, then claim service only from approved ownership records.</p>
+        <SoftStatus>Ownership care</SoftStatus>
+        <h1 className="mt-4 max-w-3xl text-[2rem] font-semibold leading-[1.05] tracking-normal text-slate-950 sm:text-[2.75rem]">Register products. Keep care connected.</h1>
+        <p className="mt-4 max-w-2xl text-sm font-light leading-7 text-slate-600 sm:text-base">Link marketplace and retail purchases to your INFIBOLT account for warranty coverage, support, and long-term product care.</p>
         <p className="mt-5 text-sm font-semibold text-slate-500">{profile.email} · {profile.phone}</p>
         <div className="mt-6 grid max-w-xl gap-3 sm:grid-cols-2">
           <button
@@ -550,7 +550,7 @@ function WarrantyHero({ profile, activeMode, onModeChange }) {
             onClick={() => onModeChange("claim")}
             className={`min-h-[52px] rounded-full px-5 text-xs font-semibold uppercase tracking-[0.14em] transition ${activeMode === "claim" ? "bg-emerald-600 text-white shadow-[0_16px_34px_rgba(16,185,129,0.22)]" : "border border-emerald-700/15 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"}`}
           >
-            Claim warranty
+            Warranty care
           </button>
         </div>
       </div>
@@ -651,7 +651,7 @@ function RegisteredProductList({
                   {activeRma && <ClaimStatus rma={activeRma} />}
                   {!claimAvailable && (
                     <span className="mt-2 block text-xs font-medium leading-5 text-amber-800">
-                      Caution: this product is {item.warrantyStatus || "pending approval"}. Claim unlocks after admin approval.
+                      Warranty care becomes available after ownership verification is complete.
                     </span>
                   )}
                 </span>
@@ -660,7 +660,7 @@ function RegisteredProductList({
                 <span className={`inline-flex justify-self-start rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] sm:justify-self-end ${
                   claimAvailable ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"
                 }`}>
-                  {claimAvailable ? "Approved" : item.warrantyStatus || "Pending"}
+                  {claimAvailable ? "Care ready" : "Verification in progress"}
                 </span>
                 {claimAvailable && (
                   <button
@@ -669,7 +669,7 @@ function RegisteredProductList({
                     disabled={Boolean(activeRma) || claimingId === item.id}
                     className="inline-flex min-h-[42px] items-center justify-center rounded-full bg-slate-950 px-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-slate-800 disabled:pointer-events-none disabled:opacity-55"
                   >
-                    {claimingId === item.id ? "Submitting..." : activeRma ? activeRma.status : formOpen ? "Form open" : "Claim warranty"}
+                    {claimingId === item.id ? "Submitting..." : activeRma ? activeRma.status : formOpen ? "Form open" : "Start care request"}
                   </button>
                 )}
               </span>
@@ -709,7 +709,7 @@ function ClaimStatus({ rma }) {
     <span className={`mt-2 inline-flex rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${
       rejected ? "bg-rose-50 text-rose-700" : approved ? "bg-emerald-50 text-emerald-700" : "bg-sky-50 text-sky-700"
     }`}>
-      {rejected ? "Claim rejected" : approved ? "Approved for claim" : "Claim under review"} · {rma.id}
+      {rejected ? "Care request closed" : approved ? "Care in progress" : "Care request received"} · {rma.id}
     </span>
   );
 }
@@ -731,7 +731,7 @@ function ClaimRequestForm({ ownership, draft, upload, policy, policyError, submi
         label="Issue description"
         value={draft.issueDescription}
         onChange={(issueDescription) => onChange((current) => ({ ...current, issueDescription }))}
-        placeholder={`Describe the issue with ${ownership.product}.`}
+        placeholder={`Tell us what happened with ${ownership.product}.`}
         required
       />
       <ClaimPhotoUpload upload={upload} uploaded={Boolean(draft.attachment?.url)} onUpload={onPhotoUpload} />
@@ -744,13 +744,13 @@ function ClaimRequestForm({ ownership, draft, upload, policy, policyError, submi
         onChange={(policyAccepted) => onChange((current) => ({ ...current, policyAccepted }))}
       />
       <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
-        <p className="text-xs font-medium leading-5 text-slate-500">Select an issue, describe it, upload clear proof, and acknowledge the INFIBOLT warranty policy before submitting.</p>
+        <p className="text-xs font-medium leading-5 text-slate-500">Select an issue, describe what happened, upload a clear photo, and acknowledge the INFIBOLT warranty policy before submitting.</p>
         <span className="flex gap-2 sm:justify-end">
           <button type="button" onClick={onCancel} className="inline-flex min-h-[42px] items-center justify-center rounded-full border border-slate-900/10 bg-white px-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600 transition hover:bg-slate-50">
             Cancel
           </button>
           <button type="button" onClick={onSubmit} disabled={submitDisabled} className="inline-flex min-h-[42px] items-center justify-center rounded-full bg-slate-950 px-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-slate-800 disabled:pointer-events-none disabled:opacity-55">
-            {submitting ? "Submitting..." : "Submit for claim"}
+            {submitting ? "Submitting..." : "Submit care request"}
           </button>
         </span>
       </div>

@@ -100,6 +100,14 @@ const mobileServices = [
   { label: "Warranty terms", icon: WalletCards, href: "/warranty-policy" },
 ];
 
+function normalizePhone(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function isValidPhone(value) {
+  return /^[1-9]\d{7,14}$/.test(normalizePhone(value));
+}
+
 export default function ProfilePage() {
   const auth = useAppStore((state) => state.auth);
   const profile = useAppStore((state) => state.profile);
@@ -116,6 +124,7 @@ export default function ProfilePage() {
   const [settingsForm, setSettingsForm] = useState(profile);
   const [settingsPasswordError, setSettingsPasswordError] = useState("");
   const [emailVerification, setEmailVerification] = useState({ email: "", verificationId: "", otp: "", cooldown: 0, status: "idle", error: "" });
+  const [phoneCompletion, setPhoneCompletion] = useState({ phone: "", status: "idle", error: "" });
 
   useEffect(() => {
     if (!auth.user) return;
@@ -125,6 +134,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     setSettingsForm(profile);
+    setPhoneCompletion({ phone: profile.phone || "", status: "idle", error: "" });
   }, [profile]);
 
   useEffect(() => {
@@ -139,6 +149,18 @@ export default function ProfilePage() {
   const supportItems = support.tickets.length ? support.tickets : defaultTickets;
   const warrantyItems = warranty.claims.length ? warranty.claims : defaultClaims;
   const savedItems = wishlist.length ? wishlist : products.slice(0, 2);
+  if (!signedIn && auth.status === "loading") {
+    return (
+      <CommerceShell seoTitle="Account" seoDescription="Secure INFIBOLT account access for products, warranty records, and support.">
+        <AccountAtmosphere>
+          <MotionSection className="grid min-h-[calc(100svh-73px)] place-items-center px-5 py-12 sm:px-6 sm:py-16 lg:py-20">
+            <PageLoader label="Opening your account" />
+          </MotionSection>
+        </AccountAtmosphere>
+      </CommerceShell>
+    );
+  }
+
   if (!signedIn) {
     return (
       <CommerceShell seoTitle="Account" seoDescription="Secure INFIBOLT account access for products, warranty records, and support.">
@@ -167,15 +189,20 @@ export default function ProfilePage() {
       toast.error("Password not saved", { id: "account-profile-action", description: "New password must be at least 8 characters." });
       return;
     }
+    if (!profile.phone && !isValidPhone(settingsForm.phone)) {
+      toast.error("Phone number required", { id: "account-profile-action", description: "Add a valid phone number to complete your profile." });
+      return;
+    }
     const { currentPassword, newPassword, ...profileFields } = settingsForm;
     try {
       const { email, phone, ...safeProfileFields } = profileFields;
+      if (!profile.phone) safeProfileFields.phone = normalizePhone(phone);
       await updateProfile(safeProfileFields);
       setSettingsPasswordError("");
       setSettingsForm({ ...profileFields, currentPassword: "", newPassword: "" });
       toast.success("Profile saved", {
         id: "account-profile-action",
-        description: wantsPasswordChange ? "Profile updated. Password change is ready for backend connection." : "Your account details were updated.",
+        description: wantsPasswordChange ? "Profile updated. Password changes remain protected by secure account verification." : "Your account details were updated.",
       });
     } catch (error) {
       toast.error("Profile not saved", { id: "account-profile-action", description: error.message || "Please try again." });
@@ -219,9 +246,36 @@ export default function ProfilePage() {
     toast.success("Logged out", { id: "account-profile-action", description: "Your secure session has ended." });
   };
 
+  const completePhoneNumber = async (event) => {
+    event.preventDefault();
+    const phone = normalizePhone(phoneCompletion.phone);
+    if (!isValidPhone(phone)) {
+      setPhoneCompletion((current) => ({ ...current, error: "Enter a valid mobile number." }));
+      return;
+    }
+    setPhoneCompletion((current) => ({ ...current, status: "loading", error: "" }));
+    try {
+      await updateProfile({ phone });
+      setSettingsForm((current) => ({ ...current, phone }));
+      setPhoneCompletion({ phone, status: "idle", error: "" });
+      toast.success("Mobile number saved", { id: "account-profile-action", description: "Your account profile is complete." });
+    } catch (error) {
+      setPhoneCompletion((current) => ({ ...current, status: "idle", error: error.message || "Could not save mobile number." }));
+    }
+  };
+
   return (
     <CommerceShell seoTitle="Customer Profile" seoDescription="Premium INFIBOLT customer ownership hub.">
       <AccountAtmosphere>
+        {!profile.phone && (
+          <PhoneCompletionModal
+            value={phoneCompletion.phone}
+            error={phoneCompletion.error}
+            loading={phoneCompletion.status === "loading"}
+            onChange={(phone) => setPhoneCompletion((current) => ({ ...current, phone, error: "" }))}
+            onSubmit={completePhoneNumber}
+          />
+        )}
         <MotionSection className="px-3 pb-32 pt-6 sm:px-6 md:px-8 md:pb-24 lg:pt-10">
           <div className="mx-auto grid w-full max-w-[1320px] min-w-0 gap-4 sm:gap-5 lg:hidden">
             <MobileProfileApp
@@ -335,16 +389,21 @@ function MobileProfileApp({ profile, updateProfile, requestProfileContactUpdate,
       toast.error("Password not saved", { id: "account-profile-action", description: "New password must be at least 8 characters." });
       return;
     }
+    if (!profile.phone && !isValidPhone(mobileForm.phone)) {
+      toast.error("Phone number required", { id: "account-profile-action", description: "Add a valid phone number to complete your profile." });
+      return;
+    }
     const { currentPassword, newPassword, ...profileFields } = mobileForm;
     try {
       const { email, phone, ...safeProfileFields } = profileFields;
+      if (!profile.phone) safeProfileFields.phone = normalizePhone(phone);
       await updateProfile(safeProfileFields);
       setPasswordError("");
       setMobileForm({ ...profileFields, currentPassword: "", newPassword: "" });
       setEditingProfile(false);
       toast.success("Account saved", {
         id: "account-profile-action",
-        description: wantsPasswordChange ? "Profile updated. Password change is ready for backend connection." : "Your profile details were updated.",
+        description: wantsPasswordChange ? "Profile updated. Password changes remain protected by secure account verification." : "Your profile details were updated.",
       });
     } catch (error) {
       toast.error("Profile not saved", { id: "account-profile-action", description: error.message || "Please try again." });
@@ -393,6 +452,37 @@ function MobileProfileApp({ profile, updateProfile, requestProfileContactUpdate,
   );
 }
 
+function PhoneCompletionModal({ value, error, loading, onChange, onSubmit }) {
+  return (
+    <div className="fixed inset-0 z-[120] grid place-items-center bg-slate-950/38 px-4 py-6 backdrop-blur-sm">
+      <form onSubmit={onSubmit} className="w-full max-w-[430px] rounded-[1.45rem] border border-white/70 bg-white p-5 shadow-[0_30px_90px_rgba(15,23,42,0.22)] sm:p-6">
+        <SoftStatus>Complete profile</SoftStatus>
+        <h2 className="mt-4 text-2xl font-semibold tracking-normal text-slate-950">Add mobile number</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Google does not share your mobile number. Add it once for warranty, support, and account recovery.
+        </p>
+        <div className="mt-4 rounded-2xl border border-amber-700/15 bg-amber-50 px-4 py-3 text-xs font-medium leading-5 text-amber-900">
+          Please check carefully. Once this mobile number is saved, it cannot be edited from your account.
+        </div>
+        <div className="mt-5">
+          <PremiumField
+            label="Mobile number"
+            inputMode="numeric"
+            autoComplete="off"
+            value={value}
+            onChange={onChange}
+            error={error}
+            placeholder="Enter mobile number"
+          />
+        </div>
+        <PremiumButton loading={loading} type="submit" className="mt-5 w-full">
+          {loading ? "Saving..." : "Save and lock mobile number"}
+        </PremiumButton>
+      </form>
+    </div>
+  );
+}
+
 function MobileProfileHeader({ profile, onEdit, spinning }) {
   const initials = String(profile.name || "IB").trim().slice(0, 1).toUpperCase() || "I";
   return (
@@ -425,6 +515,7 @@ function MobileProfileHeader({ profile, onEdit, spinning }) {
 }
 
 function MobileProfileEditor({ form, phone, onChange, passwordError, onCancel, onSubmit, emailVerification, onEmailOtpChange, onVerifyEmail, onResendEmail, onCancelEmail }) {
+  const phoneLocked = Boolean(phone);
   return (
     <form onSubmit={onSubmit} className="grid gap-4 rounded-[1.35rem] border border-slate-900/8 bg-white/82 p-4 shadow-[0_14px_42px_rgba(15,23,42,0.055)] backdrop-blur-2xl">
       <div>
@@ -433,7 +524,15 @@ function MobileProfileEditor({ form, phone, onChange, passwordError, onCancel, o
       </div>
       <PremiumField label="Full name" value={form.name || ""} onChange={(name) => onChange((current) => ({ ...current, name }))} />
       <PremiumField label="Email" type="email" value={form.email || ""} onChange={() => {}} disabled helper="Account email is fixed after signup." />
-      <PremiumField label="Phone number" value={form.phone || phone || ""} onChange={() => {}} disabled helper="Phone is fixed after signup and can be used for login." />
+      <PremiumField
+        label="Phone number"
+        value={form.phone || phone || ""}
+        onChange={(phoneNumber) => {
+          if (!phoneLocked) onChange((current) => ({ ...current, phone: phoneNumber }));
+        }}
+        disabled={phoneLocked}
+        helper={phoneLocked ? "Phone is fixed after signup and can be used for login." : "Required to complete your Google account profile."}
+      />
       <EmailVerificationPanel verification={emailVerification} onOtpChange={onEmailOtpChange} onVerify={onVerifyEmail} onResend={onResendEmail} onCancel={onCancelEmail} />
       <div className="grid grid-cols-2 gap-3">
         <PremiumField label="City" value={form.city || ""} onChange={(city) => onChange((current) => ({ ...current, city }))} />
@@ -734,6 +833,7 @@ function AlertsPanel() {
 }
 
 function SettingsPanel({ form, phone, passwordError, onChange, onCancel, onSubmit, emailVerification, onEmailOtpChange, onVerifyEmail, onResendEmail, onCancelEmail }) {
+  const phoneLocked = Boolean(phone);
   return (
     <AccountCard className="p-4 sm:p-6">
       <SectionHeading label="Settings" title="Edit account" description="Keep your profile details current and manage password changes from the same account space." />
@@ -743,7 +843,15 @@ function SettingsPanel({ form, phone, passwordError, onChange, onCancel, onSubmi
           <div className="grid gap-4 md:grid-cols-2">
             <PremiumField label="Full name" value={form.name || ""} onChange={(name) => onChange((current) => ({ ...current, name }))} />
             <PremiumField label="Email" type="email" value={form.email || ""} onChange={() => {}} disabled helper="Account email is fixed after signup." />
-            <PremiumField label="Phone number" value={form.phone || phone || ""} onChange={() => {}} disabled helper="Phone is fixed after signup and can be used for login." />
+            <PremiumField
+              label="Phone number"
+              value={form.phone || phone || ""}
+              onChange={(phoneNumber) => {
+                if (!phoneLocked) onChange((current) => ({ ...current, phone: phoneNumber }));
+              }}
+              disabled={phoneLocked}
+              helper={phoneLocked ? "Phone is fixed after signup and can be used for login." : "Required to complete your Google account profile."}
+            />
             <PremiumField label="City" value={form.city || ""} onChange={(city) => onChange((current) => ({ ...current, city }))} />
             <PremiumSelect label="State" value={form.state || "Karnataka"} onChange={(state) => onChange((current) => ({ ...current, state }))} options={indianStates} />
           </div>

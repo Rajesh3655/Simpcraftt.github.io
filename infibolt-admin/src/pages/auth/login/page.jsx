@@ -18,7 +18,7 @@ export default function AdminLoginPage() {
     if (Object.keys(errors).length) return;
     try {
       await login(form);
-      toast.success("Admin session active", { description: "Secure backend session is active." });
+      toast.success("Secure session active", { description: "Protected workspace access is ready." });
       navigate("/");
     } catch (error) {
       setFieldErrors(error.fields || { email: "Check this email.", password: "Check this password." });

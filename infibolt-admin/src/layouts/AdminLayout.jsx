@@ -100,7 +100,7 @@ const navGroups = [
 const allNavItems = navGroups.flatMap((group) => group.items);
 
 const sectionMeta = {
-  dashboard: ["Operations Dashboard", "A calm command center for launch health, ownership growth, warranty pressure, and support workload."],
+  dashboard: ["Operations Dashboard", "A calm command center for launch health, ownership growth, warranty care, and support workload."],
   products: ["Product Management", "Create and control products through focused cards instead of one overwhelming form."],
   categories: ["Category Management", "Organize product families, category heroes, and navigation visibility."],
   productHero: ["Product Hero", "Control flagship product placement across homepage and product surfaces."],
@@ -109,8 +109,8 @@ const sectionMeta = {
   newsletterSubscribers: ["Newsletter Subscribers", "Manage footer subscribers, consent status, exports, and unsubscribe state."],
   registeredWarranty: ["Registered Warranty", "Verify device ownership and warranty activation records."],
   warrantyPolicy: ["Warranty Policy", "Publish the warranty policy PDF customers must acknowledge before registration."],
-  warrantyClaims: ["Warranty Claims", "Approve, reject, and track claim decisions with invoice and serial context."],
-  claimStatus: ["Warranty Details", "Review registered warranties and warranty claims with clean status controls."],
+  warrantyClaims: ["Warranty Claims", "Review warranty care requests with invoice and serial context."],
+  claimStatus: ["Warranty Details", "Review registered warranties and care requests with clean status controls."],
   serialManagement: ["Serial Management", "Look up serials, product mappings, ownership conflicts, and duplicate risk."],
   complaints: ["Complaints", "Triage incoming customer issues with context and priority."],
   contactSettings: ["Contact Settings", "Update storefront phone, help email, WhatsApp, and social media footer links."],
@@ -123,13 +123,13 @@ const sectionMeta = {
   homepageCms: ["Homepage CMS", "Visually manage hero blocks, sections, banners, and product placements."],
   productPageCms: ["Product Page CMS", "Control product story blocks, specs, ownership messaging, and SEO."],
   seo: ["SEO Management", "Review titles, descriptions, sitemap readiness, and index controls."],
-  analytics: ["Analytics", "Simple, useful operational analytics without chart clutter."],
+  analytics: ["Analytics", "Simple, useful performance signals without chart clutter."],
   inventory: ["Inventory", "Track SKU, stock, serial prefixes, and launch readiness."],
   marketplace: ["Marketplace Links", "Control Amazon, Flipkart, retail partner, and regional launch URLs."],
   launchStatus: ["Launch Status", "Coordinate public visibility, hero timing, and availability signals."],
   security: ["Security", "Session, RBAC, rate limit, audit, and upload hardening controls."],
   adminUsers: ["Admin Users", "Manage internal users, roles, status, and permissions."],
-  auditLogs: ["Audit Logs", "Review sensitive changes, sign-ins, exports, and operational actions."],
+  auditLogs: ["Audit Logs", "Review sensitive changes, sign-ins, exports, and protected actions."],
   settings: ["Settings", "Brand, system, integration, and feature controls."],
 };
 
@@ -169,13 +169,13 @@ export function AdminShell({ title, description, section = "dashboard", children
       <div className="min-h-screen bg-[#f6f4ef] text-slate-950 dark:bg-[#08090c] dark:text-white">
         {navOpen && <button type="button" aria-label="Close navigation" onClick={() => setNavOpen(false)} className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-sm xl:hidden" />}
 
-        <aside className={`fixed inset-y-0 left-0 z-50 flex w-[min(21rem,calc(100vw-1rem))] flex-col border-r border-slate-900/8 bg-white/90 shadow-[16px_0_60px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition-transform duration-300 xl:translate-x-0 dark:border-white/10 dark:bg-[#0c0d12]/92 ${navOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <aside className={`fixed inset-y-0 left-0 z-50 flex w-[min(21rem,calc(100vw-1rem))] flex-col border-r border-slate-900/8 bg-white/92 shadow-[16px_0_60px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition-transform duration-300 xl:translate-x-0 dark:border-white/10 dark:bg-[#0c0d12]/92 ${navOpen ? "translate-x-0" : "-translate-x-full"}`}>
           <div className="flex items-center justify-between gap-3 px-5 py-5">
             <Link to="/" className="flex items-center gap-3">
               <img src="/images/favicon.svg" alt="INFIBOLT" className="h-7 w-7 dark:invert" />
               <span>
                 <span className="block text-[14px] font-extrabold uppercase leading-none tracking-[0.25em]">INFIBOLT</span>
-                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Admin OS</span>
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Control Center</span>
               </span>
             </Link>
             <button type="button" onClick={() => setNavOpen(false)} className="rounded-xl border border-slate-900/10 p-2 xl:hidden dark:border-white/10" aria-label="Close admin navigation">
@@ -222,7 +222,7 @@ export function AdminShell({ title, description, section = "dashboard", children
         </aside>
 
         <div className="xl:pl-[21rem]">
-          <header className="sticky top-0 z-30 border-b border-slate-900/8 bg-[#f6f4ef]/86 px-4 py-3 backdrop-blur-2xl dark:border-white/10 dark:bg-[#08090c]/86 sm:px-6 lg:px-8">
+          <header className="sticky top-0 z-30 border-b border-slate-900/8 bg-[#f6f4ef]/88 px-4 py-3 backdrop-blur-2xl dark:border-white/10 dark:bg-[#08090c]/86 sm:px-6 lg:px-8">
             <div className="mx-auto flex max-w-[1440px] items-center gap-3">
               <button type="button" onClick={() => setNavOpen(true)} className="rounded-xl border border-slate-900/10 bg-white/60 p-3 xl:hidden dark:border-white/10 dark:bg-white/5" aria-label="Open admin navigation">
                 <LayoutDashboard className="h-5 w-5" />
@@ -245,12 +245,12 @@ export function AdminShell({ title, description, section = "dashboard", children
             </div>
           </header>
 
-          <main id="admin-main-content" className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <main id="admin-main-content" className="px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
             <div className="mx-auto max-w-[1440px]">
-              <div className="mb-6 flex flex-col gap-4 rounded-[1.35rem] border border-slate-900/8 bg-white/62 p-5 shadow-[0_18px_60px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-white/[0.035] lg:flex-row lg:items-end lg:justify-between">
-                <div>
+              <div className="mb-5 flex flex-col gap-4 rounded-[1.35rem] border border-slate-900/8 bg-white/66 p-5 shadow-[0_18px_54px_rgba(15,23,42,0.055)] dark:border-white/10 dark:bg-white/[0.035] sm:mb-6 sm:p-6 lg:flex-row lg:items-end lg:justify-between">
+                <div className="min-w-0">
                   <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">{active ? active.label : "Admin"}</p>
-                  <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
+                  <h1 className="mt-3 text-[2rem] font-semibold leading-[1.05] tracking-normal sm:text-4xl">{title}</h1>
                   {description && <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 dark:text-slate-400">{description}</p>}
                 </div>
               </div>
@@ -382,7 +382,7 @@ function DashboardWorkspace() {
   ];
 
   return (
-    <section className="rounded-[1.25rem] border border-slate-900/8 bg-white/76 p-5 shadow-[0_18px_58px_rgba(15,23,42,0.07)] dark:border-white/10 dark:bg-white/[0.035]">
+    <section className="rounded-[1.35rem] border border-slate-900/8 bg-white/76 p-5 shadow-[0_18px_54px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-white/[0.035] sm:p-6">
       <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Quick access</p>
@@ -401,10 +401,10 @@ function DashboardAccessCard({ label, href, icon: Icon, total, today, text }) {
   return (
     <Link
       to={href}
-      className="group rounded-[1.15rem] border border-slate-900/8 bg-slate-950/[0.025] p-5 transition hover:-translate-y-0.5 hover:border-slate-950/20 hover:bg-white hover:shadow-[0_18px_45px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/[0.035] dark:hover:bg-white/[0.07]"
+      className="group rounded-[1.2rem] border border-slate-900/8 bg-slate-950/[0.025] p-5 transition duration-200 hover:border-slate-950/18 hover:bg-white hover:shadow-[0_16px_40px_rgba(15,23,42,0.075)] dark:border-white/10 dark:bg-white/[0.035] dark:hover:bg-white/[0.07] md:hover:-translate-y-0.5"
     >
       <div className="flex items-start justify-between gap-4">
-        <span className="grid h-11 w-11 place-items-center rounded-xl bg-slate-950 text-white transition group-hover:scale-105 dark:bg-white dark:text-slate-950">
+        <span className="grid h-11 w-11 place-items-center rounded-xl bg-slate-950 text-white transition duration-200 group-hover:scale-[1.03] dark:bg-white dark:text-slate-950">
           <Icon className="h-4 w-4" />
         </span>
         <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
@@ -414,7 +414,7 @@ function DashboardAccessCard({ label, href, icon: Icon, total, today, text }) {
       <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{label}</p>
       <div className="mt-3 flex items-end justify-between gap-4">
         <p className="text-4xl font-semibold tracking-tight text-slate-950 dark:text-white">{total}</p>
-        <p className="pb-1 text-sm font-medium text-slate-500 dark:text-slate-400">{text}</p>
+        <p className="max-w-[9rem] pb-1 text-right text-sm font-medium leading-5 text-slate-500 dark:text-slate-400">{text}</p>
       </div>
     </Link>
   );
@@ -1815,7 +1815,7 @@ function MetricGrid() {
 
 function Panel({ title, icon: Icon, children }) {
   return (
-    <section className="rounded-[1.25rem] border border-slate-900/8 bg-white/72 p-5 shadow-[0_16px_48px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-white/[0.035]">
+    <section className="rounded-[1.35rem] border border-slate-900/8 bg-white/74 p-5 shadow-[0_16px_46px_rgba(15,23,42,0.055)] dark:border-white/10 dark:bg-white/[0.035] sm:p-6">
       <div className="mb-5 flex items-center gap-3">
         <span className="grid h-10 w-10 place-items-center rounded-xl bg-slate-950 text-white dark:bg-white dark:text-slate-950">
           <Icon className="h-4 w-4" />

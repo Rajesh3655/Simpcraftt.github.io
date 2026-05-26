@@ -19,7 +19,7 @@ export function PageLoader({ label = "Preparing experience" }) {
 }
 
 export function SkeletonBlock({ className = "" }) {
-  return <div className={`premium-shimmer rounded-2xl bg-slate-200/80 dark:bg-white/10 ${className}`} />;
+  return <div className={`premium-shimmer rounded-[1.15rem] bg-slate-200/80 dark:bg-white/10 ${className}`} />;
 }
 
 export function EmptyState({ title = "Nothing here yet", description, action }) {
@@ -35,7 +35,7 @@ export function EmptyState({ title = "Nothing here yet", description, action }) 
 
 export function ErrorState({ title = "Could not load content", description, onRetry }) {
   return (
-    <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-6 text-red-900 dark:text-red-100">
+    <div className="rounded-[1.25rem] border border-red-500/20 bg-red-500/5 p-6 text-red-900 shadow-[0_12px_34px_rgba(190,18,60,0.055)] dark:text-red-100">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-3">
           <AlertCircle className="mt-1 h-5 w-5 shrink-0" />

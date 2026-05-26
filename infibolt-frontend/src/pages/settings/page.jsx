@@ -7,6 +7,14 @@ import { AccountAtmosphere, AccountCard, PremiumButton, PremiumField, SoftStatus
 import { OtpInput } from "../../components/OtpInput";
 import { useAppStore } from "../../store/appStore";
 
+function normalizePhone(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function isValidPhone(value) {
+  return /^[1-9]\d{7,14}$/.test(normalizePhone(value));
+}
+
 export default function SettingsPage() {
   const profile = useAppStore((state) => state.profile);
   const updateProfile = useAppStore((state) => state.updateProfile);
@@ -28,6 +36,13 @@ export default function SettingsPage() {
   const save = async (event) => {
     event.preventDefault();
     const { email, phone, ...safeProfileFields } = form;
+    if (!profile.phone) {
+      if (!isValidPhone(phone)) {
+        toast.error("Phone number required", { description: "Add a valid phone number to complete your profile." });
+        return;
+      }
+      safeProfileFields.phone = normalizePhone(phone);
+    }
     await updateProfile(safeProfileFields);
     toast.success("Preferences saved", { description: "Your account details are ready for the next visit." });
   };
@@ -74,12 +89,12 @@ export default function SettingsPage() {
                       label={key}
                       value={form[key] || ""}
                       onChange={(value) => {
-                        if (key === "email" || key === "phone") return;
+                        if (key === "email" || (key === "phone" && profile.phone)) return;
                         setForm((current) => ({ ...current, [key]: value }));
                       }}
                       type={key === "email" ? "email" : "text"}
-                      disabled={key === "email" || key === "phone"}
-                      helper={key === "email" ? "Account email is fixed after signup." : key === "phone" ? "Phone is fixed after signup and can be used for login." : undefined}
+                      disabled={key === "email" || (key === "phone" && Boolean(profile.phone))}
+                      helper={key === "email" ? "Account email is fixed after signup." : key === "phone" ? (profile.phone ? "Phone is fixed after signup and can be used for login." : "Required to complete your Google account profile.") : undefined}
                     />
                   ))}
                 </div>

@@ -82,6 +82,16 @@ export async function seedDevelopmentData() {
   }
 
   await Customer.updateMany({ passwordHash: { $exists: false } }, { $set: { passwordHash: customerPasswordHash } });
+  await Promise.all(
+    categories
+      .filter((category) => category.description)
+      .map((category) =>
+        Category.updateOne(
+          { id: category.id, $or: [{ description: { $exists: false } }, { description: "" }, { description: null }] },
+          { $set: { description: category.description } }
+        )
+      )
+  );
 }
 
 export function dbStatus() {

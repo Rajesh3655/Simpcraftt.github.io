@@ -45,6 +45,9 @@ export async function mockRequest(config) {
   if (url === "/auth/verify-otp" && method === "post") {
     return { data: { token: token(), user: { name: data.name || "INFIBOLT Customer", email: data.email || "customer@infibolt.com", phone: data.phone || "9876543210", role: "customer" } } };
   }
+  if (url === "/auth/google" && method === "post") {
+    return { data: { token: token(), user: { name: "Google Customer", email: "customer@infibolt.com", phone: "", role: "customer" } } };
+  }
   if (url === "/auth/forgot-password") return { data: { resetId: `reset_${Date.now().toString(36)}`, message: "Reset OTP prepared." } };
 
   if (url === "/products") return { data: { items: products, categories, total: products.length } };

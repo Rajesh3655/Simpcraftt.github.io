@@ -105,6 +105,22 @@ function assertSignupIdentityAvailable(fields) {
   throw createHttpError(409, message, { fields });
 }
 
+async function verifyGoogleCredential(credential) {
+  if (!env.googleClientId) throw createHttpError(503, "Google login is not configured.");
+  const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+  if (!response.ok) throw createHttpError(401, "Google sign in could not be verified.");
+  const profile = await response.json();
+  if (profile.aud !== env.googleClientId) throw createHttpError(401, "Google sign in was issued for another app.");
+  if (profile.email_verified !== "true" && profile.email_verified !== true) throw createHttpError(401, "Google account email is not verified.");
+  if (!profile.sub || !profile.email) throw createHttpError(401, "Google account details are incomplete.");
+  return {
+    sub: String(profile.sub),
+    email: String(profile.email).toLowerCase(),
+    name: String(profile.name || profile.given_name || profile.email.split("@")[0]).trim(),
+    picture: profile.picture ? String(profile.picture) : undefined,
+  };
+}
+
 async function resolvePasswordResetAccount(identifier) {
   const resolved = resolveAccountIdentifier({ identifier });
   return Customer.findOne(resolved.query).select("+passwordHash +resetTokenHash +resetTokenExpiresAt");
@@ -178,6 +194,49 @@ export async function verifyOtp(req, res) {
   await createSession(req, res, user);
   await writeAuditLog(req, "customer.email.verified", { email: data.email });
   return ok(res, { user: sanitizeUser(user) }, 201);
+}
+
+export async function googleLogin(req, res) {
+  const { credential } = matchedData(req);
+  const googleProfile = await verifyGoogleCredential(credential);
+  let user = await Customer.findOne({
+    $or: [{ googleSub: googleProfile.sub }, { email: googleProfile.email }],
+  }).select("+refreshTokenHash +googleSub");
+
+  if (user?.status === "Locked") throw createHttpError(423, "Account is disabled. Contact INFIBOLT support.");
+
+  if (!user) {
+    user = await Customer.create({
+      name: googleProfile.name,
+      email: googleProfile.email,
+      googleSub: googleProfile.sub,
+      avatarUrl: googleProfile.picture,
+      status: "Verified",
+      role: "customer",
+      emailVerifiedAt: new Date(),
+    });
+    user = await Customer.findById(user._id).select("+refreshTokenHash +googleSub");
+    await writeAuditLog(req, "customer.google_signup.success", { email: googleProfile.email });
+  } else {
+    let changed = false;
+    if (!user.googleSub) {
+      user.googleSub = googleProfile.sub;
+      changed = true;
+    }
+    if (!user.emailVerifiedAt) {
+      user.emailVerifiedAt = new Date();
+      changed = true;
+    }
+    if (googleProfile.picture && user.avatarUrl !== googleProfile.picture) {
+      user.avatarUrl = googleProfile.picture;
+      changed = true;
+    }
+    if (changed) await user.save();
+    await writeAuditLog(req, "customer.google_login.success", { email: googleProfile.email });
+  }
+
+  await createSession(req, res, user);
+  return ok(res, { user: sanitizeUser(user) });
 }
 
 export async function forgotPassword(req, res) {
@@ -374,22 +433,40 @@ export async function updateProfile(req, res) {
   const data = matchedData(req, { locations: ["body"] });
   const allowed = ["name", "address", "city", "state"];
   const update = {};
+  if (data.phone !== undefined) {
+    if (req.user.phone && data.phone !== req.user.phone) {
+      throw createHttpError(403, "Phone number cannot be changed after it is set.");
+    }
+    if (!req.user.phone) {
+      const existing = await Customer.findOne({ phone: data.phone, _id: { $ne: req.user._id } }).select("_id").lean();
+      if (existing) throw createHttpError(409, "This phone number is already registered.", { fields: { phone: "This phone number is already registered." } });
+      update.phone = data.phone;
+    }
+  }
   for (const field of allowed) {
     if (data[field] !== undefined && data[field] !== req.user[field]) {
       update[field] = data[field];
-      await CustomerChangeLog.create({
-        customerId: req.user._id,
-        field,
-        previousValue: req.user[field],
-        nextValue: data[field],
-        verified: true,
-        actorEmail: req.user.email,
-        ip: req.ip,
-        userAgent: req.get("user-agent"),
-      });
     }
   }
-  const customer = await Customer.findByIdAndUpdate(req.user._id, update, { new: true, runValidators: true });
+  if (!Object.keys(update).length) {
+    return ok(res, { ...sanitizeUser(req.user), address: req.user.address, city: req.user.city || "Bengaluru", state: req.user.state || "Karnataka" });
+  }
+  const customer = await Customer.findOneAndUpdate(
+    { _id: req.user._id, ...(update.phone ? { $or: [{ phone: { $exists: false } }, { phone: "" }, { phone: null }] } : {}) },
+    update,
+    { new: true, runValidators: true }
+  );
+  if (!customer) throw createHttpError(409, "Phone number is already set for this account.");
+  await Promise.all(Object.keys(update).map((field) => CustomerChangeLog.create({
+    customerId: req.user._id,
+    field,
+    previousValue: req.user[field],
+    nextValue: update[field],
+    verified: true,
+    actorEmail: req.user.email,
+    ip: req.ip,
+    userAgent: req.get("user-agent"),
+  })));
   await writeAuditLog(req, "customer.profile.updated", { fields: Object.keys(update) });
   return ok(res, { ...sanitizeUser(customer), address: customer.address, city: customer.city, state: customer.state });
 }

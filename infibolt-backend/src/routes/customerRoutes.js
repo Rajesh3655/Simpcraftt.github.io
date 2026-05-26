@@ -6,6 +6,7 @@ import {
   createWarrantyClaim,
   createWarrantyRma,
   forgotPassword,
+  googleLogin,
   getHomepageProducts,
   getProduct,
   getPublicSiteSettings,
@@ -49,6 +50,7 @@ customerRoutes.post("/auth/login", authLimiter, customerLoginValidator, validate
 customerRoutes.post("/auth/login/request-otp", authLimiter, customerLoginValidator, validate, asyncHandler(requestLoginOtp));
 customerRoutes.post("/auth/login/verify-otp", authLimiter, [accountIdentifierField, body("email").optional().trim(), otpValidator], validate, asyncHandler(verifyLoginOtp));
 customerRoutes.post("/auth/signup", authLimiter, customerSignupValidator, validate, asyncHandler(signup));
+customerRoutes.post("/auth/google", authLimiter, [body("credential").trim().isLength({ min: 100, max: 4096 })], validate, asyncHandler(googleLogin));
 customerRoutes.post(
   "/auth/verify-otp",
   authLimiter,
@@ -76,6 +78,7 @@ customerRoutes.patch(
   requireAuth("customer"),
   [
     body("name").optional({ nullable: true }).trim().isLength({ min: 2, max: 120 }),
+    body("phone").optional({ nullable: true }).trim().customSanitizer((value) => String(value || "").replace(/\D/g, "")).matches(/^[1-9]\d{7,14}$/),
     body("address").optional({ nullable: true }).trim().isLength({ max: 240 }),
     body("city").optional({ nullable: true }).trim().isLength({ max: 80 }),
     body("state").optional({ nullable: true }).trim().isLength({ max: 80 }),

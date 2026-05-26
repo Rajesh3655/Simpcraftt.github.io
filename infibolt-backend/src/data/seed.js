@@ -1,8 +1,8 @@
 export const categories = [
-  { id: "audio", name: "Audio", icon: "headphones", desktopMenuVisible: true, sortOrder: 1 },
-  { id: "wearables", name: "Wearables", icon: "watch", desktopMenuVisible: true, sortOrder: 2 },
-  { id: "charging", name: "Charging", icon: "zap", desktopMenuVisible: true, sortOrder: 3 },
-  { id: "home-tech", name: "Home Tech", icon: "home", desktopMenuVisible: true, sortOrder: 4 },
+  { id: "audio", name: "Audio", icon: "headphones", description: "Cinematic sound for focused work and deep listening.", desktopMenuVisible: true, sortOrder: 1 },
+  { id: "wearables", name: "Wearables", icon: "watch", description: "Health, time, and everyday intelligence in premium hardware.", desktopMenuVisible: true, sortOrder: 2 },
+  { id: "charging", name: "Charging", icon: "zap", description: "Fast, clean power systems for modern device ecosystems.", desktopMenuVisible: true, sortOrder: 3 },
+  { id: "home-tech", name: "Home Tech", icon: "home", description: "Connected lifestyle tools for premium everyday spaces.", desktopMenuVisible: true, sortOrder: 4 },
 ];
 
 export const collections = [

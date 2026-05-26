@@ -10,6 +10,9 @@ export const authService = {
   async verifyOtp(payload) {
     return request.post("/auth/verify-otp", payload, { skipGlobalErrorToast: true });
   },
+  google(payload) {
+    return request.post("/auth/google", payload, { skipGlobalErrorToast: true });
+  },
   forgotPassword(payload) {
     return request.post("/auth/forgot-password", payload, { skipGlobalErrorToast: true });
   },

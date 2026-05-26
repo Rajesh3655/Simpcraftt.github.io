@@ -25,7 +25,7 @@ function getFriendlyApiError(error) {
   if (!error.response) {
     return {
       status,
-      message: "We could not reach the Infibolt server. Please make sure the backend is running and try again.",
+      message: "We could not reach INFIBOLT services right now. Please try again in a moment.",
       details,
       fields,
     };

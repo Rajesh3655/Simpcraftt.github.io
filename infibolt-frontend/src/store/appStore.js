@@ -5,12 +5,18 @@ import { supportService } from "../services/supportService";
 import { warrantyService } from "../services/warrantyService";
 
 const initialProfile = {
-  name: "Rajesh Kumar",
-  email: "customer@infibolt.com",
-  phone: "9876543210",
+  name: "",
+  email: "",
+  phone: "",
   city: "Bengaluru",
   state: "Karnataka",
 };
+
+function setCustomerSessionHint(active) {
+  if (typeof window === "undefined") return;
+  if (active) window.localStorage.setItem("infibolt.customerSession", "active");
+  else window.localStorage.removeItem("infibolt.customerSession");
+}
 
 export const useAppStore = create((set, get) => ({
   auth: {
@@ -32,6 +38,7 @@ export const useAppStore = create((set, get) => ({
     set((state) => ({ auth: { ...state.auth, status: "loading", error: null } }));
     try {
       const result = await authService.login(credentials);
+      setCustomerSessionHint(true);
       set({ auth: { user: result.user, status: "authenticated", error: null }, profile: { ...initialProfile, ...result.user } });
       return result;
     } catch (error) {
@@ -44,6 +51,7 @@ export const useAppStore = create((set, get) => ({
     set((state) => ({ auth: { ...state.auth, status: "loading", error: null } }));
     try {
       const result = await authService.verifyLoginOtp(payload);
+      setCustomerSessionHint(true);
       set({ auth: { user: result.user, status: "authenticated", error: null }, profile: { ...initialProfile, ...result.user } });
       return result;
     } catch (error) {
@@ -52,10 +60,23 @@ export const useAppStore = create((set, get) => ({
     }
   },
   signup: (payload) => authService.signup(payload),
+  googleLogin: async (payload) => {
+    set((state) => ({ auth: { ...state.auth, status: "loading", error: null } }));
+    try {
+      const result = await authService.google(payload);
+      setCustomerSessionHint(true);
+      set({ auth: { user: result.user, status: "authenticated", error: null }, profile: { ...initialProfile, ...result.user } });
+      return result;
+    } catch (error) {
+      set((state) => ({ auth: { ...state.auth, status: "error", error: error.message || "Google sign in failed." } }));
+      throw error;
+    }
+  },
   verifyOtp: async (payload) => {
     set((state) => ({ auth: { ...state.auth, status: "loading", error: null } }));
     try {
       const result = await authService.verifyOtp(payload);
+      setCustomerSessionHint(true);
       set({ auth: { user: result.user, status: "authenticated", error: null }, profile: { ...initialProfile, ...result.user } });
       return result;
     } catch (error) {
@@ -64,11 +85,24 @@ export const useAppStore = create((set, get) => ({
     }
   },
   hydrateSession: async () => {
+    set((state) => ({ auth: { ...state.auth, status: "loading", error: null } }));
     try {
       const result = await authService.me();
+      setCustomerSessionHint(true);
       set({ auth: { user: result.user, status: "authenticated", error: null }, profile: { ...initialProfile, ...result.user } });
       return result;
-    } catch {
+    } catch (error) {
+      if (error.status === 401) {
+        try {
+          const result = await authService.refresh();
+          setCustomerSessionHint(true);
+          set({ auth: { user: result.user, status: "authenticated", error: null }, profile: { ...initialProfile, ...result.user } });
+          return result;
+        } catch {
+          // Fall through to clear the stale local session hint.
+        }
+      }
+      setCustomerSessionHint(false);
       set((state) => ({ auth: { ...state.auth, user: null, status: "idle" } }));
       return null;
     }
@@ -76,9 +110,11 @@ export const useAppStore = create((set, get) => ({
   refreshSession: async () => {
     try {
       const result = await authService.refresh();
+      setCustomerSessionHint(true);
       set({ auth: { user: result.user, status: "authenticated", error: null }, profile: { ...initialProfile, ...result.user } });
       return result;
     } catch (error) {
+      setCustomerSessionHint(false);
       set((state) => ({ auth: { ...state.auth, user: null, status: "expired", error: "Your secure session expired. Please sign in again." } }));
       return null;
     }
@@ -87,6 +123,7 @@ export const useAppStore = create((set, get) => ({
     try {
       await authService.logout();
     } finally {
+      setCustomerSessionHint(false);
       set((state) => ({ auth: { ...state.auth, user: null, status: "idle" } }));
     }
   },
@@ -152,7 +189,6 @@ export const useAppStore = create((set, get) => ({
     return rma;
   },
   updateProfile: async (profile) => {
-    set((state) => ({ profile: { ...state.profile, ...profile } }));
     const result = await authService.updateProfile(profile);
     set((state) => ({ profile: { ...state.profile, ...result }, auth: { ...state.auth, user: { ...(state.auth.user || {}), ...result } } }));
     return result;

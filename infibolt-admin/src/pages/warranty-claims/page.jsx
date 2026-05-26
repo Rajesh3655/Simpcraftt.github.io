@@ -52,7 +52,7 @@ export default function AdminWarrantyClaimsPage() {
   };
 
   return (
-    <AdminShell section="warrantyClaims" title="Warranty Claims" description="Review ownership, RMA requests, serial context, invoices, and operational claim decisions.">
+    <AdminShell section="warrantyClaims" title="Warranty Claims" description="Review warranty care requests with clear customer, product, serial, and invoice context.">
       <div className="grid gap-5">
         <section className="grid gap-4 rounded-[1.15rem] border border-slate-900/8 bg-white/70 p-5 shadow-[0_14px_44px_rgba(15,23,42,0.05)] dark:border-white/10 dark:bg-white/[0.035] lg:grid-cols-[1fr_auto] lg:items-center">
           <label className="flex min-h-[46px] items-center gap-3 rounded-full border border-slate-900/10 bg-white/75 px-5 dark:border-white/10 dark:bg-white/5">
@@ -104,7 +104,7 @@ export default function AdminWarrantyClaimsPage() {
                     </label>
                     <label className="grid gap-2">
                       <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Internal note</span>
-                      <textarea value={notesDrafts[item.id] || ""} onChange={(event) => setNotesDrafts((current) => ({ ...current, [item.id]: event.target.value }))} rows={3} className="premium-control px-4 py-3 text-sm font-medium outline-none dark:bg-black/20" placeholder="Decision context, invoice note, serial verification" />
+                      <textarea value={notesDrafts[item.id] || ""} onChange={(event) => setNotesDrafts((current) => ({ ...current, [item.id]: event.target.value }))} rows={3} className="premium-control px-4 py-3 text-sm font-medium outline-none dark:bg-black/20" placeholder="Care note, invoice detail, serial confirmation" />
                     </label>
                     <button type="button" onClick={() => save(item)} disabled={saving === item.id} className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-slate-950 px-5 text-xs font-bold uppercase tracking-[0.14em] text-white shadow-[0_14px_34px_rgba(15,23,42,0.16)] disabled:opacity-60 dark:bg-white dark:text-slate-950">
                       <CheckCircle2 className="h-4 w-4" />

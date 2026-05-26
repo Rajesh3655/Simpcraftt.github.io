@@ -424,7 +424,7 @@ function MarketplaceSection({ product }) {
                 ? "Marketplace purchase is temporarily paused for this product. Join availability alerts and return to register ownership after purchase."
                 : isComingSoon
                   ? "This product is not open for purchase yet. Partner buttons will appear here when launch availability begins."
-                : "Buy from your preferred marketplace, then return to Infibolt to register ownership, activate warranty, and access support."}
+                : "Buy from your preferred marketplace, then link your product to INFIBOLT for warranty coverage, support, and long-term care."}
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -444,7 +444,7 @@ function MarketplaceSection({ product }) {
 }
 
 function WarrantyOwnership({ product }) {
-  const steps = ["Purchase from any trusted marketplace", "Register your serial number", "Upload invoice for verification", "Activate warranty and raise claims", "Get Infibolt support from your account"];
+  const steps = ["Purchase through a trusted partner", "Link your product serial number", "Add invoice details securely", "Activate warranty coverage", "Keep support connected to your account"];
 
   return (
     <section className="bg-white px-4 py-14 sm:px-6 lg:py-24">
@@ -453,7 +453,7 @@ function WarrantyOwnership({ product }) {
           <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-black/45">Warranty & ownership</p>
           <h2 className="mt-4 text-3xl font-semibold leading-tight tracking-normal text-[#111316] sm:text-5xl">Your product stays connected after purchase.</h2>
           <p className="mt-5 text-base leading-8 text-black/62">
-            Marketplace ownership is verified through Infibolt using your product serial number and invoice. Once approved, warranty and support remain attached to your account.
+            Link your device with a serial number and invoice so warranty coverage, support, and product care stay connected to your INFIBOLT account.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link to={`/warranty?product=${product.slug}`} prefetch="intent" className="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-[#111316] px-6 text-[11px] font-bold uppercase tracking-[0.15em] text-white">
@@ -663,8 +663,8 @@ function uniqueBySlug(items) {
 function defaultFaqs(product) {
   return [
     { question: `Where can I buy ${product.name}?`, answer: "Infibolt products are purchased through trusted marketplace and retail launch partners listed on this page." },
-    { question: "How do I activate warranty?", answer: "Create or open your Infibolt account, register the product serial number, upload the invoice, and submit it for warranty activation." },
-    { question: "Can I raise support claims after marketplace purchase?", answer: "Yes. Once ownership is registered, warranty claims and product support are handled through Infibolt support workflows." },
+    { question: "How do I activate warranty?", answer: "Create or open your INFIBOLT account, register the product serial number, and add your invoice details to activate warranty coverage." },
+    { question: "Can I get support after marketplace purchase?", answer: "Yes. Once your product is registered, warranty care and product support stay connected to your INFIBOLT account." },
   ];
 }
 
@@ -692,7 +692,7 @@ function buildProductSchema(product, metadata) {
 function resolveMetadata(product) {
   return {
     title: product.seo?.title || `${product.name} | Infibolt`,
-    description: product.seo?.description || product.subtitle || product.summary || "Official Infibolt product details, marketplace availability, warranty registration, and ownership support.",
+    description: product.seo?.description || product.subtitle || product.summary || "Official INFIBOLT product details, trusted partner availability, warranty coverage, and ownership care.",
   };
 }
 

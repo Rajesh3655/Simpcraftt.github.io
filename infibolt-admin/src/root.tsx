@@ -8,8 +8,8 @@ import globalStylesHref from './styles/global.css?url';
 initializeMonitoring();
 
 export const meta = () => [
-  { title: 'INFIBOLT Admin OS' },
-  { name: 'description', content: 'Protected INFIBOLT operations console for products, care, warranty, media, and analytics.' },
+  { title: 'INFIBOLT Control Center' },
+  { name: 'description', content: 'Protected INFIBOLT workspace for products, care, warranty, media, and analytics.' },
   { name: 'robots', content: 'noindex,nofollow' },
   { name: 'theme-color', content: '#090A0D' },
 ];

@@ -8,9 +8,9 @@ import { useAdminStore } from "../../store/appStore";
 import { formatIndiaDateTime } from "../../utils/time";
 
 const warrantyActions = [
-  { label: "Approve", status: "Active", note: "Invoice and serial approved by admin.", tone: "green" },
-  { label: "Pending", status: "Pending Verification", note: "Warranty registration moved to pending review.", tone: "orange" },
-  { label: "Reject", status: "Rejected", note: "Warranty registration rejected by admin.", tone: "red" },
+  { label: "Approve", status: "Active", note: "Invoice and serial confirmed.", tone: "green" },
+  { label: "Pending", status: "Pending Verification", note: "Warranty registration needs additional review.", tone: "orange" },
+  { label: "Reject", status: "Rejected", note: "Warranty registration could not be verified.", tone: "red" },
 ];
 
 export default function AdminWarrantyPage() {
@@ -73,7 +73,7 @@ export default function AdminWarrantyPage() {
   };
 
   return (
-    <AdminShell section="registeredWarranty" title="Registered Warranty" description="Approve, reject, or keep warranty registrations pending after reviewing invoice and ownership details.">
+    <AdminShell section="registeredWarranty" title="Registered Warranty" description="Review registered products, confirm ownership details, and keep warranty records accurate.">
       <div className="grid gap-5">
         {status === "loading" && <PageLoader label="Opening registered warranty queue" />}
         {status === "error" && <EmptyState title="Registered warranty unavailable" description={error} />}
@@ -83,7 +83,7 @@ export default function AdminWarrantyPage() {
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-slate-950 text-white dark:bg-white dark:text-slate-950">
               <ShieldCheck className="h-4 w-4" />
             </span>
-            <h2 className="text-lg font-semibold tracking-tight">Warranty Verification Queue</h2>
+            <h2 className="text-lg font-semibold tracking-tight">Warranty Verification</h2>
           </div>
 
           {claims.length > 0 && (

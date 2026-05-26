@@ -70,7 +70,7 @@ export default function AdminProductsPage() {
   };
 
   return (
-    <AdminShell section="products" title="Product Management" description="Create, update, publish, and retire catalogue records from one operational product desk.">
+    <AdminShell section="products" title="Product Management" description="Create, refine, publish, and retire catalogue products from one focused workspace.">
       <div className="grid gap-5">
         <section className="rounded-[1.15rem] border border-slate-900/8 bg-white/70 p-5 shadow-[0_14px_44px_rgba(15,23,42,0.05)] dark:border-white/10 dark:bg-white/[0.035]">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

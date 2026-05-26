@@ -21,10 +21,13 @@ const schema = new mongoose.Schema(
     resetTokenExpiresAt: { type: Date, select: false },
     emailVerificationTokenHash: { type: String, select: false },
     emailVerifiedAt: { type: Date },
+    googleSub: { type: String, trim: true, select: false },
+    avatarUrl: { type: String, trim: true, maxlength: 500 },
   },
   schemaDefaults
 );
 
 schema.index({ email: 1, status: 1 });
+schema.index({ googleSub: 1 }, { unique: true, sparse: true });
 
 export const Customer = mongoose.model("Customer", schema);

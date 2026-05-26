@@ -1,4 +1,4 @@
-import { Links, Meta, Scripts, ScrollRestoration, useOutlet } from 'react-router';
+import { Links, Meta, Scripts, ScrollRestoration, useLocation, useOutlet } from 'react-router';
 import { useEffect } from 'react';
 import { Toaster } from 'sonner';
 import { initializeMonitoring } from './config/monitoring';
@@ -103,15 +103,18 @@ export default function App() {
 }
 
 function CustomerSessionManager() {
+  const { pathname } = useLocation();
   const authUser = useAppStore((state) => state.auth.user);
   const hydrateSession = useAppStore((state) => state.hydrateSession);
   const refreshSession = useAppStore((state) => state.refreshSession);
 
   useEffect(() => {
     if (hasHydratedCustomerSession) return;
+    const shouldHydrate = hasCustomerSessionHint();
+    if (!shouldHydrate) return;
     hasHydratedCustomerSession = true;
     hydrateSession();
-  }, [hydrateSession]);
+  }, [hydrateSession, pathname]);
 
   useEffect(() => {
     if (!authUser) return undefined;
@@ -122,5 +125,10 @@ function CustomerSessionManager() {
   }, [authUser, refreshSession]);
 
   return null;
+}
+
+function hasCustomerSessionHint() {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem("infibolt.customerSession") === "active";
 }
 

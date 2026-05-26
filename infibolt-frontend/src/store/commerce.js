@@ -180,20 +180,20 @@ export const products = [
 
 export const faqs = [
   {
-    question: "Can I buy directly from INFIBOLT?",
-    answer: "Infibolt is launching marketplace-first. Current purchases route to selected partners, while ownership, warranty, and support are managed here.",
+    question: "Where can I purchase INFIBOLT products?",
+    answer: "INFIBOLT products can be purchased through trusted marketplace and retail launch partners including Amazon, Flipkart, and selected offline channels.",
   },
   {
-    question: "Can marketplace links be changed later?",
-    answer: "Yes. Product records already include individual Amazon, Flipkart, and custom marketplace URLs.",
+    question: "Which launch partners are available?",
+    answer: "Availability may vary by product. Each product page shows the trusted purchase options currently available for that device.",
   },
   {
-    question: "How does warranty registration work?",
-    answer: "Customers submit product, serial, purchase, invoice, and contact details. The system returns a tracking ticket.",
+    question: "How do I register my device for warranty coverage?",
+    answer: "After purchase, you can securely register your product using your invoice and serial number to activate warranty coverage and support services.",
   },
   {
-    question: "How do I activate warranty after marketplace purchase?",
-    answer: "Create an Infibolt account, register the product serial and invoice, then your ownership profile unlocks warranty and support workflows.",
+    question: "How does ownership verification work after purchase?",
+    answer: "Sign in to your INFIBOLT account, add your product details, and verify ownership through your registered email for a protected care experience.",
   },
 ];
 

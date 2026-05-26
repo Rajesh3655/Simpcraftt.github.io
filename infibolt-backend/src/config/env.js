@@ -54,6 +54,7 @@ export const env = {
   adminEmail: process.env.SEED_ADMIN_EMAIL || "admin@infibolt.com",
   adminPassword: process.env.SEED_ADMIN_PASSWORD || "",
   customerPassword: process.env.SEED_CUSTOMER_PASSWORD || "",
+  googleClientId: process.env.GOOGLE_CLIENT_ID || "",
 };
 
 function requireProductionValue(name, value, { url = false, secret = false } = {}) {

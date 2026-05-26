@@ -2,6 +2,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import {
   AlertCircle,
   ArrowRight,
+  ChevronDown,
   CircleHelp,
   CreditCard,
   FileUp,
@@ -322,34 +323,34 @@ export function CommerceShell({
 
       <header
         onMouseLeave={() => setActiveMega(null)}
-        className={`fixed left-0 right-0 top-0 z-50 border-b backdrop-blur-2xl transition-all duration-300 ${
+        className={`fixed left-0 right-0 top-0 z-50 border-b backdrop-blur-2xl transition-all duration-200 ease-out ${
           isScrolled || activeMega
             ? "border-slate-900/10 bg-white/94 shadow-[0_18px_55px_rgba(15,23,42,0.08)] lg:dark:border-white/[0.08] lg:dark:bg-[#08090b]/84"
             : "border-slate-900/8 bg-white/90 lg:dark:border-white/[0.03] lg:dark:bg-surface-dark/72"
         }`}
       >
-        <div className={`mx-auto flex w-screen max-w-none items-center justify-between gap-3 overflow-hidden px-4 transition-all duration-300 sm:px-6 lg:w-full lg:max-w-[1400px] lg:px-12 ${
+        <div className={`mx-auto flex w-full max-w-[1440px] items-center justify-between gap-3 px-4 transition-all duration-200 ease-out sm:px-6 lg:px-12 ${
           isScrolled ? "py-2.5 lg:py-3" : "py-3 lg:py-4"
         }`}>
           <Link to="/" className="group flex min-w-0 items-center gap-2">
             <img
               src="/images/favicon.svg"
               alt="INFIBOLT logo"
-              className="h-[22px] w-[22px] shrink-0 object-contain dark:invert"
+              className="h-7 w-7 shrink-0 object-contain dark:invert"
             />
             <span className="truncate text-[14px] font-extrabold uppercase leading-none tracking-[0.24em] text-[#111827] dark:text-white">
               INFIBOLT
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-7 lg:flex">
+          <nav className="hidden items-center gap-8 lg:flex">
             {navItems.map((item) => (
               <NavLink
                 key={item.href}
                 to={item.href}
                 prefetch="intent"
                 onMouseEnter={() => setActiveMega(item.href === "/products" ? item.href : null)}
-                className={`relative rounded-full px-1.5 py-1 text-sm font-semibold tracking-normal transition-colors duration-300 ${
+              className={`relative rounded-full px-1.5 py-1 text-sm font-semibold tracking-normal transition-colors duration-150 ease-out ${
                   pathname === item.href
                     ? "text-slate-950 lg:dark:text-white"
                     : "text-slate-600 hover:text-slate-950 lg:dark:text-slate-300 lg:dark:hover:text-white"
@@ -375,10 +376,10 @@ export function CommerceShell({
               to="/profile"
               prefetch="intent"
               aria-label="Profile"
-              className={`flex h-11 w-11 items-center justify-center rounded-full border shadow-[0_10px_24px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-transform duration-200 active:scale-95 sm:h-12 sm:w-12 ${
+              className={`flex h-11 w-11 items-center justify-center rounded-full backdrop-blur-xl transition-transform duration-200 active:scale-95 sm:h-12 sm:w-12 ${
                 pathname.startsWith("/profile") || pathname.startsWith("/login") || pathname.startsWith("/register")
-                  ? "border-slate-900/25 bg-slate-900 text-white"
-                  : "border-slate-900/12 bg-white/90 text-slate-950"
+                  ? "border border-transparent bg-slate-950 text-white shadow-[0_12px_28px_rgba(15,23,42,0.16)]"
+                  : "border border-slate-900/12 bg-white/90 text-slate-950 shadow-[0_10px_24px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.72)]"
               }`}
             >
               <ProfileAvatar initial={profileInitial} signedIn={Boolean(authUser)} />
@@ -407,7 +408,7 @@ function MobileBottomNav({ pathname, visible = true }) {
         visible ? "translate-y-0" : "translate-y-[120%]"
       }`}
     >
-      <div className="mx-auto grid w-full max-w-[720px] grid-cols-4 rounded-[1.2rem] border border-white/70 bg-white/90 p-1 shadow-[0_14px_42px_rgba(15,23,42,0.13)] backdrop-blur-2xl">
+      <div className="mx-auto grid w-full max-w-[720px] grid-cols-4 rounded-[1.25rem] border border-white/70 bg-white/92 p-1 shadow-[0_14px_42px_rgba(15,23,42,0.12)] backdrop-blur-2xl">
         {bottomNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
@@ -426,7 +427,7 @@ function MobileBottomNav({ pathname, visible = true }) {
               {isActive && (
               <motion.span
                   layoutId="mobile-bottom-nav-active"
-                  className="absolute inset-0 rounded-[1rem] bg-slate-950/[0.06]"
+                  className="absolute inset-0 rounded-[1rem] bg-slate-950/[0.055]"
                   transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
                 />
               )}
@@ -467,10 +468,10 @@ function IconLink({ href, label, children, active = false }) {
       prefetch="intent"
       aria-label={label}
       title={label}
-      className={`flex h-10 w-10 items-center justify-center rounded-full border shadow-[0_10px_24px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.76)] transition-all duration-300 ${
+      className={`flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300 ${
         active
-          ? "border-slate-900 bg-slate-900 text-white"
-          : "border-slate-900/12 bg-white/90 text-slate-800 hover:border-slate-900/20 hover:bg-white hover:text-slate-950 lg:dark:border-white/12 lg:dark:bg-white/8 lg:dark:text-slate-200 lg:dark:hover:bg-white/12 lg:dark:hover:text-white"
+          ? "border border-transparent bg-slate-950 text-white shadow-[0_12px_28px_rgba(15,23,42,0.16)]"
+          : "border border-slate-900/12 bg-white/90 text-slate-800 shadow-[0_10px_24px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.76)] hover:border-slate-900/20 hover:bg-white hover:text-slate-950 lg:dark:border-white/12 lg:dark:bg-white/8 lg:dark:text-slate-200 lg:dark:hover:bg-white/12 lg:dark:hover:text-white"
       }`}
     >
       {children}
@@ -480,7 +481,7 @@ function IconLink({ href, label, children, active = false }) {
 
 function MegaMenu({ active }) {
   const isOpen = active === "/products";
-  const [menuData, setMenuData] = useState({ products: [], categories: [] });
+  const [menuData, setMenuData] = useState({ products, categories });
   const visibleCategories = [...menuData.categories]
     .filter((category) => category.desktopMenuVisible === true)
     .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || String(a.name).localeCompare(String(b.name)))
@@ -498,7 +499,6 @@ function MegaMenu({ active }) {
         : "max-w-[820px] grid-cols-4 justify-self-start";
 
   useEffect(() => {
-    if (!isOpen) return undefined;
     let alive = true;
     Promise.all([productService.list(), productService.categories()]).then(([productResult, categoryResult]) => {
       if (!alive) return;
@@ -513,15 +513,15 @@ function MegaMenu({ active }) {
     return () => {
       alive = false;
     };
-  }, [isOpen]);
+  }, []);
 
   return (
     <div
-      className={`hidden overflow-hidden border-t border-slate-900/[0.06] bg-white/92 shadow-[0_34px_80px_rgba(15,23,42,0.12)] backdrop-blur-2xl transition-all duration-300 lg:block dark:border-white/10 dark:bg-[#08090b]/92 ${
+      className={`hidden overflow-hidden border-t border-slate-900/[0.06] bg-white/92 shadow-[0_34px_80px_rgba(15,23,42,0.12)] backdrop-blur-2xl transition-all duration-150 ease-out lg:block dark:border-white/10 dark:bg-[#08090b]/92 ${
         isOpen ? "max-h-[560px] opacity-100" : "max-h-0 opacity-0"
       }`}
     >
-      <div className="mx-auto grid max-w-[1400px] grid-cols-[0.72fr_1.28fr] gap-8 px-10 py-7 xl:px-12 xl:py-8">
+      <div className="mx-auto grid max-w-[1440px] grid-cols-[0.72fr_1.28fr] gap-8 px-10 py-7 xl:px-12 xl:py-8">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
             Product universe
@@ -534,13 +534,13 @@ function MegaMenu({ active }) {
                   key={item.slug ?? item.id}
                   to={href}
                   prefetch="intent"
-                  className="group flex items-center justify-between rounded-2xl border border-transparent px-4 py-3 transition duration-200 hover:border-slate-900/10 hover:bg-slate-950/[0.035] dark:hover:border-white/10 dark:hover:bg-white/[0.06]"
+                  className="group flex items-center justify-between rounded-2xl border border-transparent px-4 py-3 transition duration-150 ease-out hover:border-slate-900/10 hover:bg-slate-950/[0.035] dark:hover:border-white/10 dark:hover:bg-white/[0.06]"
                 >
                   <span>
                     <span className="block text-sm font-semibold text-slate-950 dark:text-white">{item.name}</span>
                     <span className="mt-1 block max-w-[22rem] text-xs leading-5 text-slate-500 dark:text-slate-400">{item.description}</span>
                   </span>
-                  <ArrowRight className="h-4 w-4 text-slate-300 transition duration-200 group-hover:translate-x-0.5 group-hover:text-slate-950 dark:group-hover:text-white" />
+                  <ArrowRight className="h-4 w-4 text-slate-300 transition duration-150 ease-out group-hover:translate-x-0.5 group-hover:text-slate-950 dark:group-hover:text-white" />
                 </Link>
               );
             })}
@@ -552,10 +552,10 @@ function MegaMenu({ active }) {
               key={product.slug}
               to={`/products/${product.slug}`}
               prefetch="intent"
-              className="group min-w-0 overflow-hidden rounded-2xl border border-slate-900/8 bg-slate-50/80 p-1.5 transition duration-300 hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_18px_48px_rgba(15,23,42,0.11)] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] xl:p-2"
+              className="group min-w-0 overflow-hidden rounded-2xl border border-slate-900/8 bg-slate-50/80 p-1.5 transition duration-150 ease-out hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_18px_48px_rgba(15,23,42,0.11)] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08] xl:p-2"
             >
               <div className="aspect-square overflow-hidden rounded-xl bg-slate-100 dark:bg-white/[0.05] xl:aspect-[4/3]">
-                <CinematicImage src={product.image} alt={product.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.025]" />
+                <CinematicImage src={product.image} alt={product.name} className="h-full w-full object-cover transition duration-300 ease-out group-hover:scale-[1.02]" />
               </div>
               <div className="p-2 xl:p-3">
                 <p className="truncate text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400 xl:text-[10px] xl:tracking-[0.18em]">{product.badge}</p>
@@ -667,8 +667,8 @@ export function ProductGrid({ items = [], columns = "default" }) {
     return (
       <div className="rounded-2xl border border-slate-900/10 bg-slate-50 p-8 text-center dark:border-white/10 dark:bg-white/[0.02]">
         <Search className="mx-auto h-6 w-6 text-slate-400" />
-        <h2 className="mt-4 text-xl font-semibold tracking-tight text-slate-900 dark:text-white">No products match this view</h2>
-        <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-500 dark:text-slate-400">Try a different category or search phrase. New product stories will appear here as the catalogue grows.</p>
+        <h2 className="mt-4 text-xl font-semibold tracking-tight text-slate-900 dark:text-white">No products found</h2>
+        <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-500 dark:text-slate-400">Try another category or search term. New INFIBOLT products will appear here as the catalogue expands.</p>
       </div>
     );
   }
@@ -727,7 +727,7 @@ export function ProductCard({ product }) {
         hidden: { opacity: 0, y: 16 },
         visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } }
       }}
-      className="group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-black/5 bg-white/72 p-1.5 shadow-[0_10px_34px_rgba(17,24,39,0.045)] transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-[0_24px_60px_rgba(17,24,39,0.12)] dark:border-white/5 dark:bg-white/[0.025] dark:hover:bg-white/[0.055] dark:hover:shadow-[0_12px_34px_rgba(0,0,0,0.18)] sm:p-2"
+      className="group relative flex h-full flex-col overflow-hidden rounded-[1.35rem] border border-black/5 bg-white/72 p-1.5 shadow-[0_10px_34px_rgba(17,24,39,0.045)] transition-all duration-300 hover:bg-white hover:shadow-[0_20px_52px_rgba(17,24,39,0.1)] dark:border-white/5 dark:bg-white/[0.025] dark:hover:bg-white/[0.055] dark:hover:shadow-[0_12px_34px_rgba(0,0,0,0.18)] sm:p-2 md:hover:-translate-y-0.5"
     >
       <Link to={`/products/${product.slug}`} className="block">
         <div className="relative aspect-[1/1] overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800/50 sm:aspect-[4/4.7]">
@@ -738,7 +738,7 @@ export function ProductCard({ product }) {
           </div>
           <div className="pointer-events-none absolute inset-0 z-20 rounded-xl shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]" />
         </div>
-        <div className="relative z-10 flex flex-col p-3 sm:p-6">
+        <div className="relative z-10 flex flex-1 flex-col p-3 sm:p-6">
           <div className="mb-2 flex items-center justify-between gap-2 sm:mb-4 sm:gap-3">
             <span className="text-[8px] font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300 sm:text-[10px] sm:tracking-[0.2em]">
               {category?.name}
@@ -746,7 +746,7 @@ export function ProductCard({ product }) {
           </div>
           <h3 className="line-clamp-2 text-[1.02rem] font-semibold leading-tight tracking-normal text-slate-900 transition-colors duration-200 group-hover:text-slate-700 sm:text-[1.16rem] md:text-[1.25rem] dark:text-white dark:group-hover:text-slate-200">{product.name}</h3>
           <p className="mt-1.5 line-clamp-2 min-h-[2.25rem] text-[0.74rem] leading-5 text-slate-600 dark:text-slate-400 sm:mt-2.5 sm:min-h-[3rem] sm:text-[0.88rem] sm:leading-relaxed">{product.summary}</p>
-          <div className="mt-3 flex items-center justify-between sm:mt-6">
+          <div className="mt-auto flex items-center justify-between pt-3 sm:pt-6">
             <span className="text-[0.95rem] font-semibold tracking-tight text-slate-900 dark:text-white sm:text-[1.08rem]">{formatPrice(product.price)}</span>
             <span className="inline-flex items-center gap-2 text-[0] font-bold uppercase tracking-[0.16em] text-slate-900 transition-colors duration-300 dark:text-white sm:gap-3 sm:text-[11px]">
               <span className="hidden sm:inline">Explore</span>
@@ -771,7 +771,7 @@ export function ProductFilters({ selectedCategory, onCategoryChange, query, onQu
   const selectedSortLabel = sortOptions.find(([value]) => value === sort)?.[1] ?? "Featured";
 
   return (
-    <div className="premium-surface sticky top-[76px] z-30 mb-8 flex flex-col gap-6 p-4 backdrop-blur-2xl md:mb-10 sm:p-5 dark:bg-white/[0.03]">
+    <div className="premium-surface sticky top-[76px] z-30 mb-8 flex flex-col gap-5 p-4 backdrop-blur-2xl sm:p-5 md:mb-10 lg:gap-6 dark:bg-white/[0.03]">
       {/* Top Row: Search & Sort */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <label className="premium-control flex flex-1 items-center gap-3 rounded-full px-5 py-3.5 dark:border-white/10 dark:bg-white/5 dark:focus-within:border-white/30 dark:focus-within:bg-white/10">
@@ -825,7 +825,7 @@ export function ProductFilters({ selectedCategory, onCategoryChange, query, onQu
       {/* Bottom Row: Sliding Category Pills */}
       <div className="relative -mx-4 overflow-hidden sm:mx-0">
         <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-10 bg-gradient-to-l from-white via-white/90 to-transparent dark:from-[#111318] dark:via-[#111318]/90" />
-        <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-2 pr-14 scroll-px-4 sm:px-0 sm:pr-10 sm:scroll-px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+        <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-1.5 pr-14 scroll-px-4 sm:px-0 sm:pr-10 sm:scroll-px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
           {[{ id: "all", name: "All Products" }, ...categoryItems].map((category) => {
             const categoryValue = category.id === "all" ? "all" : category.slug || category.id || category.name;
             const isSelected = selectedCategory === categoryValue || selectedCategory === category.id || selectedCategory === category.slug || selectedCategory === category.name;
@@ -833,7 +833,7 @@ export function ProductFilters({ selectedCategory, onCategoryChange, query, onQu
             <button
               key={categoryValue}
               onClick={() => onCategoryChange(categoryValue)}
-              className={`relative min-w-max snap-start whitespace-nowrap rounded-full px-6 py-2.5 text-sm font-medium transition-colors ${
+              className={`relative min-w-max snap-start whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-medium transition-colors sm:px-6 ${
                 isSelected
                   ? "text-slate-900 dark:text-white"
                   : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
@@ -1096,19 +1096,19 @@ export function WarrantyForm() {
   const submitWarranty = async (event) => {
     event.preventDefault();
     setSubmitted(true);
-    toast.info("Warranty verification system ready", {
-      description: "The frontend is ready, but claims are not being submitted yet.",
+    toast.info("Warranty care request prepared", {
+      description: "Your details are ready to continue through the secure warranty care flow.",
     });
   };
 
   return (
     <form onSubmit={submitWarranty} className="grid gap-5 rounded-2xl bg-slate-50 p-5 sm:p-8 md:p-10 dark:bg-white/[0.02] border border-black/5 dark:border-white/10">
-      <div className="rounded-2xl border border-amber-500/30 bg-amber-400/10 p-5 text-amber-900 dark:text-amber-100">
+      <div className="rounded-2xl border border-slate-900/8 bg-white/70 p-5 text-slate-800 shadow-[0_14px_34px_rgba(15,23,42,0.05)] dark:border-white/10 dark:bg-white/[0.045] dark:text-slate-100">
         <div className="flex items-start gap-4">
           <ShieldCheck className="mt-1 h-5 w-5 shrink-0" />
           <div>
-            <h3 className="font-semibold">Warranty verification system ready</h3>
-            <p className="mt-2 text-sm leading-relaxed opacity-85">Use this flow for product details, serial number, invoice upload, and email OTP verification.</p>
+            <h3 className="font-semibold">Ownership care is protected</h3>
+            <p className="mt-2 text-sm leading-relaxed opacity-85">Register product details, serial number, invoice proof, and email verification in one secure flow.</p>
           </div>
         </div>
       </div>
@@ -1140,7 +1140,7 @@ export function WarrantyForm() {
       <div className="grid gap-5 md:grid-cols-[1fr_220px]">
         <Field name="otp" label="OTP verification" placeholder="6-digit code" disabled />
         <div className="rounded-xl border border-slate-900/10 bg-white/50 p-4 text-sm text-slate-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400">
-          Email OTP verification protects every warranty claim.
+          Email verification protects each warranty care request.
         </div>
       </div>
       <label className="flex items-center gap-4 text-sm font-medium text-slate-600 dark:text-slate-400 py-4">
@@ -1149,11 +1149,11 @@ export function WarrantyForm() {
       </label>
       <button type="submit" className="group relative inline-flex min-h-[48px] items-center justify-center gap-3 overflow-hidden bg-slate-900 px-6 py-3 sm:px-8 text-[11px] font-bold uppercase tracking-[0.15em] text-white transition-colors duration-300 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
         <ShieldCheck className="h-4 w-4" />
-        Submit Claim
+        Submit Care Request
       </button>
       {submitted && (
         <div className="rounded-xl border border-slate-900/10 bg-white/70 p-5 text-sm font-medium text-slate-900 dark:border-white/10 dark:bg-white/[0.05] dark:text-white">
-          Warranty claim received. Verification details will appear in your claim history.
+          Care request received. Updates will stay connected to your account.
         </div>
       )}
     </form>
@@ -1173,12 +1173,12 @@ export function SupportForm() {
 
   return (
     <form onSubmit={submitSupport} className="grid gap-6 rounded-2xl bg-slate-50 p-5 sm:p-8 md:p-10 dark:bg-white/[0.02] border border-black/5 dark:border-white/10">
-      <div className="rounded-2xl border border-amber-500/30 bg-amber-400/10 p-5 text-amber-900 dark:text-amber-100">
+      <div className="rounded-2xl border border-slate-900/8 bg-white/70 p-5 text-slate-800 shadow-[0_14px_34px_rgba(15,23,42,0.05)] dark:border-white/10 dark:bg-white/[0.045] dark:text-slate-100">
         <div className="flex items-start gap-4">
           <AlertCircle className="mt-1 h-5 w-5 shrink-0" />
           <div>
-            <h3 className="font-semibold">Support ticket system ready</h3>
-            <p className="mt-2 text-sm leading-relaxed opacity-85">Complaint submission, ticket IDs, care-team replies, and status tracking are handled through the secure support workflow.</p>
+            <h3 className="font-semibold">Support stays connected</h3>
+            <p className="mt-2 text-sm leading-relaxed opacity-85">Your message, product context, replies, and care updates remain connected to your account.</p>
           </div>
         </div>
       </div>
@@ -1190,11 +1190,11 @@ export function SupportForm() {
       <Field name="message" label="Message" textarea required />
       <button type="submit" className="group relative inline-flex min-h-[48px] items-center justify-center gap-3 overflow-hidden bg-slate-900 px-6 py-3 sm:px-8 text-[11px] font-bold uppercase tracking-[0.15em] text-white transition-colors duration-300 hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
         <Send className="h-4 w-4" />
-        Submit Ticket
+        Send Request
       </button>
       {previewed && (
         <div className="rounded-xl border border-slate-900/10 bg-white/70 p-5 text-sm font-medium text-slate-900 dark:border-white/10 dark:bg-white/[0.05] dark:text-white">
-          Complaint ticket created. Replies and status updates will stay attached to this case.
+          Support request created. Replies and updates will stay attached to this conversation.
         </div>
       )}
     </form>
@@ -1225,26 +1225,62 @@ function Select({ label, name, options }) {
 }
 
 export function FAQList() {
+  const [openIndex, setOpenIndex] = useState(0);
+
   return (
-    <div className="flex flex-col border-t border-slate-200 dark:border-white/10">
-      {faqs.map((faq) => (
-        <details key={faq.question} className="group border-b border-slate-200 py-8 dark:border-white/10">
-          <summary className="cursor-pointer list-none text-lg font-medium tracking-tight text-slate-900 md:text-xl transition-colors group-open:text-slate-500 dark:text-white dark:group-open:text-slate-400 flex items-center justify-between">
-            {faq.question}
-            <span className="ml-6 flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition-transform duration-500 group-open:rotate-45 dark:border-white/10">
-              +
-            </span>
-          </summary>
-          <p className="mt-6 text-base font-light leading-relaxed text-slate-600 dark:text-slate-400 pr-12">{faq.answer}</p>
-        </details>
-      ))}
+    <div className="grid gap-4">
+      {faqs.map((faq, index) => {
+        const isOpen = openIndex === index;
+        return (
+          <motion.div
+            key={faq.question}
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.25 }}
+            transition={{ duration: 0.5, delay: index * 0.045, ease: [0.22, 1, 0.36, 1] }}
+            className={`overflow-hidden rounded-[1.35rem] border bg-white/72 shadow-[0_16px_48px_rgba(15,23,42,0.055)] transition-all duration-300 dark:bg-white/[0.045] ${
+              isOpen
+                ? "border-slate-900/14 shadow-[0_24px_70px_rgba(15,23,42,0.095)] dark:border-white/18"
+                : "border-slate-900/[0.07] hover:-translate-y-0.5 hover:border-slate-900/12 hover:bg-white dark:border-white/10 dark:hover:bg-white/[0.07]"
+            }`}
+          >
+            <button
+              type="button"
+              onClick={() => setOpenIndex(isOpen ? -1 : index)}
+              className="flex w-full items-center justify-between gap-5 px-5 py-5 text-left sm:px-6 sm:py-6"
+              aria-expanded={isOpen}
+            >
+              <span className="text-base font-semibold leading-6 tracking-normal text-slate-950 dark:text-white sm:text-lg">
+                {faq.question}
+              </span>
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition duration-300 ${
+                isOpen
+                  ? "rotate-180 border border-transparent bg-slate-950 text-white shadow-[0_10px_24px_rgba(15,23,42,0.14)] dark:bg-white dark:text-slate-950"
+                  : "border border-slate-900/[0.08] bg-slate-50 text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] dark:border-white/10 dark:bg-white/[0.06] dark:text-white"
+              }`}>
+                <ChevronDown className="h-4 w-4" strokeWidth={2} />
+              </span>
+            </button>
+            <motion.div
+              initial={false}
+              animate={isOpen ? { height: "auto", opacity: 1 } : { height: 0, opacity: 0 }}
+              transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+              className="overflow-hidden"
+            >
+              <p className="px-5 pb-6 pr-16 text-sm leading-7 text-slate-500 dark:text-slate-400 sm:px-6 sm:pb-7 sm:text-[0.98rem]">
+                {faq.answer}
+              </p>
+            </motion.div>
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
 
 export function FeatureBand() {
   const features = [
-    { icon: ShieldCheck, title: "Warranty-ready", text: "Registration, claims, serial details, invoice upload, and ticket tracking." },
+    { icon: ShieldCheck, title: "Warranty-ready", text: "Registration, serial details, invoice upload, and care updates stay connected." },
     { icon: Sparkles, title: "Marketplace-first", text: "Every product supports editable Amazon, Flipkart, and custom purchase links." },
     { icon: PackageCheck, title: "Ownership platform", text: "Buy through launch partners, then return to Infibolt for warranty, support, and device care." },
   ];
