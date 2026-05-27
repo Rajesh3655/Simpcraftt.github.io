@@ -33,7 +33,6 @@ import {
   getSupportTicket,
   updateProfile,
   verifyProfileContactUpdate,
-  verifyWarrantyOtp,
   verifyLoginOtp,
   verifyOtp,
 } from "../controllers/customerController.js";
@@ -146,7 +145,6 @@ customerRoutes.post(
   validate,
   asyncHandler(createWarrantyClaim)
 );
-customerRoutes.post("/warranty-claims/:id/verify-otp", requireAuth("customer"), [param("id").trim().isLength({ min: 3, max: 80 }), body("otp").trim().isLength({ min: 6, max: 6 })], validate, asyncHandler(verifyWarrantyOtp));
 customerRoutes.post("/warranty-claims/rma", requireAuth("customer"), warrantyRmaValidator, validate, asyncHandler(createWarrantyRma));
 
 customerRoutes.get("/support", requireAuth("customer"), asyncHandler(listSupportTickets));

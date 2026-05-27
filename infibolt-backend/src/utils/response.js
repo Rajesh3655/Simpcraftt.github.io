@@ -12,6 +12,15 @@ export const sanitizeUser = (user) => ({
   permissions: user.permissions || [],
 });
 
+export const sanitizeAdminUser = (user) => ({
+  id: String(user._id),
+  name: user.name,
+  email: user.email,
+  status: user.status,
+  avatarUrl: user.avatarUrl,
+  permissions: user.permissions || [],
+});
+
 export const productDetails = (product) => ({
   ...product,
   summary: product.summary || product.shortDescription,

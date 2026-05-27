@@ -4,7 +4,7 @@ import { EmptyState, PageLoader } from "../../components/AppStates";
 import { uploadUrl } from "../../config/api";
 import { AdminShell } from "../../layouts/AdminLayout";
 import { useAdminStore } from "../../store/appStore";
-import { formatIndiaDateTime } from "../../utils/time";
+import { formatIndiaDate, formatIndiaDateTime } from "../../utils/time";
 
 const statusTabs = [
   { key: "all", label: "All" },
@@ -116,10 +116,10 @@ export default function AdminClaimStatusPage() {
         item.sourceDetail,
         item.invoiceNumber,
         item.invoiceUrl,
-        formatDate(item.purchaseDate),
+        formatDateOnly(item.purchaseDate),
         formatDate(item.registeredAt),
-        formatDate(item.warrantyStart),
-        formatDate(item.warrantyUntil),
+        formatDateOnly(item.warrantyStart),
+        formatDateOnly(item.warrantyUntil),
         item.ownershipId,
         item.issueType,
         item.issueDescription,
@@ -367,4 +367,8 @@ function dateValue(value) {
 
 function formatDate(value) {
   return formatIndiaDateTime(value);
+}
+
+function formatDateOnly(value) {
+  return formatIndiaDate(value);
 }

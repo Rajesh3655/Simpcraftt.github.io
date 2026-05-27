@@ -162,7 +162,7 @@ export function AccountAccess({ initialMode = "login", compact = false, redirect
   }, [resetForm, resetStep]);
 
   const hasServerErrors = Object.keys(serverErrors).length > 0;
-  const loginErrorTitle = error.toLowerCase().includes("locked") || error.toLowerCase().includes("disabled") ? "Account locked" : "Sign in could not continue";
+  const loginErrorTitle = error.toLowerCase().includes("locked") || error.toLowerCase().includes("blocked") || error.toLowerCase().includes("disabled") ? "Account blocked" : "Sign in could not continue";
 
   const finishAuth = useCallback((message) => {
     toast.success(message, { description: "Your INFIBOLT account is ready." });
@@ -244,6 +244,7 @@ export function AccountAccess({ initialMode = "login", compact = false, redirect
       setError(message);
       if (requestError.status === 423) {
         setServerErrors({});
+        toast.error("Account blocked", { id: "account-blocked", description: message });
       } else {
         markServerFields("login", message, requestError.fields || requestError.details);
       }
@@ -261,7 +262,11 @@ export function AccountAccess({ initialMode = "login", compact = false, redirect
       await googleLogin({ credential });
       finishAuth(mode === "signup" ? "Account created" : "Welcome back");
     } catch (requestError) {
-      setError(requestError.message || "Google sign in could not continue.");
+      const message = requestError.message || "Google sign in could not continue.";
+      setError(message);
+      if (requestError.status === 423) {
+        toast.error("Account blocked", { id: "account-blocked", description: message });
+      }
     } finally {
       setStatus("idle");
     }

@@ -21,9 +21,11 @@ import { createHttpError } from "../utils/httpError.js";
 import { ok, productDetails, sanitizeUser } from "../utils/response.js";
 import { createSession, revokeUserSessions, rotateRefreshSession } from "../services/sessionService.js";
 import { issueOtp, verifyOtpCode } from "../services/otpService.js";
+import { verifyGoogleCredential } from "../services/googleAuthService.js";
 import { moveLocalUpload } from "../services/uploadService.js";
 import {
   assertSerialAvailable,
+  assertWarrantyRegistrationWindow,
   assertValidSerial,
   createRmaId,
   ensureProductUnit,
@@ -105,22 +107,6 @@ function assertSignupIdentityAvailable(fields) {
   throw createHttpError(409, message, { fields });
 }
 
-async function verifyGoogleCredential(credential) {
-  if (!env.googleClientId) throw createHttpError(503, "Google login is not configured.");
-  const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
-  if (!response.ok) throw createHttpError(401, "Google sign in could not be verified.");
-  const profile = await response.json();
-  if (profile.aud !== env.googleClientId) throw createHttpError(401, "Google sign in was issued for another app.");
-  if (profile.email_verified !== "true" && profile.email_verified !== true) throw createHttpError(401, "Google account email is not verified.");
-  if (!profile.sub || !profile.email) throw createHttpError(401, "Google account details are incomplete.");
-  return {
-    sub: String(profile.sub),
-    email: String(profile.email).toLowerCase(),
-    name: String(profile.name || profile.given_name || profile.email.split("@")[0]).trim(),
-    picture: profile.picture ? String(profile.picture) : undefined,
-  };
-}
-
 async function resolvePasswordResetAccount(identifier) {
   const resolved = resolveAccountIdentifier({ identifier });
   return Customer.findOne(resolved.query).select("+passwordHash +resetTokenHash +resetTokenExpiresAt");
@@ -143,7 +129,7 @@ export async function login(req, res) {
   const identifier = resolveAccountIdentifier(data);
   const user = await Customer.findOne(identifier.query).select("+passwordHash +failedLoginCount +lockUntil +refreshTokenHash");
   if (!user) throw createHttpError(401, "Invalid email or password.");
-  if (user.status === "Locked") throw createHttpError(423, "Account is disabled. Contact INFIBOLT support.");
+  if (user.status === "Locked") throw createHttpError(423, "Account is blocked. Contact INFIBOLT support.");
   await assertUnlocked(user);
   if (!user.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
     await recordFailedLogin(user);
@@ -203,7 +189,7 @@ export async function googleLogin(req, res) {
     $or: [{ googleSub: googleProfile.sub }, { email: googleProfile.email }],
   }).select("+refreshTokenHash +googleSub");
 
-  if (user?.status === "Locked") throw createHttpError(423, "Account is disabled. Contact INFIBOLT support.");
+  if (user?.status === "Locked") throw createHttpError(423, "Account is blocked. Contact INFIBOLT support.");
 
   if (!user) {
     user = await Customer.create({
@@ -279,7 +265,7 @@ export async function requestLoginOtp(req, res) {
   const identifier = resolveAccountIdentifier(data);
   const user = await Customer.findOne(identifier.query).select("+passwordHash +failedLoginCount +lockUntil");
   if (!user) throw createHttpError(401, "Invalid email or password.");
-  if (user.status === "Locked") throw createHttpError(423, "Account is disabled. Contact INFIBOLT support.");
+  if (user.status === "Locked") throw createHttpError(423, "Account is blocked. Contact INFIBOLT support.");
   await assertUnlocked(user);
   if (!user.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
     await recordFailedLogin(user);
@@ -336,12 +322,13 @@ export async function me(req, res) {
 
 export async function listProducts(_req, res) {
   const page = Math.max(Number(_req.query.page || 1), 1);
-  const limit = Math.min(Math.max(Number(_req.query.limit || 24), 1), 60);
+  const warrantyRegistration = _req.query.warrantyRegistration === "true";
+  const limit = Math.min(Math.max(Number(_req.query.limit || (warrantyRegistration ? 200 : 24)), 1), warrantyRegistration ? 200 : 60);
   const skip = (page - 1) * limit;
-  const filter = publicProductFilter({ category: _req.query.category, collection: _req.query.collection });
-  if (_req.query.featured === "true") filter.featured = true;
-  if (_req.query.newLaunch === "true") filter.newLaunch = true;
-  if (_req.query.bestseller === "true") filter.bestseller = true;
+  const filter = warrantyRegistration ? {} : publicProductFilter({ category: _req.query.category, collection: _req.query.collection });
+  if (!warrantyRegistration && _req.query.featured === "true") filter.featured = true;
+  if (!warrantyRegistration && _req.query.newLaunch === "true") filter.newLaunch = true;
+  if (!warrantyRegistration && _req.query.bestseller === "true") filter.bestseller = true;
   if (_req.query.search) filter.$text = { $search: String(_req.query.search) };
 
   const [items, total, categories] = await Promise.all([
@@ -426,7 +413,7 @@ export async function getPublicSiteSettings(_req, res) {
 }
 
 export async function getProfile(req, res) {
-  return ok(res, { ...sanitizeUser(req.user), address: req.user.address, city: req.user.city || "Bengaluru", state: req.user.state || "Karnataka" });
+  return ok(res, { ...sanitizeUser(req.user), address: req.user.address || "", city: req.user.city || "", state: req.user.state || "" });
 }
 
 export async function updateProfile(req, res) {
@@ -449,7 +436,7 @@ export async function updateProfile(req, res) {
     }
   }
   if (!Object.keys(update).length) {
-    return ok(res, { ...sanitizeUser(req.user), address: req.user.address, city: req.user.city || "Bengaluru", state: req.user.state || "Karnataka" });
+    return ok(res, { ...sanitizeUser(req.user), address: req.user.address || "", city: req.user.city || "", state: req.user.state || "" });
   }
   const customer = await Customer.findOneAndUpdate(
     { _id: req.user._id, ...(update.phone ? { $or: [{ phone: { $exists: false } }, { phone: "" }, { phone: null }] } : {}) },
@@ -468,7 +455,7 @@ export async function updateProfile(req, res) {
     userAgent: req.get("user-agent"),
   })));
   await writeAuditLog(req, "customer.profile.updated", { fields: Object.keys(update) });
-  return ok(res, { ...sanitizeUser(customer), address: customer.address, city: customer.city, state: customer.state });
+  return ok(res, { ...sanitizeUser(customer), address: customer.address || "", city: customer.city || "", state: customer.state || "" });
 }
 
 export async function requestProfileContactUpdate(req, res) {
@@ -571,10 +558,15 @@ export async function createWarrantyClaim(req, res) {
   const source = data.source || "Marketplace";
   const productInfo = await resolveProductForOwnership({ product: data.product, productSlug: data.productSlug });
   await assertSerialAvailable(serial, req.user?._id, productInfo.productSlug);
+  assertWarrantyRegistrationWindow(data.purchaseDate);
   const { start, end } = warrantyEndFromPurchase(data.purchaseDate);
-  const otpTarget = req.user?.email || data.email;
-  const draft = {
-    customerId: String(req.user?._id || ""),
+  await ensureProductUnit({ serial, ...productInfo, customer: req.user, source });
+  const invoiceUrl = data.invoiceUrl?.startsWith("/uploads/temp/")
+    ? await moveLocalUpload(data.invoiceUrl, "warranty")
+    : data.invoiceUrl;
+  const ownership = await ProductOwnership.create({
+    id: issueId("OWN"),
+    customerId: req.user?._id,
     customerName: data.customer || req.user?.name,
     email: data.email || req.user?.email,
     phone: req.user?.phone,
@@ -583,62 +575,18 @@ export async function createWarrantyClaim(req, res) {
     source,
     sourceDetail: data.sourceDetail || data.storeName,
     invoiceNumber: data.invoiceNumber,
-    invoiceUrl: data.invoiceUrl,
-    purchaseDate: data.purchaseDate || start,
-    warrantyStart: start,
-    warrantyUntil: end,
-  };
-  const otp = await issueOtp({ email: otpTarget, purpose: "warranty", metadata: { draft }, req });
-  await writeAuditLog(req, "ownership.registration.otp_requested", { serial, source });
-  return ok(res, {
-    id: otp.id,
-    verificationId: otp.id,
-    ...draft,
-    otpTarget,
-    otpRequired: true,
-    expiresInSeconds: otp.expiresInSeconds,
-    resendAfterSeconds: otp.resendAfterSeconds,
-    message: "Warranty email OTP sent successfully.",
-  }, 202);
-}
-
-export async function verifyWarrantyOtp(req, res) {
-  const { id, otp } = matchedData(req);
-  const otpTarget = req.user?.email;
-  const record = await verifyOtpCode({ email: otpTarget, purpose: "warranty", otp, verificationId: id, req });
-  const draft = record.metadata?.draft;
-  if (!draft?.serial || !draft?.product) throw createHttpError(422, "Warranty registration details expired. Please start again.");
-  const serial = assertValidSerial(draft.serial);
-  const productInfo = await resolveProductForOwnership({ product: draft.product, productSlug: draft.productSlug });
-  await assertSerialAvailable(serial, req.user?._id, productInfo.productSlug);
-  await ensureProductUnit({ serial, ...productInfo, customer: req.user, source: draft.source });
-  const invoiceUrl = draft.invoiceUrl?.startsWith("/uploads/temp/")
-    ? await moveLocalUpload(draft.invoiceUrl, "warranty")
-    : draft.invoiceUrl;
-  const ownership = await ProductOwnership.create({
-    id: issueId("OWN"),
-    customerId: req.user?._id,
-    customerName: draft.customerName || req.user?.name,
-    email: draft.email || req.user?.email,
-    phone: draft.phone || req.user?.phone,
-    ...productInfo,
-    serial,
-    source: draft.source,
-    sourceDetail: draft.sourceDetail,
-    invoiceNumber: draft.invoiceNumber,
     invoiceUrl,
-    purchaseDate: draft.purchaseDate,
+    purchaseDate: data.purchaseDate || start,
     registeredAt: new Date(),
     otpVerifiedAt: new Date(),
-    warrantyStart: draft.warrantyStart,
-    warrantyUntil: draft.warrantyUntil,
+    warrantyStart: start,
+    warrantyUntil: end,
     status: "Pending Verification",
     warrantyStatus: "Pending Verification",
-    timeline: [{ status: "Pending Verification", note: "Email OTP verified. Waiting for admin invoice review.", actorEmail: draft.email || req.user?.email }],
+    timeline: [{ status: "Pending Verification", note: "Warranty registration submitted. Waiting for admin invoice review.", actorEmail: data.email || req.user?.email }],
   });
-  await ownership.save();
-  await writeAuditLog(req, "ownership.otp.verified", { ownershipId: ownership.id, serial: ownership.serial });
-  return ok(res, ownership);
+  await writeAuditLog(req, "ownership.registration.submitted", { ownershipId: ownership.id, serial, source });
+  return ok(res, ownership, 201);
 }
 
 export async function lookupWarranty(req, res) {
@@ -691,6 +639,7 @@ export async function createWarrantyRma(req, res) {
     serial: ownership.serial,
     issueType: data.issueType,
     issueDescription: data.issueDescription,
+    customerAddress: data.customerAddress,
     attachments: data.attachments || [],
     policyDecision,
     timeline: [{ status: "Requested", note: policyDecision, actorEmail: req.user.email }],

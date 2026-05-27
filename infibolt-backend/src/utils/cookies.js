@@ -4,9 +4,10 @@ import { env } from "../config/env.js";
 const cookieBase = {
   httpOnly: true,
   secure: env.isProduction,
-  sameSite: env.isProduction ? "none" : "lax",
+  sameSite: env.cookieSameSite,
   signed: true,
   path: "/",
+  ...(env.cookieDomain ? { domain: env.cookieDomain } : {}),
 };
 
 export const LEGACY_COOKIE_NAMES = {
@@ -64,12 +65,24 @@ export function signRefreshToken(user, tokenId) {
   });
 }
 
-export function verifyAccessToken(token) {
-  return jwt.verify(token, env.jwtAccessSecret, { issuer: "infibolt-api" });
+export function accessAudiencesForRoles(roles = []) {
+  const roleList = Array.isArray(roles) ? roles : [roles];
+  const audiences = [];
+  if (roleList.some(isAdminRole)) audiences.push("infibolt-admin");
+  if (roleList.includes("customer")) audiences.push("infibolt-frontend");
+  return audiences;
 }
 
-export function verifyRefreshToken(token) {
-  return jwt.verify(token, env.jwtRefreshSecret, { issuer: "infibolt-api" });
+export function verifyAccessToken(token, audiences = []) {
+  const options = { issuer: "infibolt-api" };
+  if (audiences.length) options.audience = audiences;
+  return jwt.verify(token, env.jwtAccessSecret, options);
+}
+
+export function verifyRefreshToken(token, audience) {
+  const options = { issuer: "infibolt-api" };
+  if (audience) options.audience = audience;
+  return jwt.verify(token, env.jwtRefreshSecret, options);
 }
 
 export function setAuthCookies(res, { accessToken, refreshToken, role }) {

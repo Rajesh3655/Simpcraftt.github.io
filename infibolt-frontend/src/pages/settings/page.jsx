@@ -43,6 +43,10 @@ export default function SettingsPage() {
       }
       safeProfileFields.phone = normalizePhone(phone);
     }
+    if (!String(form.address || "").trim() || !String(form.city || "").trim() || !String(form.state || "").trim()) {
+      toast.error("Address details required", { description: "Add full address, city, and state to complete your profile." });
+      return;
+    }
     await updateProfile(safeProfileFields);
     toast.success("Preferences saved", { description: "Your account details are ready for the next visit." });
   };
@@ -83,7 +87,7 @@ export default function SettingsPage() {
             <form onSubmit={save} className="mx-auto grid max-w-4xl gap-5">
               <Panel icon={UserRound} eyebrow="Identity" title="Profile details">
                 <div className="grid gap-4 md:grid-cols-2">
-                  {["name", "email", "phone", "city", "state"].map((key) => (
+                  {["name", "email", "phone", "address", "city", "state"].map((key) => (
                     <PremiumField
                       key={key}
                       label={key}
@@ -94,7 +98,7 @@ export default function SettingsPage() {
                       }}
                       type={key === "email" ? "email" : "text"}
                       disabled={key === "email" || (key === "phone" && Boolean(profile.phone))}
-                      helper={key === "email" ? "Account email is fixed after signup." : key === "phone" ? (profile.phone ? "Phone is fixed after signup and can be used for login." : "Required to complete your Google account profile.") : undefined}
+                      helper={key === "email" ? "Account email is fixed after signup." : key === "phone" ? (profile.phone ? "Phone is fixed after signup and can be used for login." : "Required to complete your Google account profile.") : key === "address" ? "Required for warranty pickup, delivery, and support." : undefined}
                     />
                   ))}
                 </div>

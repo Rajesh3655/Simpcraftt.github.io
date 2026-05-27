@@ -16,6 +16,15 @@ export function formatIndiaDateTime(value) {
   }).format(date);
 }
 
+export function formatIndiaDate(value) {
+  const date = dateFrom(value);
+  if (!date) return value ? String(value) : "-";
+  return new Intl.DateTimeFormat("en-IN", {
+    dateStyle: "medium",
+    timeZone: INDIA_TIME_ZONE,
+  }).format(date);
+}
+
 export function isSameIndiaDay(value, comparison = new Date()) {
   const date = dateFrom(value);
   const current = dateFrom(comparison);

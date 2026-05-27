@@ -7,6 +7,5 @@ export const warrantyService = {
     ...payload,
     customer: payload.customer || payload.name,
   }),
-  verifyOtp: (id, otp) => request.post(`/warranty-claims/${id}/verify-otp`, { otp }, { skipGlobalErrorToast: true }),
   createRma: (payload) => request.post("/warranty-claims/rma", payload),
 };

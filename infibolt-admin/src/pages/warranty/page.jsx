@@ -5,7 +5,7 @@ import { EmptyState, PageLoader } from "../../components/AppStates";
 import { uploadUrl } from "../../config/api";
 import { AdminShell } from "../../layouts/AdminLayout";
 import { useAdminStore } from "../../store/appStore";
-import { formatIndiaDateTime } from "../../utils/time";
+import { formatIndiaDate, formatIndiaDateTime } from "../../utils/time";
 
 const warrantyActions = [
   { label: "Approve", status: "Active", note: "Invoice and serial confirmed.", tone: "green" },
@@ -150,8 +150,8 @@ export default function AdminWarrantyPage() {
                           <span className="mt-1 block text-xs font-medium text-slate-500">{item.source || "Website"}{item.sourceDetail ? ` / ${item.sourceDetail}` : ""}</span>
                         </td>
                         <td className="px-4 py-4 text-slate-700 dark:text-slate-300">
-                          <span className="block font-medium">{formatDate(item.purchaseDate || item.registeredAt)}</span>
-                          <span className="mt-1 block text-xs font-medium text-slate-500">Until {formatDate(item.warrantyUntil)}</span>
+                          <span className="block font-medium">{formatDateOnly(item.purchaseDate || item.registeredAt)}</span>
+                          <span className="mt-1 block text-xs font-medium text-slate-500">Until {formatDateOnly(item.warrantyUntil)}</span>
                         </td>
                         <td className="px-4 py-4 text-slate-700 dark:text-slate-300">
                           <StatusBadge status={currentStatus} />
@@ -242,9 +242,9 @@ function WarrantyDetailsModal({ item, updating, onUpdate, onClose }) {
                 ["Product", item.product || "-"],
                 ["Product slug", item.productSlug || "-"],
                 ["Serial", item.serial || "-"],
-                ["Purchase date", formatDate(item.purchaseDate)],
-                ["Warranty start", formatDate(item.warrantyStart)],
-                ["Warranty until", formatDate(item.warrantyUntil)],
+                ["Purchase date", formatDateOnly(item.purchaseDate)],
+                ["Warranty start", formatDateOnly(item.warrantyStart)],
+                ["Warranty until", formatDateOnly(item.warrantyUntil)],
               ]}
             />
             <DetailGrid
@@ -348,4 +348,8 @@ function dateValue(value) {
 
 function formatDate(value) {
   return formatIndiaDateTime(value);
+}
+
+function formatDateOnly(value) {
+  return formatIndiaDate(value);
 }

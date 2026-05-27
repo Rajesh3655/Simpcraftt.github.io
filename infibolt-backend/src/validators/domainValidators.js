@@ -33,7 +33,7 @@ export const warrantyClaimValidator = [
     if (/^\/uploads\/temp\/[a-z0-9-]+\.pdf$/i.test(value)) return true;
     throw new Error("Invoice must be an uploaded PDF file.");
   }),
-  body("purchaseDate").optional().isISO8601().toDate(),
+  body("purchaseDate").exists({ checkFalsy: true }).withMessage("Purchase date is required.").bail().isISO8601().withMessage("Enter a valid purchase date.").toDate(),
   body("policyAccepted").isBoolean().toBoolean(),
 ];
 
@@ -50,4 +50,11 @@ export const warrantyRmaValidator = [
   body("attachments.*.filename").optional().trim().isLength({ max: 240 }),
   body("attachments.*.type").optional().trim().isLength({ max: 120 }),
   body("policyAccepted").isBoolean().toBoolean(),
+  body("customerAddress.name").trim().isLength({ min: 2, max: 120 }),
+  body("customerAddress.phone").trim().matches(/^[1-9]\d{7,14}$/),
+  body("customerAddress.line1").trim().isLength({ min: 5, max: 180 }),
+  body("customerAddress.line2").optional().trim().isLength({ max: 180 }),
+  body("customerAddress.city").trim().isLength({ min: 2, max: 80 }),
+  body("customerAddress.state").trim().isLength({ min: 2, max: 80 }),
+  body("customerAddress.postalCode").trim().isLength({ min: 4, max: 20 }),
 ];

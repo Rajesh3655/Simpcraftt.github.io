@@ -8,8 +8,9 @@ export function issueCsrfToken(_req, res) {
   res.cookie("infibolt_csrf", token, {
     httpOnly: false,
     secure: env.isProduction,
-    sameSite: env.isProduction ? "none" : "lax",
+    sameSite: env.cookieSameSite,
     path: "/",
+    ...(env.cookieDomain ? { domain: env.cookieDomain } : {}),
     maxAge: 60 * 60 * 1000,
   });
   res.json({ csrfToken: token });

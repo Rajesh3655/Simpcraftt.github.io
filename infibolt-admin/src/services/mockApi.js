@@ -8,7 +8,6 @@ import {
 import { categories, products } from "../store/commerce";
 
 const wait = (ms = 620) => new Promise((resolve) => window.setTimeout(resolve, ms));
-const token = () => `admin.${Date.now().toString(36)}.mock-token`;
 const contactSettings = {
   mobileNumber: "1234567890",
   phone: "1234567890",
@@ -27,13 +26,24 @@ export async function mockRequest(config) {
   const url = String(config.url || "");
   const data = typeof config.data === "string" ? JSON.parse(config.data || "{}") : config.data || {};
 
-  if (url === "/admin/auth/login" && method === "post") {
-    if (!data.email || !data.password) {
-      const error = new Error("Missing credentials");
-      error.response = { status: 422, data: { message: "Email and password are required." } };
+  if (url === "/admin/auth/google" && method === "post") {
+    if (!data.credential) {
+      const error = new Error("Missing Google credential");
+      error.response = { status: 422, data: { message: "Google credential is required." } };
       throw error;
     }
-    return { data: { token: token(), user: { name: "INFIBOLT Admin", email: data.email, role: "Owner" } } };
+    return { data: { mfaRequired: true, email: "admin@infibolt.com", verificationId: "64a000000000000000000001", expiresInSeconds: 300, resendAfterSeconds: 60 } };
+  }
+  if (url === "/admin/auth/otp/verify" && method === "post") {
+    if (data.otp !== "123456") {
+      const error = new Error("Invalid OTP");
+      error.response = { status: 422, data: { message: "Invalid OTP." } };
+      throw error;
+    }
+    return { data: { user: { name: "INFIBOLT Admin", email: data.email } } };
+  }
+  if (url === "/admin/auth/otp/resend" && method === "post") {
+    return { data: { mfaRequired: true, email: data.email, verificationId: "64a000000000000000000002", expiresInSeconds: 300, resendAfterSeconds: 60 } };
   }
   if (url === "/admin/overview") return { data: { stats: adminStats, products, warrantyClaims, supportTickets } };
   if (url === "/admin/products" && method === "get") return { data: { items: products } };

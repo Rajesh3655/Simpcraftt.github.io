@@ -5,7 +5,7 @@ const schema = new mongoose.Schema(
   {
     email: { type: String, required: true, lowercase: true, trim: true, maxlength: 180, index: true },
     target: { type: String, lowercase: true, trim: true, maxlength: 180, index: true },
-    purpose: { type: String, required: true, enum: ["signup", "login", "email-verification", "password-reset", "warranty"] },
+    purpose: { type: String, required: true, enum: ["signup", "login", "admin-login", "email-verification", "password-reset", "warranty"] },
     otpHash: { type: String, required: true, select: false },
     attempts: { type: Number, default: 0, min: 0, select: false },
     verified: { type: Boolean, default: false, index: true },

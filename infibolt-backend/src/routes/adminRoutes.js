@@ -1,10 +1,12 @@
 import { Router } from "express";
 import { body, param } from "express-validator";
 import {
-  adminLogin,
+  adminGoogleLogin,
   adminLogout,
   adminMe,
   adminRefresh,
+  adminResendOtp,
+  adminVerifyOtp,
   analytics,
   createCategory,
   createCollection,
@@ -47,7 +49,7 @@ import { authLimiter } from "../middleware/rateLimit.js";
 import { validate } from "../middleware/validate.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ADMIN_ROLES } from "../constants/roles.js";
-import { RMA_STATUS, WARRANTY_STATUS } from "../constants/status.js";
+import { DELIVERY_STATUS, RMA_STATUS, WARRANTY_STATUS } from "../constants/status.js";
 
 export const adminRoutes = Router();
 
@@ -229,7 +231,9 @@ const homepageSectionValidation = (partial = false) => {
   ];
 };
 
-adminRoutes.post("/auth/login", authLimiter, [body("email").isEmail().normalizeEmail(), body("password").isLength({ min: 8 }).trim()], validate, asyncHandler(adminLogin));
+adminRoutes.post("/auth/google", authLimiter, [body("credential").trim().isLength({ min: 100, max: 4096 })], validate, asyncHandler(adminGoogleLogin));
+adminRoutes.post("/auth/otp/verify", authLimiter, [body("email").trim().isEmail().bail().customSanitizer((value) => String(value).toLowerCase()), body("verificationId").isMongoId(), body("otp").trim().matches(/^\d{6}$/)], validate, asyncHandler(adminVerifyOtp));
+adminRoutes.post("/auth/otp/resend", authLimiter, [body("email").trim().isEmail().bail().customSanitizer((value) => String(value).toLowerCase()), body("verificationId").isMongoId()], validate, asyncHandler(adminResendOtp));
 adminRoutes.post("/auth/refresh", authLimiter, asyncHandler(adminRefresh));
 adminRoutes.post("/auth/logout", protectAdmin, asyncHandler(adminLogout));
 adminRoutes.get("/auth/me", protectAdmin, asyncHandler(adminMe));
@@ -296,7 +300,13 @@ adminRoutes.put(
   validate,
   asyncHandler(updateWarrantyPolicy)
 );
-adminRoutes.patch("/warranty-claims/:id", [param("id").trim().isLength({ min: 3, max: 80 }), body("status").optional().isIn([...WARRANTY_STATUS, ...RMA_STATUS]), body("priority").optional().isIn(["Low", "Normal", "High", "Urgent"]), body("notes").optional().trim().isLength({ max: 2000 })], validate, asyncHandler(updateWarrantyStatus));
+adminRoutes.patch("/warranty-claims/:id", [
+  param("id").trim().isLength({ min: 3, max: 80 }),
+  body("status").optional().isIn([...WARRANTY_STATUS, ...RMA_STATUS]),
+  body("notes").optional().trim().isLength({ max: 2000 }),
+  body("deliveryStatus").optional().isIn(DELIVERY_STATUS),
+  body("deliveryNotes").optional().trim().isLength({ max: 1000 }),
+], validate, asyncHandler(updateWarrantyStatus));
 adminRoutes.post(
   "/ownership/website-purchase",
   [

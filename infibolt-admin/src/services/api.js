@@ -57,13 +57,15 @@ api.interceptors.response.use(
         const retryConfig = { ...error.config, __isRetryRequest: true };
         return api(retryConfig);
       } catch {
-        notifySessionExpired();
+        if (!shouldSuppressSessionExpired(error.config)) notifySessionExpired();
         return Promise.reject({ status, message: "Admin session expired", details, fields });
       }
     }
 
     if (status === 401) {
-      notifySessionExpired();
+      if (!shouldSuppressSessionExpired(error.config)) notifySessionExpired();
+    } else if (shouldSuppressGlobalErrorToast(error.config)) {
+      return Promise.reject({ status, message, details, fields });
     } else if (status === 403 && message.includes("CSRF")) {
       csrfToken = null;
       toast.error("Security check failed", { id: toastIds.csrfFailed, description: "Please retry the action." });
@@ -98,7 +100,15 @@ function formatValidationDetail(detail) {
 function shouldAttemptRefresh(config = {}) {
   if (!config || config.__isRetryRequest) return false;
   const url = String(config.url || "");
-  return url.startsWith("/admin/") && !url.includes("/admin/auth/login") && !url.includes("/admin/auth/refresh") && !url.includes("/admin/auth/logout");
+  return url.startsWith("/admin/") && !url.includes("/admin/auth/google") && !url.includes("/admin/auth/refresh") && !url.includes("/admin/auth/logout");
+}
+
+function shouldSuppressSessionExpired(config = {}) {
+  return Boolean(config?.suppressSessionExpired);
+}
+
+function shouldSuppressGlobalErrorToast(config = {}) {
+  return Boolean(config?.suppressGlobalErrorToast);
 }
 
 async function refreshAdminSession() {

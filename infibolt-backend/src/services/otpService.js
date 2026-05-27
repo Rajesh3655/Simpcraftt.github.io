@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { env } from "../config/env.js";
 import { AuditLog } from "../models/AuditLog.js";
 import { OTPRecord } from "../models/OTPRecord.js";
+import { sendAdminOtpEmail } from "./emailService.js";
 import { hashPassword, verifyPassword } from "../utils/crypto.js";
 import { createHttpError } from "../utils/httpError.js";
 
@@ -14,14 +15,31 @@ function generateOtp() {
   return String(crypto.randomInt(100000, 1000000));
 }
 
+function logTerminalOtp({ email, otp, purpose }) {
+  if (env.isProduction && !env.allowLocalOtp) return;
+  console.info("");
+  console.info("============================================================");
+  console.info(`[TEMP EMAIL OTP] ${otp}`);
+  console.info(`purpose=${purpose} email=${email}`);
+  console.info("============================================================");
+  console.info("");
+}
+
 async function deliverOtp({ email, otp, purpose }) {
   await new Promise((resolve) => setTimeout(resolve, env.nodeEnv === "test" ? 0 : 350));
+  if (!env.isProduction || env.allowLocalOtp) {
+    logTerminalOtp({ email, otp, purpose });
+  }
+  if (purpose === "admin-login" && env.otpProvider === "ses") {
+    try {
+      return await sendAdminOtpEmail({ email, otp, minutes: 5 });
+    } catch (error) {
+      return { status: "failed", provider: "ses", reason: error.message };
+    }
+  }
   if (env.otpProvider === "local") {
     if (env.isProduction && !env.allowLocalOtp) {
       return { status: "failed", provider: "local", reason: "Local OTP delivery is disabled in production." };
-    }
-    if (!env.isProduction || env.allowLocalOtp) {
-      console.info(`[local-email-otp] purpose=${purpose} email=${email} otp=${otp}`);
     }
     return { status: "sent", provider: "local" };
   }
@@ -106,7 +124,7 @@ export async function issueOtp({ email, target, purpose, metadata = {}, ttlMinut
     resendAfterSeconds: env.otpResendCooldownSeconds,
     deliveryStatus: delivery.status,
     provider: delivery.provider,
-};
+  };
 }
 
 export async function verifyOtpCode({ email, target, purpose, otp, verificationId, req }) {

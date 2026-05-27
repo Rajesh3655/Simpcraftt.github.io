@@ -11,6 +11,7 @@ export const useAdminStore = create((set, get) => ({
     user: null,
     status: "idle",
     error: null,
+    mfa: null,
   },
   overview: { data: null, status: "idle", error: null },
   products: { items: [], status: "idle", error: null },
@@ -29,15 +30,65 @@ export const useAdminStore = create((set, get) => ({
   ],
   theme: typeof window === "undefined" ? "light" : localStorage.getItem("infibolt.admin.theme") || "light",
 
-  login: async (credentials) => {
+  googleLogin: async (payload) => {
     set((state) => ({ auth: { ...state.auth, status: "loading", error: null } }));
     try {
-      const result = await authService.login(credentials);
+      const result = await authService.google(payload);
       dismissAuthToasts();
-      set({ auth: { user: result.user, status: "authenticated", error: null } });
+      if (result.mfaRequired) {
+        set({
+          auth: {
+            user: null,
+            status: "mfa-required",
+            error: null,
+            mfa: {
+              email: result.email,
+              verificationId: result.verificationId,
+              expiresInSeconds: result.expiresInSeconds || 300,
+              resendAfterSeconds: result.resendAfterSeconds || 60,
+            },
+          },
+        });
+        return result;
+      }
+      set({ auth: { user: result.user, status: "authenticated", error: null, mfa: null } });
       return result;
     } catch (error) {
-      set((state) => ({ auth: { ...state.auth, status: "error", error: error.message || "Login failed." } }));
+      set((state) => ({ auth: { ...state.auth, status: "error", error: error.message || "Google login failed." } }));
+      throw error;
+    }
+  },
+  verifyAdminOtp: async (payload) => {
+    set((state) => ({ auth: { ...state.auth, status: "loading", error: null } }));
+    try {
+      const result = await authService.verifyOtp(payload);
+      dismissAuthToasts();
+      set({ auth: { user: result.user, status: "authenticated", error: null, mfa: null } });
+      return result;
+    } catch (error) {
+      set((state) => ({ auth: { ...state.auth, status: "mfa-required", error: error.message || "Invalid verification code." } }));
+      throw error;
+    }
+  },
+  resendAdminOtp: async (payload) => {
+    try {
+      const result = await authService.resendOtp(payload);
+      set((state) => ({
+        auth: {
+          ...state.auth,
+          status: "mfa-required",
+          error: null,
+          mfa: {
+            email: result.email,
+            verificationId: result.verificationId,
+            expiresInSeconds: result.expiresInSeconds || 300,
+            resendAfterSeconds: result.resendAfterSeconds || 60,
+          },
+        },
+      }));
+      return result;
+    } catch (error) {
+      set((state) => ({ auth: { ...state.auth, status: "mfa-required", error: error.message || "Could not resend OTP." } }));
       throw error;
     }
   },
@@ -48,18 +99,19 @@ export const useAdminStore = create((set, get) => ({
         user: null,
         status: "session-expired",
         error: "Your admin session has timed out.",
+        mfa: null,
       },
     }));
   },
   hydrateSession: async () => {
     set((state) => ({ auth: { ...state.auth, status: "loading", error: null } }));
     try {
-      const result = await authService.me();
+      const result = await authService.me({ suppressSessionExpired: true });
       dismissAuthToasts();
-      set({ auth: { user: result.user, status: "authenticated", error: null } });
+      set({ auth: { user: result.user, status: "authenticated", error: null, mfa: null } });
       return result;
     } catch {
-      set((state) => ({ auth: { ...state.auth, user: null, status: "unauthenticated" } }));
+      set((state) => ({ auth: { ...state.auth, user: null, status: "unauthenticated", mfa: null } }));
       return null;
     }
   },
@@ -67,11 +119,11 @@ export const useAdminStore = create((set, get) => ({
     try {
       await authService.logout();
     } finally {
-      set((state) => ({ auth: { ...state.auth, user: null, status: "unauthenticated" } }));
+      set((state) => ({ auth: { ...state.auth, user: null, status: "unauthenticated", mfa: null } }));
     }
   },
   clearLocalSession: () => {
-    set((state) => ({ auth: { ...state.auth, user: null, status: "unauthenticated", error: null } }));
+    set((state) => ({ auth: { ...state.auth, user: null, status: "unauthenticated", error: null, mfa: null } }));
   },
   loadAdminWorkspace: async () => {
     const loaders = [

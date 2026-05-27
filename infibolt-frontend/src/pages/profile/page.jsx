@@ -108,6 +108,15 @@ function isValidPhone(value) {
   return /^[1-9]\d{7,14}$/.test(normalizePhone(value));
 }
 
+function missingProfileFields(profile = {}) {
+  const fields = [];
+  if (!isValidPhone(profile.phone)) fields.push("mobile number");
+  if (!String(profile.address || "").trim()) fields.push("full address");
+  if (!String(profile.city || "").trim()) fields.push("city");
+  if (!String(profile.state || "").trim()) fields.push("state");
+  return fields;
+}
+
 export default function ProfilePage() {
   const auth = useAppStore((state) => state.auth);
   const profile = useAppStore((state) => state.profile);
@@ -191,6 +200,10 @@ export default function ProfilePage() {
     }
     if (!profile.phone && !isValidPhone(settingsForm.phone)) {
       toast.error("Phone number required", { id: "account-profile-action", description: "Add a valid phone number to complete your profile." });
+      return;
+    }
+    if (!String(settingsForm.address || "").trim() || !String(settingsForm.city || "").trim() || !String(settingsForm.state || "").trim()) {
+      toast.error("Address details required", { id: "account-profile-action", description: "Add full address, city, and state to complete your profile." });
       return;
     }
     const { currentPassword, newPassword, ...profileFields } = settingsForm;
@@ -295,6 +308,18 @@ export default function ProfilePage() {
 
           <div className="mx-auto hidden w-full max-w-[1320px] min-w-0 gap-4 sm:gap-5 lg:grid">
             <AccountHero profile={profile} />
+            {missingProfileFields(profile).length > 0 && (
+              <AccountCard className="p-5 sm:p-6">
+                <SoftStatus>Complete profile</SoftStatus>
+                <h2 className="mt-4 text-2xl font-semibold tracking-normal text-slate-950">Add required account details</h2>
+                <p className="mt-2 text-sm font-light leading-7 text-slate-600">
+                  Please add your {missingProfileFields(profile).join(", ")} so warranty, support, pickup, and delivery updates can continue smoothly.
+                </p>
+                <button type="button" onClick={() => setActiveTab("settings")} className="mt-5 inline-flex min-h-[44px] items-center justify-center rounded-full bg-slate-950 px-5 text-xs font-semibold uppercase tracking-[0.14em] text-white">
+                  Complete details
+                </button>
+              </AccountCard>
+            )}
 
             <div className="grid min-w-0 gap-4 sm:gap-5 lg:grid-cols-[282px_1fr]">
               <AccountNav activeTab={activeTab} onChange={setActiveTab} onLogout={handleLogout} />
@@ -371,6 +396,7 @@ function MobileProfileApp({ profile, updateProfile, requestProfileContactUpdate,
   const [mobileForm, setMobileForm] = useState(profile);
   const [passwordError, setPasswordError] = useState("");
   const [settingsSpin, setSettingsSpin] = useState("");
+  const missingFields = missingProfileFields(profile);
 
   useEffect(() => {
     setMobileForm({ ...profile, currentPassword: "", newPassword: "" });
@@ -391,6 +417,10 @@ function MobileProfileApp({ profile, updateProfile, requestProfileContactUpdate,
     }
     if (!profile.phone && !isValidPhone(mobileForm.phone)) {
       toast.error("Phone number required", { id: "account-profile-action", description: "Add a valid phone number to complete your profile." });
+      return;
+    }
+    if (!String(mobileForm.address || "").trim() || !String(mobileForm.city || "").trim() || !String(mobileForm.state || "").trim()) {
+      toast.error("Address details required", { id: "account-profile-action", description: "Add full address, city, and state to complete your profile." });
       return;
     }
     const { currentPassword, newPassword, ...profileFields } = mobileForm;
@@ -421,6 +451,20 @@ function MobileProfileApp({ profile, updateProfile, requestProfileContactUpdate,
   return (
     <div className="grid min-w-0 gap-4">
       <MobileProfileHeader profile={profile} onEdit={toggleMobileSettings} spinning={settingsSpin} />
+      {missingFields.length > 0 && !editingProfile && (
+        <section className="rounded-[1.35rem] border border-amber-700/12 bg-amber-50/76 p-4 shadow-[0_14px_42px_rgba(15,23,42,0.055)]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-800">Complete profile</p>
+          <h2 className="mt-2 text-lg font-semibold tracking-normal text-slate-950">Add required account details</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">Please add your {missingFields.join(", ")} for warranty pickup, delivery, and support.</p>
+          <button
+            type="button"
+            onClick={toggleMobileSettings}
+            className="mt-4 min-h-[44px] rounded-full bg-slate-950 px-5 text-xs font-semibold uppercase tracking-[0.14em] text-white"
+          >
+            Complete details
+          </button>
+        </section>
+      )}
       {editingProfile && (
         <MobileProfileEditor
           form={mobileForm}
@@ -533,10 +577,11 @@ function MobileProfileEditor({ form, phone, onChange, passwordError, onCancel, o
         disabled={phoneLocked}
         helper={phoneLocked ? "Phone is fixed after signup and can be used for login." : "Required to complete your Google account profile."}
       />
+      <PremiumField label="Full address" value={form.address || ""} onChange={(address) => onChange((current) => ({ ...current, address }))} helper="Required for warranty pickup, delivery, and support." />
       <EmailVerificationPanel verification={emailVerification} onOtpChange={onEmailOtpChange} onVerify={onVerifyEmail} onResend={onResendEmail} onCancel={onCancelEmail} />
       <div className="grid grid-cols-2 gap-3">
         <PremiumField label="City" value={form.city || ""} onChange={(city) => onChange((current) => ({ ...current, city }))} />
-        <PremiumSelect label="State" value={form.state || "Karnataka"} onChange={(state) => onChange((current) => ({ ...current, state }))} options={indianStates} />
+        <PremiumSelect label="State" value={form.state || ""} onChange={(state) => onChange((current) => ({ ...current, state }))} options={["", ...indianStates]} />
       </div>
       <div className="grid gap-4 border-t border-slate-900/8 pt-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Password</p>
@@ -787,7 +832,8 @@ function AddressesPanel({ profile }) {
             </span>
             <div>
               <p className="font-semibold text-slate-950">Primary address</p>
-              <p className="mt-2 text-sm font-light leading-7 text-slate-600">{profile.city || "Bengaluru"}, {profile.state || "Karnataka"}</p>
+              <p className="mt-2 text-sm font-light leading-7 text-slate-600">{profile.address || "Full address not added"}</p>
+              <p className="text-sm font-light leading-7 text-slate-600">{[profile.city, profile.state].filter(Boolean).join(", ") || "City and state not added"}</p>
               <p className="text-sm font-light leading-7 text-slate-600">Use marketplace invoice and serial details to activate device care.</p>
             </div>
           </div>
@@ -852,8 +898,9 @@ function SettingsPanel({ form, phone, passwordError, onChange, onCancel, onSubmi
               disabled={phoneLocked}
               helper={phoneLocked ? "Phone is fixed after signup and can be used for login." : "Required to complete your Google account profile."}
             />
+            <PremiumField label="Full address" value={form.address || ""} onChange={(address) => onChange((current) => ({ ...current, address }))} helper="Required for warranty pickup, delivery, and support." />
             <PremiumField label="City" value={form.city || ""} onChange={(city) => onChange((current) => ({ ...current, city }))} />
-            <PremiumSelect label="State" value={form.state || "Karnataka"} onChange={(state) => onChange((current) => ({ ...current, state }))} options={indianStates} />
+            <PremiumSelect label="State" value={form.state || ""} onChange={(state) => onChange((current) => ({ ...current, state }))} options={["", ...indianStates]} />
           </div>
           <EmailVerificationPanel verification={emailVerification} onOtpChange={onEmailOtpChange} onVerify={onVerifyEmail} onResend={onResendEmail} onCancel={onCancelEmail} />
         </div>

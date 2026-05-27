@@ -1,4 +1,9 @@
-import "dotenv/config";
+import path from "path";
+import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+
+const configDir = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(configDir, "../../.env"), override: true });
 
 const production = process.env.NODE_ENV === "production";
 const fallbackSecret = "replace-this-local-development-secret-only";
@@ -23,9 +28,11 @@ export const env = {
     .filter((origin, index, origins) => origins.indexOf(origin) === index),
   mongoUri: process.env.MONGODB_URI || "",
   mongoDb: process.env.MONGODB_DB || "infibolt_dev",
-  jwtAccessSecret: process.env.JWT_ACCESS_SECRET || fallbackSecret,
+  jwtAccessSecret: process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || fallbackSecret,
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || `${fallbackSecret}-refresh`,
   cookieSecret: process.env.COOKIE_SECRET || `${fallbackSecret}-cookie`,
+  cookieDomain: process.env.COOKIE_DOMAIN || (production ? ".infibolt.com" : undefined),
+  cookieSameSite: process.env.COOKIE_SAME_SITE || (production ? "none" : "lax"),
   accessTokenTtl: process.env.ACCESS_TOKEN_TTL || "15m",
   refreshTokenDays: Number(process.env.REFRESH_TOKEN_DAYS || 7),
   bcryptRounds: Number(process.env.BCRYPT_ROUNDS || 12),
@@ -44,7 +51,11 @@ export const env = {
   },
   resendApiKey: process.env.RESEND_API_KEY || "",
   sendgridApiKey: process.env.SENDGRID_API_KEY || "",
-  awsSesRegion: process.env.AWS_SES_REGION || "",
+  awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+  awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+  awsRegion: process.env.AWS_REGION || process.env.AWS_SES_REGION || "",
+  awsSesRegion: process.env.AWS_SES_REGION || process.env.AWS_REGION || "",
+  sesFromEmail: process.env.SES_FROM_EMAIL || process.env.EMAIL_FROM || "INFIBOLT <no-reply@infibolt.com>",
   otpTtlMinutes: Number(process.env.OTP_TTL_MINUTES || 10),
   otpResendCooldownSeconds: Number(process.env.OTP_RESEND_COOLDOWN_SECONDS || 60),
   otpMaxRequestsPerHour: Number(process.env.OTP_MAX_REQUESTS_PER_HOUR || 5),
@@ -55,6 +66,11 @@ export const env = {
   adminPassword: process.env.SEED_ADMIN_PASSWORD || "",
   customerPassword: process.env.SEED_CUSTOMER_PASSWORD || "",
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+  adminWhitelist: (process.env.ADMIN_WHITELIST || "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean),
 };
 
 function requireProductionValue(name, value, { url = false, secret = false } = {}) {
@@ -81,6 +97,10 @@ requireProductionValue("MONGODB_URI", env.mongoUri);
 requireProductionValue("JWT_ACCESS_SECRET", env.jwtAccessSecret, { secret: true });
 requireProductionValue("JWT_REFRESH_SECRET", env.jwtRefreshSecret, { secret: true });
 requireProductionValue("COOKIE_SECRET", env.cookieSecret, { secret: true });
+requireProductionValue("GOOGLE_CLIENT_ID", env.googleClientId);
+if (production && env.adminWhitelist.length === 0) {
+  throw new Error("Production ADMIN_WHITELIST must include at least one approved admin email.");
+}
 if (production && env.allowProductionSeed) {
   requireProductionValue("SEED_ADMIN_PASSWORD", env.adminPassword);
 }

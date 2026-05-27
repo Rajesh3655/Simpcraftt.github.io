@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, Clock3, HelpCircle, ImageUp, PackageCheck, UploadCloud } from "lucide-react";
+import { CheckCircle2, HelpCircle, ImageUp, PackageCheck, UploadCloud } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router";
 import { toast } from "sonner";
@@ -15,7 +15,6 @@ import {
   PremiumSelect,
   SoftStatus,
 } from "../../components/customer/PremiumAccount";
-import { OtpInput } from "../../components/OtpInput";
 import { uploadUrl } from "../../config/api";
 import { productService } from "../../services/productService";
 import { uploadService } from "../../services/uploadService";
@@ -26,7 +25,16 @@ import { useAppStore } from "../../store/appStore";
 const purchaseSources = ["Amazon", "Flipkart", "Marketplace", "Retail", "Offline"];
 const claimableWarrantyStatuses = ["Active", "Claim Under Review", "Replacement Approved", "Repaired", "Replaced"];
 const claimIssueTypes = ["Dead on arrival", "Not powering on", "Physical damage", "Battery or charging issue", "Audio or display issue", "Accessory issue", "Other product issue"];
-const initialClaimDraft = { issueType: "Dead on arrival", issueDescription: "", attachment: null, policyAccepted: false, policyViewed: false };
+const initialClaimDraft = {
+  issueType: "Dead on arrival",
+  issueDescription: "",
+  attachment: null,
+  customerAddress: { name: "", phone: "", line1: "", line2: "", city: "", state: "", postalCode: "" },
+  policyAccepted: false,
+  policyViewed: false,
+};
+const WARRANTY_REGISTRATION_WINDOW_DAYS = 7;
+const INDIA_TIME_ZONE = "Asia/Kolkata";
 
 const stepMotion = {
   initial: { opacity: 0, y: 12 },
@@ -55,9 +63,64 @@ const warrantyFormForProduct = (productSlug = "") => {
   };
 };
 
-const otpDestination = (ownership, profile) => (
-  ownership?.otpTarget || profile?.email || "your verified email"
-);
+const dateInputFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: INDIA_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+function dateInputValue(value = new Date()) {
+  return dateInputFormatter.format(value);
+}
+
+function dayIndexFromDateInput(value) {
+  const [year, month, day] = String(value || "").split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return Math.floor(Date.UTC(year, month - 1, day) / 86400000);
+}
+
+function addDaysToDateInput(value, days) {
+  const [year, month, day] = String(value || "").split("-").map(Number);
+  if (!year || !month || !day) return "";
+  const date = new Date(Date.UTC(year, month - 1, day + days));
+  return date.toISOString().slice(0, 10);
+}
+
+function purchaseDateError(value) {
+  if (!value) return "Purchase date is required.";
+  const today = dateInputValue();
+  const purchaseDay = dayIndexFromDateInput(value);
+  const todayDay = dayIndexFromDateInput(today);
+  if (purchaseDay === null || todayDay === null) return "Enter a valid purchase date.";
+  const daysSincePurchase = todayDay - purchaseDay;
+  if (daysSincePurchase < 0) return "Purchase date cannot be in the future.";
+  if (daysSincePurchase > WARRANTY_REGISTRATION_WINDOW_DAYS) {
+    return "Warranty registration is available only within 7 days of purchase.";
+  }
+  return "";
+}
+
+function claimAddressFromProfile(profile = {}) {
+  return {
+    name: profile.name || "",
+    phone: String(profile.phone || "").replace(/\D/g, ""),
+    line1: profile.address || "",
+    line2: "",
+    city: profile.city || "",
+    state: profile.state || "",
+    postalCode: "",
+  };
+}
+
+function missingClaimProfileFields(profile = {}) {
+  const missing = [];
+  if (!String(profile.phone || "").replace(/\D/g, "")) missing.push("mobile number");
+  if (!String(profile.address || "").trim()) missing.push("full address");
+  if (!String(profile.city || "").trim()) missing.push("city");
+  if (!String(profile.state || "").trim()) missing.push("state");
+  return missing;
+}
 
 export default function WarrantyPage() {
   const location = useLocation();
@@ -66,13 +129,10 @@ export default function WarrantyPage() {
   const { claims, rmas } = useAppStore((state) => state.warranty);
   const loadWarrantyClaims = useAppStore((state) => state.loadWarrantyClaims);
   const createWarrantyClaim = useAppStore((state) => state.createWarrantyClaim);
-  const verifyWarrantyOtp = useAppStore((state) => state.verifyWarrantyOtp);
   const createWarrantyRma = useAppStore((state) => state.createWarrantyRma);
   const [activeMode, setActiveMode] = useState("register");
   const [registrationStep, setRegistrationStep] = useState("details");
   const [activeOwnership, setActiveOwnership] = useState(null);
-  const [otp, setOtp] = useState("");
-  const [otpCooldown, setOtpCooldown] = useState(0);
   const [otpError, setOtpError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [claiming, setClaiming] = useState("");
@@ -90,6 +150,7 @@ export default function WarrantyPage() {
   const warrantyReturnTo = `${location.pathname}${location.search || ""}`;
   const [linkedProduct, setLinkedProduct] = useState(null);
   const [form, setForm] = useState(() => warrantyFormForProduct(warrantyProductSlug));
+  const [registrationProducts, setRegistrationProducts] = useState(products);
 
   useEffect(() => {
     if (auth.user) loadWarrantyClaims();
@@ -102,8 +163,26 @@ export default function WarrantyPage() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    productService.warrantyRegistrationList()
+      .then((result) => {
+        if (cancelled) return;
+        const merged = [...(result.items || []), ...products].reduce((map, item) => {
+          const key = item.slug || item.name || item.title;
+          if (key && !map.has(key)) map.set(key, item);
+          return map;
+        }, new Map());
+        setRegistrationProducts([...merged.values()]);
+      })
+      .catch(() => setRegistrationProducts(products));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!warrantyProductSlug) return;
-    const selected = products.find((item) => item.slug === warrantyProductSlug);
+    const selected = registrationProducts.find((item) => item.slug === warrantyProductSlug);
     if (selected) {
       setLinkedProduct(null);
       setActiveMode("register");
@@ -133,20 +212,23 @@ export default function WarrantyPage() {
     return () => {
       cancelled = true;
     };
-  }, [warrantyProductSlug]);
+  }, [registrationProducts, warrantyProductSlug]);
 
   const registeredProducts = useMemo(() => claims, [claims]);
-  const rmaByOwnership = useMemo(() => rmas.reduce((map, rma) => ({ ...map, [rma.ownershipId]: rma }), {}), [rmas]);
+  const rmaByOwnership = useMemo(() => rmas.reduce((map, rma) => {
+    if (!rma.ownershipId || map[rma.ownershipId]) return map;
+    return { ...map, [rma.ownershipId]: rma };
+  }, {}), [rmas]);
   const selectedWarrantyProduct = useMemo(
     () => (
       linkedProduct?.slug === warrantyProductSlug
         ? linkedProduct
-        : products.find((item) => item.slug === warrantyProductSlug)
+        : registrationProducts.find((item) => item.slug === warrantyProductSlug)
     ),
-    [linkedProduct, warrantyProductSlug],
+    [linkedProduct, registrationProducts, warrantyProductSlug],
   );
   const warrantyProductOptions = useMemo(() => {
-    const baseProducts = products.slice(0, 8);
+    const baseProducts = registrationProducts;
     if (selectedWarrantyProduct?.slug && !baseProducts.some((item) => item.slug === selectedWarrantyProduct.slug)) {
       return [selectedWarrantyProduct, ...baseProducts];
     }
@@ -154,16 +236,8 @@ export default function WarrantyPage() {
   }, [selectedWarrantyProduct]);
   const formErrors = {
     serial: form.serial && form.serial.trim().length < 3 ? "Enter the serial number printed on the product, box, or invoice." : "",
-    purchaseDate: form.purchaseDate && new Date(form.purchaseDate) > new Date() ? "Purchase date cannot be in the future." : "",
+    purchaseDate: purchaseDateError(form.purchaseDate),
   };
-  const warrantyOtpDestination = otpDestination(activeOwnership, profile);
-
-  useEffect(() => {
-    if (otpCooldown <= 0) return undefined;
-    const timer = window.setInterval(() => setOtpCooldown((current) => Math.max(current - 1, 0)), 1000);
-    return () => window.clearInterval(timer);
-  }, [otpCooldown]);
-
   if (!auth.user) {
     return (
       <CommerceShell seoTitle="Warranty" seoDescription="Sign in to manage INFIBOLT product ownership and warranty.">
@@ -184,7 +258,6 @@ export default function WarrantyPage() {
   const resetRegistrationDraft = () => {
     setRegistrationStep("details");
     setActiveOwnership(null);
-    setOtp("");
     setOtpError("");
     setInvoiceUpload({ status: "idle", error: "", fileName: "" });
     setPolicyAccepted(false);
@@ -213,11 +286,11 @@ export default function WarrantyPage() {
       return;
     }
     if (form.serial.trim().length < 3) {
-      setOtpError("Enter the product serial number before OTP verification.");
+      setOtpError("Enter the product serial number before registration.");
       return;
     }
     if (!warrantyPolicy?.url || !policyViewed || !policyAccepted) {
-      setPolicyError(!warrantyPolicy?.url ? "Warranty policy is not available yet." : !policyViewed ? "Please view and read the warranty policy before registration." : "Acknowledge the warranty policy before OTP verification.");
+      setPolicyError(!warrantyPolicy?.url ? "Warranty policy is not available yet." : !policyViewed ? "Please view and read the warranty policy before registration." : "Acknowledge the warranty policy before registration.");
       return;
     }
     setSubmitting(true);
@@ -230,38 +303,13 @@ export default function WarrantyPage() {
         policyAccepted,
       });
       setActiveOwnership(ownership);
-      setRegistrationStep("otp");
-      setOtpCooldown(ownership.resendAfterSeconds || 60);
-      setOtp("");
-      toast.success("Email OTP sent", { description: `Verify ${otpDestination(ownership, profile)} to continue registration.` });
+      setRegistrationStep("submitted");
+      toast.success("Warranty registration submitted", { description: "Admin invoice review will activate warranty." });
     } catch (requestError) {
       const fields = requestError.details?.fields || {};
       setFieldErrors(fields);
       setOtpError(fields.serial || requestError.message || "Registration could not start.");
       if (fields.policyAccepted) setPolicyError(fields.policyAccepted);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const resendWarrantyOtp = async () => {
-    if (otpCooldown > 0 || submitting) return;
-    setSubmitting(true);
-    setOtpError("");
-    try {
-      const ownership = await createWarrantyClaim({
-        ...form,
-        serial: form.serial.trim().toUpperCase(),
-        customer: profile.name,
-        email: profile.email,
-        policyAccepted,
-      });
-      setActiveOwnership(ownership);
-      setOtp("");
-      setOtpCooldown(ownership.resendAfterSeconds || 60);
-      toast.success("Code resent", { description: "Use the newest email OTP to continue registration." });
-    } catch (requestError) {
-      setOtpError(requestError.message || "We could not resend the warranty code.");
     } finally {
       setSubmitting(false);
     }
@@ -291,28 +339,15 @@ export default function WarrantyPage() {
     }
   };
 
-  const submitOtp = async (event) => {
-    event.preventDefault();
-    if (!activeOwnership?.id || otp.length !== 6) {
-      setOtpError("Enter the 6 digit warranty OTP.");
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const verified = await verifyWarrantyOtp(activeOwnership.id, otp);
-      setActiveOwnership(verified);
-      setRegistrationStep("submitted");
-      toast.success("Ownership submitted", { description: "Admin invoice review will activate warranty." });
-    } catch (requestError) {
-      setOtpError(requestError.message || "OTP was not accepted.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const startClaim = (ownership) => {
+    const missingFields = missingClaimProfileFields(profile);
+    if (missingFields.length > 0) {
+      toast.warning("Complete service details", {
+        description: `Add ${missingFields.join(", ")} before submitting the claim.`,
+      });
+    }
     setActiveClaimId(ownership.id);
-    setClaimDraft(initialClaimDraft);
+    setClaimDraft({ ...initialClaimDraft, customerAddress: claimAddressFromProfile(profile) });
     setClaimUpload({ status: "idle", error: "", fileName: "" });
     setClaimPolicyError("");
   };
@@ -363,6 +398,12 @@ export default function WarrantyPage() {
       setClaimUpload({ status: "error", error: "Upload a product photo before submitting.", fileName: claimUpload.fileName });
       return;
     }
+    const address = claimDraft.customerAddress || {};
+    const phone = String(address.phone || "").replace(/\D/g, "");
+    if (!address.name.trim() || phone.length < 8 || !address.line1.trim() || !address.city.trim() || !address.state.trim() || !address.postalCode.trim()) {
+      setClaimUpload((current) => ({ ...current, error: "Enter pickup and delivery address details before submitting." }));
+      return;
+    }
     if (!warrantyPolicy?.url || !claimDraft.policyViewed || !claimDraft.policyAccepted) {
       setClaimPolicyError(!warrantyPolicy?.url ? "Warranty policy is not available yet." : !claimDraft.policyViewed ? "Please view and read the warranty policy before submitting a claim." : "Acknowledge the warranty policy before submitting a claim.");
       return;
@@ -373,6 +414,10 @@ export default function WarrantyPage() {
         ownershipId: ownership.id,
         issueType: claimDraft.issueType,
         issueDescription: claimDraft.issueDescription.trim(),
+        customerAddress: {
+          ...claimDraft.customerAddress,
+          phone: String(claimDraft.customerAddress.phone || "").replace(/\D/g, ""),
+        },
         attachments: [claimDraft.attachment],
         policyAccepted: claimDraft.policyAccepted,
       });
@@ -406,6 +451,7 @@ export default function WarrantyPage() {
                     <h2 className="mt-4 text-2xl font-semibold tracking-normal text-slate-950">Activate ownership care</h2>
                     <p className="mt-2 max-w-2xl text-sm font-light leading-7 text-slate-600">
                       Link Amazon, Flipkart, marketplace, or retail purchases to your INFIBOLT account with secure email verification.
+                      Registration must be completed within 7 days of purchase.
                     </p>
                   </div>
                   <StepPills active={registrationStep} />
@@ -424,7 +470,7 @@ export default function WarrantyPage() {
                         </div>
                         <PremiumSelect label="Purchase source" value={form.source} onChange={(source) => setForm((current) => ({ ...current, source }))} options={purchaseSources} />
                         <PremiumField label={["Retail", "Offline"].includes(form.source) ? "Store name" : "Seller / order source"} value={form.sourceDetail} onChange={(sourceDetail) => setForm((current) => ({ ...current, sourceDetail }))} placeholder={form.source === "Amazon" ? "Amazon order / seller" : "Store or marketplace"} />
-                        <PremiumField label="Purchase date" type="date" value={form.purchaseDate} onChange={(purchaseDate) => setForm((current) => ({ ...current, purchaseDate }))} error={formErrors.purchaseDate} required />
+                        <PremiumField label="Purchase date" type="date" value={form.purchaseDate} onChange={(purchaseDate) => setForm((current) => ({ ...current, purchaseDate }))} error={formErrors.purchaseDate} helper="Register within 7 days of purchase to activate warranty." min={addDaysToDateInput(dateInputValue(), -WARRANTY_REGISTRATION_WINDOW_DAYS)} max={dateInputValue()} required />
                         <PremiumField label="Invoice number" value={form.invoiceNumber} onChange={(invoiceNumber) => setForm((current) => ({ ...current, invoiceNumber }))} placeholder="Invoice / order ID" required />
                       </div>
                       <InvoicePdfUpload upload={invoiceUpload} uploaded={Boolean(form.invoiceUrl)} onUpload={uploadInvoicePdf} />
@@ -445,24 +491,6 @@ export default function WarrantyPage() {
                       <PremiumButton loading={submitting} type="submit" disabled={Boolean(formErrors.serial || formErrors.purchaseDate)}>
                         {submitting ? "Sending email OTP..." : "Verify and register"}
                       </PremiumButton>
-                    </motion.form>
-                  )}
-
-                  {registrationStep === "otp" && (
-                    <motion.form key="otp" {...stepMotion} onSubmit={submitOtp} className="grid gap-4">
-                      <PremiumNotice tone="success" title="Email verification">
-                        Enter the OTP sent to {warrantyOtpDestination} to protect this ownership record.
-                      </PremiumNotice>
-                      <div className="rounded-[1.25rem] border border-slate-900/8 bg-white/58 p-4">
-                        <div className="mb-3 flex items-center justify-between gap-3">
-                          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Warranty email OTP</span>
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500"><Clock3 className="h-3.5 w-3.5" /> {otpCooldown > 0 ? `${otpCooldown}s` : "Ready"}</span>
-                        </div>
-                        <OtpInput value={otp} onChange={(value) => { setOtp(value); setOtpError(""); }} disabled={submitting} error={otpError} />
-                      </div>
-                      <PremiumButton loading={submitting} type="submit">{submitting ? "Checking..." : "Complete verification"}</PremiumButton>
-                      <button type="button" onClick={resendWarrantyOtp} disabled={otpCooldown > 0 || submitting} className="text-left text-sm font-semibold text-slate-500 transition hover:text-slate-950 disabled:opacity-50">Resend email code</button>
-                      <button type="button" onClick={() => setRegistrationStep("details")} className="text-left text-sm font-semibold text-slate-500 transition hover:text-slate-950">Edit registration details</button>
                     </motion.form>
                   )}
 
@@ -535,7 +563,10 @@ function WarrantyHero({ profile, activeMode, onModeChange }) {
       <div className="relative">
         <SoftStatus>Ownership care</SoftStatus>
         <h1 className="mt-4 max-w-3xl text-[2rem] font-semibold leading-[1.05] tracking-normal text-slate-950 sm:text-[2.75rem]">Register products. Keep care connected.</h1>
-        <p className="mt-4 max-w-2xl text-sm font-light leading-7 text-slate-600 sm:text-base">Link marketplace and retail purchases to your INFIBOLT account for warranty coverage, support, and long-term product care.</p>
+        <p className="mt-4 max-w-2xl text-sm font-light leading-7 text-slate-600 sm:text-base">
+          Link marketplace and retail purchases to your INFIBOLT account for warranty coverage, support, and long-term product care.
+          Register within 7 days of purchase; after the 8th day, warranty registration cannot be claimed.
+        </p>
         <p className="mt-5 text-sm font-semibold text-slate-500">{profile.email} · {profile.phone}</p>
         <div className="mt-6 grid max-w-xl gap-3 sm:grid-cols-2">
           <button
@@ -559,7 +590,7 @@ function WarrantyHero({ profile, activeMode, onModeChange }) {
 }
 
 function StepPills({ active }) {
-  const steps = ["details", "otp", "submitted"];
+  const steps = ["details", "submitted"];
   return (
     <div className="flex items-center gap-2">
       {steps.map((step, index) => (
@@ -635,6 +666,8 @@ function RegisteredProductList({
         {items.map((item) => {
           const claimAvailable = claimableWarrantyStatuses.includes(item.warrantyStatus);
           const activeRma = rmaByOwnership[item.id];
+          const rmaAllowsNewRequest = ["Rejected", "Closed"].includes(activeRma?.status);
+          const rmaBlocksNewRequest = Boolean(activeRma) && !rmaAllowsNewRequest;
           const formOpen = activeClaimId === item.id;
           return (
             <div
@@ -665,15 +698,17 @@ function RegisteredProductList({
                 {claimAvailable && (
                   <button
                     type="button"
-                    onClick={() => (activeRma ? undefined : onStartClaim(item))}
-                    disabled={Boolean(activeRma) || claimingId === item.id}
-                    className="inline-flex min-h-[42px] items-center justify-center rounded-full bg-slate-950 px-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-slate-800 disabled:pointer-events-none disabled:opacity-55"
+                    onClick={() => (rmaBlocksNewRequest ? undefined : onStartClaim(item))}
+                    disabled={rmaBlocksNewRequest || claimingId === item.id}
+                    className={`inline-flex min-h-[42px] items-center justify-center rounded-full px-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-white transition disabled:pointer-events-none disabled:opacity-55 ${
+                      rmaAllowsNewRequest ? "bg-slate-950 hover:bg-slate-800" : "bg-slate-950 hover:bg-slate-800"
+                    }`}
                   >
-                    {claimingId === item.id ? "Submitting..." : activeRma ? activeRma.status : formOpen ? "Form open" : "Start care request"}
+                    {claimingId === item.id ? "Submitting..." : rmaBlocksNewRequest ? activeRma.status : formOpen ? "Form open" : rmaAllowsNewRequest ? "Start new request" : "Start care request"}
                   </button>
                 )}
               </span>
-              {formOpen && !activeRma && (
+              {formOpen && !rmaBlocksNewRequest && (
                 <ClaimRequestForm
                   ownership={item}
                   draft={claimDraft}
@@ -704,18 +739,46 @@ function RegisteredProductList({
 
 function ClaimStatus({ rma }) {
   const rejected = rma.status === "Rejected";
+  const closed = rma.status === "Closed";
   const approved = ["Approved", "Pickup Scheduled", "In Transit", "Inspection", "Repair Approved", "Replacement Approved", "Repaired", "Replaced", "Closed"].includes(rma.status);
+  const latestTimelineNote = [...(rma.timeline || [])].reverse().find((entry) => entry?.note)?.note;
+  const note = rma.notes || latestTimelineNote || rma.policyDecision || "";
+  const statusLabel = rejected ? "Care request rejected" : closed ? "Care request closed" : approved ? "Care in progress" : "Care request received";
+  const deliveryGuidance = {
+    Picked: "Product pickup is recorded.",
+    Received: "Product received at service desk.",
+    Processed: "Service team is processing the request.",
+    Shipped: "Product has been shipped back.",
+    Delivered: "Product delivery is complete.",
+  };
   return (
-    <span className={`mt-2 inline-flex rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${
-      rejected ? "bg-rose-50 text-rose-700" : approved ? "bg-emerald-50 text-emerald-700" : "bg-sky-50 text-sky-700"
-    }`}>
-      {rejected ? "Care request closed" : approved ? "Care in progress" : "Care request received"} · {rma.id}
+    <span className="mt-2 grid gap-2">
+      <span className={`inline-flex w-fit rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${
+        rejected ? "bg-rose-50 text-rose-700" : approved ? "bg-emerald-50 text-emerald-700" : "bg-sky-50 text-sky-700"
+      }`}>
+        {statusLabel} · {rma.status || "Requested"} · {rma.id}
+      </span>
+      {note && (
+        <span className={`block max-w-2xl rounded-xl px-3 py-2 text-xs font-medium leading-5 ${
+          rejected ? "bg-rose-50 text-rose-800" : "bg-slate-950/[0.035] text-slate-600"
+        }`}>
+          {rejected ? "Reason: " : "Update: "}{note}
+        </span>
+      )}
+      {(rma.deliveryStatus || rma.status === "Approved") && (
+        <span className="block max-w-2xl rounded-xl bg-emerald-50 px-3 py-2 text-xs font-medium leading-5 text-emerald-800">
+          Delivery: {rma.deliveryStatus || "Awaiting pickup"}. {rma.deliveryNotes || deliveryGuidance[rma.deliveryStatus] || "Admin will update pickup, service processing, shipping, and delivery here."}
+        </span>
+      )}
     </span>
   );
 }
 
 function ClaimRequestForm({ ownership, draft, upload, policy, policyError, submitting, onChange, onPhotoUpload, onCancel, onSubmit }) {
-  const submitDisabled = submitting || !draft.issueType || draft.issueDescription.trim().length < 5 || !draft.attachment?.url || !policy?.url || !draft.policyViewed || !draft.policyAccepted;
+  const address = draft.customerAddress || {};
+  const addressReady = address.name?.trim() && String(address.phone || "").replace(/\D/g, "").length >= 8 && address.line1?.trim() && address.city?.trim() && address.state?.trim() && address.postalCode?.trim();
+  const updateAddress = (field, value) => onChange((current) => ({ ...current, customerAddress: { ...(current.customerAddress || {}), [field]: value } }));
+  const submitDisabled = submitting || !draft.issueType || draft.issueDescription.trim().length < 5 || !draft.attachment?.url || !addressReady || !policy?.url || !draft.policyViewed || !draft.policyAccepted;
 
   return (
     <div className="grid gap-4 border-t border-slate-900/8 pt-4 sm:col-span-2">
@@ -735,6 +798,18 @@ function ClaimRequestForm({ ownership, draft, upload, policy, policyError, submi
         required
       />
       <ClaimPhotoUpload upload={upload} uploaded={Boolean(draft.attachment?.url)} onUpload={onPhotoUpload} />
+      <div className="grid gap-3 rounded-2xl border border-slate-900/8 bg-white/54 p-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Pickup and delivery address</p>
+        <div className="grid gap-3 md:grid-cols-2">
+          <PremiumField label="Contact name" value={address.name || ""} onChange={(value) => updateAddress("name", value)} required />
+          <PremiumField label="Contact phone" value={address.phone || ""} onChange={(value) => updateAddress("phone", value.replace(/\D/g, ""))} inputMode="tel" required />
+          <PremiumField label="Address line 1" value={address.line1 || ""} onChange={(value) => updateAddress("line1", value)} required />
+          <PremiumField label="Address line 2" value={address.line2 || ""} onChange={(value) => updateAddress("line2", value)} />
+          <PremiumField label="City" value={address.city || ""} onChange={(value) => updateAddress("city", value)} required />
+          <PremiumField label="State" value={address.state || ""} onChange={(value) => updateAddress("state", value)} required />
+          <PremiumField label="PIN code" value={address.postalCode || ""} onChange={(value) => updateAddress("postalCode", value)} required />
+        </div>
+      </div>
       <WarrantyPolicyAgreement
         policy={policy}
         accepted={draft.policyAccepted}

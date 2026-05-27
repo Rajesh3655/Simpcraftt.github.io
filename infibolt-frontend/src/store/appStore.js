@@ -170,10 +170,6 @@ export const useAppStore = create((set, get) => ({
   },
   createWarrantyClaim: async (payload) => {
     const claim = await warrantyService.createClaim(payload);
-    return claim;
-  },
-  verifyWarrantyOtp: async (id, otp) => {
-    const claim = await warrantyService.verifyOtp(id, otp);
     set((state) => ({
       warranty: {
         ...state.warranty,

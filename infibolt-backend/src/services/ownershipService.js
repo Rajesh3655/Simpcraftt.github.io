@@ -4,6 +4,9 @@ import { ProductUnit } from "../models/ProductUnit.js";
 import { RMARequest } from "../models/RMARequest.js";
 import { createHttpError } from "../utils/httpError.js";
 
+const INDIA_TIME_ZONE = "Asia/Kolkata";
+export const WARRANTY_REGISTRATION_WINDOW_DAYS = 7;
+
 export function normalizeSerial(serial) {
   return String(serial || "").trim().toUpperCase();
 }
@@ -33,6 +36,46 @@ export function warrantyEndFromPurchase(purchaseDate, months = 12) {
   const end = new Date(start);
   end.setMonth(end.getMonth() + months);
   return { start, end };
+}
+
+function indiaDateKey(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: INDIA_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function dayIndex(dateKey) {
+  const [year, month, day] = String(dateKey || "").split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return Math.floor(Date.UTC(year, month - 1, day) / 86400000);
+}
+
+export function assertWarrantyRegistrationWindow(purchaseDate, comparison = new Date()) {
+  const purchaseKey = indiaDateKey(purchaseDate);
+  const todayKey = indiaDateKey(comparison);
+  const purchaseDay = dayIndex(purchaseKey);
+  const todayDay = dayIndex(todayKey);
+  if (purchaseDay === null || todayDay === null) {
+    throw createHttpError(422, "Enter a valid purchase date.", {
+      fields: { purchaseDate: "Enter the purchase date shown on your invoice." },
+    });
+  }
+  const daysSincePurchase = todayDay - purchaseDay;
+  if (daysSincePurchase < 0) {
+    throw createHttpError(422, "Purchase date cannot be in the future.", {
+      fields: { purchaseDate: "Purchase date cannot be in the future." },
+    });
+  }
+  if (daysSincePurchase > WARRANTY_REGISTRATION_WINDOW_DAYS) {
+    throw createHttpError(422, "Warranty registration is available only within 7 days of purchase.", {
+      fields: { purchaseDate: "Register within 7 days of purchase. This purchase date is outside the allowed window." },
+    });
+  }
 }
 
 export async function resolveProductForOwnership({ product, productSlug }) {

@@ -1,5 +1,7 @@
 import { matchedData } from "express-validator";
 import { writeAuditLog } from "../middleware/audit.js";
+import { env } from "../config/env.js";
+import { AdminLoginLog } from "../models/AdminLoginLog.js";
 import { AdminUser } from "../models/AdminUser.js";
 import { Category } from "../models/Category.js";
 import { Collection } from "../models/Collection.js";
@@ -17,16 +19,16 @@ import { SupportTicket } from "../models/SupportTicket.js";
 import { WarrantyClaim } from "../models/WarrantyClaim.js";
 import { AuditLog } from "../models/AuditLog.js";
 import { OTPRecord } from "../models/OTPRecord.js";
-import { hashToken, verifyPassword } from "../utils/crypto.js";
+import { hashToken } from "../utils/crypto.js";
 import { clearAuthCookies, refreshCookieCandidates, verifyRefreshToken } from "../utils/cookies.js";
 import { createHttpError } from "../utils/httpError.js";
-import { ok, sanitizeUser } from "../utils/response.js";
+import { ok, sanitizeAdminUser, sanitizeUser } from "../utils/response.js";
 import { createSession, revokeUserSessions, rotateRefreshSession } from "../services/sessionService.js";
-import { issueOtp } from "../services/otpService.js";
+import { issueOtp, verifyOtpCode } from "../services/otpService.js";
 import { getContactSettings, saveContactSettings } from "../services/siteSettingsService.js";
+import { verifyGoogleCredential } from "../services/googleAuthService.js";
+import { sendStatusEmail } from "../services/emailService.js";
 import { assertSerialAvailable, assertValidSerial, ensureProductUnit, resolveProductForOwnership, syncUnitOwner, warrantyEndFromPurchase } from "../services/ownershipService.js";
-
-const maxFailedLogins = 5;
 
 function slugify(value) {
   return String(value || "")
@@ -47,34 +49,214 @@ function sendCsv(res, filename, rows) {
   return res.status(200).send(body);
 }
 
-export async function adminLogin(req, res) {
-  const { email, password } = matchedData(req);
-  const user = await AdminUser.findOne({ email }).select("+passwordHash +failedLoginCount +lockUntil +refreshTokenHash");
-  if (!user || user.status === "Locked") throw createHttpError(401, "Invalid admin credentials.");
-  if (user.lockUntil && user.lockUntil > new Date()) throw createHttpError(423, "Admin account temporarily locked.");
-  if (!(await verifyPassword(password, user.passwordHash))) {
-    user.failedLoginCount = (user.failedLoginCount || 0) + 1;
-    if (user.failedLoginCount >= maxFailedLogins) user.lockUntil = new Date(Date.now() + 15 * 60 * 1000);
-    await user.save();
-    await writeAuditLog(req, "admin.login.failed", { email });
-    throw createHttpError(401, "Invalid admin credentials.");
+async function sendCareDecisionEmail({ email, title, status, product, serial, note, req }) {
+  if (!email) return;
+  try {
+    await sendStatusEmail({
+      email,
+      title,
+      status,
+      product,
+      serial,
+      note,
+      url: `${env.frontendOrigin.replace(/\/$/, "")}/warranty`,
+    });
+  } catch (error) {
+    console.warn("[care-email] failed", error.message);
+    await writeAuditLog(req, "care.email.failed", { email, status, reason: error.message || "email_failed" });
+  }
+}
+
+function isWhitelistedAdmin(email) {
+  return env.adminWhitelist.includes(String(email || "").toLowerCase());
+}
+
+function logAdminWhitelistCheck(email) {
+  if (env.isProduction) return;
+  console.info(`[admin-google-login] email=${email || "unknown"} whitelisted=${isWhitelistedAdmin(email)} whitelist=${env.adminWhitelist.join(",") || "(empty)"}`);
+}
+
+async function writeAdminLoginLog(req, { email, status, reason }) {
+  try {
+    await AdminLoginLog.create({
+      email: email || "unknown",
+      status,
+      reason,
+      ip: req.ip,
+      userAgent: req.get("user-agent"),
+      requestId: req.id,
+      loggedInAt: new Date(),
+    });
+  } catch (error) {
+    console.warn("[admin-login-log] failed", error.message);
+  }
+}
+
+async function resolveVerifiedGoogleAdmin(req, googleProfile) {
+  const email = googleProfile.email;
+  logAdminWhitelistCheck(email);
+  if (!isWhitelistedAdmin(email)) {
+    await writeAdminLoginLog(req, { email, status: "failure", reason: "not_whitelisted" });
+    await writeAuditLog(req, "admin.google_login.denied", { email, reason: "not_whitelisted" });
+    throw createHttpError(403, `This Google account is not authorized for admin access: ${email}`);
+  }
+
+  let user = await AdminUser.findOne({ email }).select("+refreshTokenHash +googleSub +failedLoginCount +lockUntil");
+  if (!user) {
+    user = await AdminUser.create({
+      email,
+      name: googleProfile.name,
+      role: "admin",
+      status: "Verified",
+      googleSub: googleProfile.sub,
+      avatarUrl: googleProfile.picture,
+    });
+  }
+  if (user.status === "Locked") {
+    await writeAdminLoginLog(req, { email, status: "failure", reason: "account_locked" });
+    throw createHttpError(423, "Admin account is blocked.");
+  }
+  if (user.lockUntil && user.lockUntil > new Date()) {
+    await writeAdminLoginLog(req, { email, status: "failure", reason: "temporary_lock" });
+    throw createHttpError(423, "Admin account temporarily locked.");
+  }
+
+  let changed = false;
+  if (!user.googleSub) {
+    user.googleSub = googleProfile.sub;
+    changed = true;
+  } else if (user.googleSub !== googleProfile.sub) {
+    await writeAdminLoginLog(req, { email, status: "failure", reason: "google_sub_mismatch" });
+    await writeAuditLog(req, "admin.google_login.denied", { email, reason: "google_sub_mismatch" });
+    throw createHttpError(403, "This Google account is not linked to the admin user.");
+  }
+  if (googleProfile.name && user.name !== googleProfile.name) {
+    user.name = googleProfile.name;
+    changed = true;
+  }
+  if (googleProfile.picture && user.avatarUrl !== googleProfile.picture) {
+    user.avatarUrl = googleProfile.picture;
+    changed = true;
   }
   user.failedLoginCount = 0;
   user.lockUntil = undefined;
-  await createSession(req, res, user);
-  await writeAuditLog(req, "admin.login.success", { email });
-  return ok(res, { user: sanitizeUser(user) });
+  if (changed) await user.save();
+  return user;
+}
+
+export async function adminGoogleLogin(req, res) {
+  const { credential } = matchedData(req);
+  let email = "unknown";
+  try {
+    const googleProfile = await verifyGoogleCredential(credential);
+    email = googleProfile.email;
+    const user = await resolveVerifiedGoogleAdmin(req, googleProfile);
+    const otp = await issueOtp({
+      email,
+      purpose: "admin-login",
+      ttlMinutes: 5,
+      metadata: {
+        adminUserId: String(user._id),
+        googleSub: googleProfile.sub,
+        phase: "admin_mfa",
+      },
+      req,
+    });
+    await writeAdminLoginLog(req, { email, status: "success", reason: "google_verified_otp_sent" });
+    await writeAuditLog(req, "admin.google_login.success", { email, mfa: "otp_sent" });
+    return ok(
+      res,
+      {
+        mfaRequired: true,
+        email,
+        verificationId: otp.id,
+        expiresInSeconds: otp.expiresInSeconds,
+        resendAfterSeconds: otp.resendAfterSeconds,
+        deliveryStatus: otp.deliveryStatus,
+      },
+      202
+    );
+  } catch (error) {
+    if (![403, 423].includes(error.statusCode)) {
+      await writeAdminLoginLog(req, { email, status: "failure", reason: error.message || "google_verification_failed" });
+      await writeAuditLog(req, "admin.google_login.failed", { email, reason: error.message || "google_verification_failed" });
+    }
+    throw error;
+  }
+}
+
+export async function adminVerifyOtp(req, res) {
+  const { email, otp, verificationId } = matchedData(req);
+  const normalizedEmail = String(email || "").toLowerCase();
+  try {
+    const otpRecord = await verifyOtpCode({
+      email: normalizedEmail,
+      purpose: "admin-login",
+      otp,
+      verificationId,
+      req,
+    });
+    const adminUserId = otpRecord.metadata?.adminUserId;
+    const user = adminUserId
+      ? await AdminUser.findOne({ _id: adminUserId, email: normalizedEmail }).select("+refreshTokenHash +googleSub")
+      : await AdminUser.findOne({ email: normalizedEmail }).select("+refreshTokenHash +googleSub");
+    if (!user || user.status === "Locked") throw createHttpError(401, "Admin session could not be created.");
+
+    await OTPRecord.deleteMany({ email: normalizedEmail, purpose: "admin-login" });
+    await createSession(req, res, user);
+    await writeAdminLoginLog(req, { email: normalizedEmail, status: "success", reason: "otp_verified" });
+    await writeAuditLog(req, "admin.otp_login.success", { email: normalizedEmail });
+    return ok(res, { user: sanitizeAdminUser(user) });
+  } catch (error) {
+    await writeAdminLoginLog(req, { email: normalizedEmail, status: "failure", reason: `otp_${error.message || "failed"}` });
+    await writeAuditLog(req, "admin.otp_login.failed", { email: normalizedEmail, reason: error.message || "otp_failed" });
+    throw error;
+  }
+}
+
+export async function adminResendOtp(req, res) {
+  const { email, verificationId } = matchedData(req);
+  const normalizedEmail = String(email || "").toLowerCase();
+  const previous = await OTPRecord.findOne({
+    _id: verificationId,
+    email: normalizedEmail,
+    purpose: "admin-login",
+    consumedAt: { $exists: false },
+    expiresAt: { $gt: new Date() },
+  }).lean();
+  if (!previous) throw createHttpError(422, "OTP challenge has expired. Sign in with Google again.");
+  const otp = await issueOtp({
+    email: normalizedEmail,
+    purpose: "admin-login",
+    ttlMinutes: 5,
+    metadata: previous.metadata || {},
+    req,
+  });
+  await writeAuditLog(req, "admin.otp_login.resent", { email: normalizedEmail });
+  return ok(res, {
+    mfaRequired: true,
+    email: normalizedEmail,
+    verificationId: otp.id,
+    expiresInSeconds: otp.expiresInSeconds,
+    resendAfterSeconds: otp.resendAfterSeconds,
+    deliveryStatus: otp.deliveryStatus,
+  });
 }
 
 export async function adminRefresh(req, res) {
   const refreshToken = refreshCookieCandidates("admin").map((name) => req.signedCookies?.[name]).find(Boolean);
   if (!refreshToken) throw createHttpError(401, "Refresh token missing.");
-  const payload = verifyRefreshToken(refreshToken);
+  const payload = verifyRefreshToken(refreshToken, "infibolt-admin-refresh");
   if (payload.role !== "admin") throw createHttpError(403, "Invalid session role.");
   const user = await AdminUser.findById(payload.sub).select("+refreshTokenHash");
   if (!user || user.refreshTokenHash !== hashToken(refreshToken)) throw createHttpError(401, "Refresh token has been invalidated.");
+  if (!isWhitelistedAdmin(user.email)) {
+    await revokeUserSessions(user);
+    clearAuthCookies(res, "admin");
+    throw createHttpError(401, "Admin access has been revoked.");
+  }
   await rotateRefreshSession(req, res, user, refreshToken);
-  return ok(res, { user: sanitizeUser(user) });
+  return ok(res, { user: sanitizeAdminUser(user) });
 }
 
 export async function adminLogout(req, res) {
@@ -88,7 +270,7 @@ export async function adminLogout(req, res) {
 }
 
 export async function adminMe(req, res) {
-  return ok(res, { user: sanitizeUser(req.user) });
+  return ok(res, { user: sanitizeAdminUser(req.user) });
 }
 
 export async function overview(_req, res) {
@@ -196,10 +378,14 @@ export async function updateProduct(req, res) {
 }
 
 export async function deleteProduct(req, res) {
-  const product = await Product.findOneAndDelete({ slug: req.params.slug });
+  const product = await Product.findOneAndUpdate(
+    { slug: req.params.slug },
+    { status: "Archived", visibility: "private", productPageVisible: false, homepageVisible: false, heroVisible: false, featured: false },
+    { new: true, runValidators: true }
+  );
   if (!product) throw createHttpError(404, "Product not found.");
   await writeAuditLog(req, "admin.product.deleted", { slug: req.params.slug });
-  return ok(res, { deleted: true, product });
+  return ok(res, { deleted: true, archived: true, product });
 }
 
 export async function reorderProducts(req, res) {
@@ -499,6 +685,7 @@ export async function updateWarrantyStatus(req, res) {
   const data = matchedData(req, { locations: ["body"] });
   const ownership = await ProductOwnership.findOne({ id: req.params.id });
   if (ownership) {
+    const previousStatus = ownership.warrantyStatus;
     if (data.status) {
       ownership.status = ["Active", "Rejected", "Pending Verification"].includes(data.status) ? data.status : ownership.status;
       ownership.warrantyStatus = data.status;
@@ -516,28 +703,61 @@ export async function updateWarrantyStatus(req, res) {
     }
     if (data.notes) ownership.reviewNote = data.notes;
     await ownership.save();
+    if (["Active", "Rejected"].includes(data.status) && previousStatus !== data.status) {
+      await sendCareDecisionEmail({
+        email: ownership.email,
+        title: data.status === "Active" ? "Your warranty registration is approved" : "Your warranty registration was rejected",
+        status: data.status,
+        product: ownership.product,
+        serial: ownership.serial,
+        note: data.notes || ownership.reviewNote,
+        req,
+      });
+    }
     await writeAuditLog(req, "admin.ownership.updated", { ownershipId: req.params.id, status: data.status });
     return ok(res, ownership);
   }
 
   const rma = await RMARequest.findOne({ id: req.params.id });
   if (rma) {
+    const previousStatus = rma.status;
     if (data.status) {
       rma.status = data.status;
       rma.timeline.push({ status: data.status, note: data.notes || "Admin RMA update", actorEmail: req.user.email });
     }
-    if (data.priority) rma.priority = data.priority;
     if (data.notes) rma.notes = data.notes;
+    if (data.deliveryStatus) {
+      rma.deliveryStatus = data.deliveryStatus;
+      rma.deliveryNotes = data.deliveryNotes || rma.deliveryNotes;
+      rma.deliveryTimeline.push({ status: data.deliveryStatus, note: data.deliveryNotes || "Delivery status updated.", actorEmail: req.user.email });
+    }
     await rma.save();
-    const ownershipWarrantyStatus = ["Replacement Approved", "Repaired", "Replaced"].includes(data.status) ? data.status : "Claim Under Review";
-    await ProductOwnership.findOneAndUpdate(
-      { id: rma.ownershipId },
-      {
-        warrantyStatus: ownershipWarrantyStatus,
-        $push: { timeline: { status: ownershipWarrantyStatus, note: `${rma.id} updated: ${data.status || "Under review"}`, actorEmail: req.user.email } },
-      },
-      { new: true }
-    );
+    if (data.status) {
+      const ownershipWarrantyStatus = ["Replacement Approved", "Repaired", "Replaced"].includes(data.status)
+        ? data.status
+        : ["Rejected", "Closed"].includes(data.status)
+          ? "Active"
+          : "Claim Under Review";
+      await ProductOwnership.findOneAndUpdate(
+        { id: rma.ownershipId },
+        {
+          warrantyStatus: ownershipWarrantyStatus,
+          $push: { timeline: { status: ownershipWarrantyStatus, note: `${rma.id} updated: ${data.status}`, actorEmail: req.user.email } },
+        },
+        { new: true }
+      );
+    }
+    if (["Approved", "Rejected"].includes(data.status) && previousStatus !== data.status) {
+      await sendCareDecisionEmail({
+        email: rma.email,
+        title: data.status === "Approved" ? "Your warranty claim is approved" : "Your warranty claim was rejected",
+        status: data.status,
+        product: rma.product,
+        serial: rma.serial,
+        note: data.notes || rma.notes,
+        req,
+      });
+    }
     await writeAuditLog(req, "admin.rma.updated", { rmaId: req.params.id, status: data.status });
     return ok(res, rma);
   }
