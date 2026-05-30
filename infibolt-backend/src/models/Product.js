@@ -17,8 +17,11 @@ const schema = new mongoose.Schema(
     sku: { type: String, trim: true, uppercase: true, maxlength: 80, index: true },
     serialPrefix: { type: String, trim: true, uppercase: true, maxlength: 30 },
     price: { type: Number, required: true, min: 0 },
+    originalPrice: { type: Number, min: 0 },
     comparePrice: { type: Number, min: 0 },
     stock: { type: Number, default: 0, min: 0 },
+    limitedOffer: { type: Boolean, default: false, index: true },
+    offerEnds: { type: Date },
     rating: { type: Number, default: 0, min: 0, max: 5 },
     reviewCount: { type: Number, default: 0, min: 0 },
     badge: { type: String, default: "New", trim: true, maxlength: 40 },
@@ -128,6 +131,8 @@ schema.pre("validate", function normalizeProduct() {
   this.fullDescription = this.fullDescription || this.description;
   this.subtitle = this.subtitle || this.shortDescription || this.summary;
   this.categorySlug = this.categorySlug || String(this.category || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  this.originalPrice = this.originalPrice || this.comparePrice;
+  this.comparePrice = this.comparePrice || this.originalPrice;
   this.collectionSlug = this.collectionSlug || String(this.collection || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
   this.coverImage = this.coverImage || this.image;
   this.thumbnail = this.thumbnail || this.coverImage;

@@ -5,6 +5,7 @@ import {
   createSupportTicket,
   createWarrantyClaim,
   createWarrantyRma,
+  submitWarrantyShipment,
   forgotPassword,
   googleLogin,
   getHomepageProducts,
@@ -13,9 +14,11 @@ import {
   getWarrantyPolicy,
   listCategories,
   getProfile,
+  getManual,
   requestProfileContactUpdate,
   listFeaturedProducts,
   listCollections,
+  listManuals,
   listProducts,
   listSupportTickets,
   listWarrantyClaims,
@@ -40,20 +43,20 @@ import { requireAuth } from "../middleware/auth.js";
 import { authLimiter } from "../middleware/rateLimit.js";
 import { validate } from "../middleware/validate.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { accountIdentifierField, customerLoginValidator, customerSignupValidator, emailField, otpValidator, strongPasswordField, verificationIdField } from "../validators/authValidators.js";
-import { supportTicketValidator, warrantyClaimValidator, warrantyRmaValidator } from "../validators/domainValidators.js";
+import { accountIdentifierField, customerLoginValidator, customerSignupValidator, emailField, googleAuthFlowField, otpValidator, requiredVerificationIdField, strongPasswordField, termsAcceptedField } from "../validators/authValidators.js";
+import { supportTicketValidator, warrantyClaimValidator, warrantyRmaValidator, warrantyShipmentValidator } from "../validators/domainValidators.js";
 
 export const customerRoutes = Router();
 
 customerRoutes.post("/auth/login", authLimiter, customerLoginValidator, validate, asyncHandler(login));
 customerRoutes.post("/auth/login/request-otp", authLimiter, customerLoginValidator, validate, asyncHandler(requestLoginOtp));
 customerRoutes.post("/auth/login/verify-otp", authLimiter, [accountIdentifierField, body("email").optional().trim(), otpValidator], validate, asyncHandler(verifyLoginOtp));
-customerRoutes.post("/auth/signup", authLimiter, customerSignupValidator, validate, asyncHandler(signup));
-customerRoutes.post("/auth/google", authLimiter, [body("credential").trim().isLength({ min: 100, max: 4096 })], validate, asyncHandler(googleLogin));
+customerRoutes.post("/auth/signup", authLimiter, [...customerSignupValidator, termsAcceptedField], validate, asyncHandler(signup));
+customerRoutes.post("/auth/google", authLimiter, [body("credential").trim().isLength({ min: 100, max: 4096 }), googleAuthFlowField], validate, asyncHandler(googleLogin));
 customerRoutes.post(
   "/auth/verify-otp",
   authLimiter,
-  [...customerSignupValidator, otpValidator, verificationIdField],
+  [...customerSignupValidator, otpValidator, requiredVerificationIdField],
   validate,
   asyncHandler(verifyOtp)
 );
@@ -65,6 +68,8 @@ customerRoutes.get("/auth/me", requireAuth("customer"), asyncHandler(me));
 
 customerRoutes.get("/products", asyncHandler(listProducts));
 customerRoutes.get("/products/featured", asyncHandler(listFeaturedProducts));
+customerRoutes.get("/manuals", asyncHandler(listManuals));
+customerRoutes.get("/manuals/:id", [param("id").isMongoId()], validate, asyncHandler(getManual));
 customerRoutes.get("/homepage", asyncHandler(getHomepageProducts));
 customerRoutes.get("/site-settings", asyncHandler(getPublicSiteSettings));
 customerRoutes.get("/products/:slug", [param("slug").trim().matches(/^[a-z0-9-]+$/)], validate, asyncHandler(getProduct));
@@ -81,6 +86,19 @@ customerRoutes.patch(
     body("address").optional({ nullable: true }).trim().isLength({ max: 240 }),
     body("city").optional({ nullable: true }).trim().isLength({ max: 80 }),
     body("state").optional({ nullable: true }).trim().isLength({ max: 80 }),
+    body("postalCode").optional({ nullable: true }).trim().matches(/^[1-9]\d{5}$/).withMessage("Enter a valid 6 digit PIN code."),
+    body("currentPassword").optional({ nullable: true }).trim().isLength({ min: 8 }).withMessage("Enter your current password."),
+    body("newPassword")
+      .optional({ nullable: true })
+      .trim()
+      .isStrongPassword({ minLength: 8, minSymbols: 1 })
+      .withMessage("Password must include uppercase, lowercase, number, symbol, and at least 8 characters."),
+    body().custom((value) => {
+      if (value.currentPassword && !value.newPassword) {
+        throw new Error("Enter a new password.");
+      }
+      return true;
+    }),
   ],
   validate,
   asyncHandler(updateProfile)
@@ -146,6 +164,7 @@ customerRoutes.post(
   asyncHandler(createWarrantyClaim)
 );
 customerRoutes.post("/warranty-claims/rma", requireAuth("customer"), warrantyRmaValidator, validate, asyncHandler(createWarrantyRma));
+customerRoutes.post("/warranty-claims/rma/:id/shipment", requireAuth("customer"), [param("id").trim().isLength({ min: 3, max: 80 }), ...warrantyShipmentValidator], validate, asyncHandler(submitWarrantyShipment));
 
 customerRoutes.get("/support", requireAuth("customer"), asyncHandler(listSupportTickets));
 customerRoutes.post("/support", supportTicketValidator, validate, asyncHandler(createSupportTicket));

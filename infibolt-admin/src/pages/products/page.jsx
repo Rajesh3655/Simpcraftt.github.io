@@ -9,7 +9,9 @@ import { productService } from "../../services/productService";
 import { useAdminStore } from "../../store/appStore";
 import { formatPrice } from "../../store/commerce";
 
-const productStatuses = ["Draft", "Preview", "Ready", "Published", "Prototype", "Hidden", "Out of Stock", "Upcoming", "Discontinued"];
+const productStatuses = ["Draft", "Preview", "Ready", "Published", "Prototype", "Hidden", "Archived", "Out of Stock", "Upcoming", "Discontinued"];
+const deletedStatuses = new Set(["Archived", "Discontinued"]);
+const frontendOrigin = import.meta.env.VITE_FRONTEND_ORIGIN || "https://infibolt.com";
 
 export default function AdminProductsPage() {
   const products = useAdminStore((state) => state.products);
@@ -32,25 +34,32 @@ export default function AdminProductsPage() {
     const needle = query.trim().toLowerCase();
     return products.items.filter((product) => {
       const matchesSearch = !needle || [product.name, product.slug, product.sku, product.category, product.summary].filter(Boolean).join(" ").toLowerCase().includes(needle);
-      const matchesStatus = status === "all" || product.status === status;
+      const isDeleted = deletedStatuses.has(product.status);
+      const matchesStatus = status === "all"
+        ? !isDeleted
+        : status === "deleted"
+          ? isDeleted
+          : product.status === status;
       return matchesSearch && matchesStatus;
     });
   }, [products.items, query, status]);
 
+  const activeProducts = useMemo(() => products.items.filter((product) => !deletedStatuses.has(product.status)), [products.items]);
   const counts = useMemo(() => ({
-    all: products.items.length,
+    all: activeProducts.length,
     Published: products.items.filter((product) => product.status === "Published").length,
     Draft: products.items.filter((product) => product.status === "Draft").length,
     Hidden: products.items.filter((product) => product.status === "Hidden").length,
     Upcoming: products.items.filter((product) => product.status === "Upcoming").length,
-  }), [products.items]);
+    deleted: products.items.filter((product) => deletedStatuses.has(product.status)).length,
+  }), [activeProducts.length, products.items]);
 
   const remove = async () => {
     if (!deleteTarget) return;
     setDeleting(deleteTarget.slug);
     try {
       await deleteProduct(deleteTarget.slug);
-      toast.success("Product deleted", { description: `${deleteTarget.name} was removed from the catalogue.` });
+      toast.success("Product moved to Deleted", { description: `${deleteTarget.name} was removed from the active catalogue.` });
       setDeleteTarget(null);
     } finally {
       setDeleting("");
@@ -79,7 +88,7 @@ export default function AdminProductsPage() {
               <input value={query} onChange={(event) => setQuery(event.target.value)} className="w-full bg-transparent text-sm font-medium outline-none placeholder:text-slate-400" placeholder="Search products, SKU, slug, category" />
             </label>
             <div className="flex flex-wrap gap-2">
-              {["all", "Published", "Draft", "Hidden", "Upcoming"].map((item) => (
+              {["all", "Published", "Draft", "Hidden", "Upcoming", "deleted"].map((item) => (
                 <button key={item} type="button" onClick={() => setStatus(item)} className={`min-h-[40px] rounded-full px-4 text-[10px] font-bold uppercase tracking-[0.14em] transition ${status === item ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950" : "border border-slate-900/10 bg-white/60 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"}`}>
                   {item} {counts[item] ?? 0}
                 </button>
@@ -107,7 +116,7 @@ export default function AdminProductsPage() {
               </thead>
               <tbody className="divide-y divide-slate-900/6 dark:divide-white/8">
                 {filteredProducts.map((product) => (
-                  <tr key={product.slug} className="transition hover:bg-slate-950/[0.025] dark:hover:bg-white/[0.035]">
+                  <tr key={product.slug} className={`transition hover:bg-slate-950/[0.025] dark:hover:bg-white/[0.035] ${deletedStatuses.has(product.status) ? "bg-slate-950/[0.025] opacity-70" : ""}`}>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-4">
                         <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-slate-100 dark:bg-white/10">
@@ -139,17 +148,23 @@ export default function AdminProductsPage() {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex justify-end gap-2">
-                        <a href={`http://localhost:3000/products/${product.slug}`} target="_blank" rel="noreferrer" className="inline-flex min-h-[38px] items-center justify-center gap-2 rounded-full border border-slate-900/10 bg-white/70 px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-700 transition hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
-                          <ExternalLink className="h-3.5 w-3.5" />
-                          View
-                        </a>
+                        {deletedStatuses.has(product.status) ? (
+                          <span className="inline-flex min-h-[38px] items-center justify-center rounded-full border border-slate-900/10 bg-slate-100/70 px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:border-white/10 dark:bg-white/5">
+                            Deleted
+                          </span>
+                        ) : (
+                          <a href={`${frontendOrigin}/products/${product.slug}`} target="_blank" rel="noreferrer" className="inline-flex min-h-[38px] items-center justify-center gap-2 rounded-full border border-slate-900/10 bg-white/70 px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-700 transition hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            View
+                          </a>
+                        )}
                         <Link to={`/products/edit/${product.slug}`} className="inline-flex min-h-[38px] items-center justify-center gap-2 rounded-full border border-slate-900/10 bg-white/70 px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-700 transition hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-slate-200" aria-label={`Edit ${product.name}`}>
                           <Edit3 className="h-4 w-4" />
                           Edit
                         </Link>
-                        <button type="button" onClick={() => setDeleteTarget(product)} disabled={deleting === product.slug} className="inline-flex min-h-[38px] items-center justify-center gap-2 rounded-full border border-rose-500/20 bg-rose-500/5 px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-rose-700 transition hover:bg-rose-500/10 disabled:opacity-50 dark:text-rose-300" aria-label={`Delete ${product.name}`}>
+                        <button type="button" onClick={() => setDeleteTarget(product)} disabled={deleting === product.slug || deletedStatuses.has(product.status)} className="inline-flex min-h-[38px] items-center justify-center gap-2 rounded-full border border-rose-500/20 bg-rose-500/5 px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-rose-700 transition hover:bg-rose-500/10 disabled:opacity-50 dark:text-rose-300" aria-label={`Delete ${product.name}`}>
                           <Trash2 className="h-4 w-4" />
-                          {deleting === product.slug ? "Deleting" : "Delete"}
+                          {deletedStatuses.has(product.status) ? "Deleted" : deleting === product.slug ? "Deleting" : "Delete"}
                         </button>
                       </div>
                     </td>

@@ -19,6 +19,18 @@ const contactSettings = {
   youtube: "",
   linkedin: "",
 };
+let manuals = [
+  {
+    _id: "64b000000000000000000001",
+    productName: "Aura Audio Pro",
+    category: "Audio",
+    description: "Setup, controls, charging, and care guidance.",
+    pdfUrl: "/uploads/manuals/mock-aura-audio-pro.pdf",
+    featured: true,
+    isVisible: true,
+    createdAt: new Date().toISOString(),
+  },
+];
 
 export async function mockRequest(config) {
   await wait(config.mockDelay || 620);
@@ -32,7 +44,7 @@ export async function mockRequest(config) {
       error.response = { status: 422, data: { message: "Google credential is required." } };
       throw error;
     }
-    return { data: { mfaRequired: true, email: "admin@infibolt.com", verificationId: "64a000000000000000000001", expiresInSeconds: 300, resendAfterSeconds: 60 } };
+    return { data: { mfaRequired: true, email: "admin@infibolt.com", verificationId: "64a000000000000000000001", expiresInSeconds: 300, resendAfterSeconds: 300 } };
   }
   if (url === "/admin/auth/otp/verify" && method === "post") {
     if (data.otp !== "123456") {
@@ -43,10 +55,28 @@ export async function mockRequest(config) {
     return { data: { user: { name: "INFIBOLT Admin", email: data.email } } };
   }
   if (url === "/admin/auth/otp/resend" && method === "post") {
-    return { data: { mfaRequired: true, email: data.email, verificationId: "64a000000000000000000002", expiresInSeconds: 300, resendAfterSeconds: 60 } };
+    return { data: { mfaRequired: true, email: data.email, verificationId: "64a000000000000000000002", expiresInSeconds: 300, resendAfterSeconds: 300 } };
   }
   if (url === "/admin/overview") return { data: { stats: adminStats, products, warrantyClaims, supportTickets } };
   if (url === "/admin/products" && method === "get") return { data: { items: products } };
+  if (url === "/admin/manuals" && method === "get") return { data: { items: manuals, total: manuals.length, categories: ["Audio", "Charging", "Wearables"] } };
+  if (url === "/admin/manuals" && method === "post") {
+    const manual = { _id: `manual-${Date.now()}`, createdAt: new Date().toISOString(), ...data };
+    manuals = [manual, ...manuals];
+    return { data: manual };
+  }
+  if (/^\/admin\/manuals\/[^/]+$/.test(url) && ["put", "patch"].includes(method)) {
+    const id = decodeURIComponent(url.split("/").pop());
+    const current = manuals.find((manual) => manual._id === id) || {};
+    const manual = { ...current, ...data, _id: id, updatedAt: new Date().toISOString() };
+    manuals = manuals.map((item) => (item._id === id ? manual : item));
+    return { data: manual };
+  }
+  if (/^\/admin\/manuals\/[^/]+$/.test(url) && method === "delete") {
+    const id = decodeURIComponent(url.split("/").pop());
+    manuals = manuals.filter((manual) => manual._id !== id);
+    return { data: { deleted: true } };
+  }
   if (url === "/admin/products" && method === "post") return { data: { id: Date.now(), ...data, status: data.status || "Draft" } };
   if (url.startsWith("/admin/products/") && ["put", "patch"].includes(method)) return { data: { ...data, updatedAt: new Date().toISOString() } };
   if (url === "/admin/categories" && method === "get") return { data: { items: categories } };
@@ -66,6 +96,7 @@ export async function mockRequest(config) {
     Object.assign(contactSettings, data);
     return { data: contactSettings };
   }
+  if (url.startsWith("/uploads/manuals") && method === "post") return { data: { url: "/uploads/manuals/mock-manual.pdf", originalName: "mock-manual.pdf", status: "uploaded", provider: "local" } };
   if (url.startsWith("/uploads") && method === "post") return { data: { url: "/uploads/products/mock-upload.png", status: "uploaded", provider: "local" } };
 
   return { data: { ok: true } };

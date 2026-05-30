@@ -40,8 +40,8 @@ const DEFAULT_COMPONENTS = {
 	blockquote: ({ node, ...props }) => (
 		<blockquote className="border-gray-300 border-l-4 pl-4 italic" {...props} />
 	),
-	img: ({ node, ...props }) => (
-		<img className="mx-auto my-4 rounded" {...props} />
+	img: ({ node, alt, ...props }) => (
+		<img className="mx-auto my-4 rounded" alt={alt || ''} loading="lazy" decoding="async" {...props} />
 	),
 	table: ({ node, ...props }) => (
 		<table className="min-w-full border-collapse" {...props} />

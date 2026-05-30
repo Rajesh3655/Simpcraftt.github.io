@@ -6,8 +6,9 @@ export function notFound(req, res) {
 
 export function errorHandler(error, req, res, _next) {
   const isMulterLimit = error.name === "MulterError" && error.code === "LIMIT_FILE_SIZE";
+  const isBodyTooLarge = error.type === "entity.too.large";
   const isDuplicateKey = error?.code === 11000;
-  const statusCode = isMulterLimit ? 413 : isDuplicateKey ? 409 : error.statusCode || error.status || 500;
+  const statusCode = isMulterLimit || isBodyTooLarge ? 413 : isDuplicateKey ? 409 : error.statusCode || error.status || 500;
   if (statusCode >= 500) {
     console.error("[api:error]", { requestId: req.id, message: error.message, stack: error.stack });
   }
@@ -16,6 +17,8 @@ export function errorHandler(error, req, res, _next) {
   res.status(statusCode).json({
     message: isMulterLimit
       ? "Uploaded file exceeds the allowed size limit."
+      : isBodyTooLarge
+        ? "Request body exceeds the allowed size limit."
       : isDuplicateKey
         ? `${duplicateField ? `${duplicateField} already exists.` : "Record already exists."}`
         : statusCode >= 500

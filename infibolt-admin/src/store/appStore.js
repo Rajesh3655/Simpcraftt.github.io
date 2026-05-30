@@ -45,7 +45,7 @@ export const useAdminStore = create((set, get) => ({
               email: result.email,
               verificationId: result.verificationId,
               expiresInSeconds: result.expiresInSeconds || 300,
-              resendAfterSeconds: result.resendAfterSeconds || 60,
+              resendAfterSeconds: result.resendAfterSeconds || 300,
             },
           },
         });
@@ -82,7 +82,7 @@ export const useAdminStore = create((set, get) => ({
             email: result.email,
             verificationId: result.verificationId,
             expiresInSeconds: result.expiresInSeconds || 300,
-            resendAfterSeconds: result.resendAfterSeconds || 60,
+            resendAfterSeconds: result.resendAfterSeconds || 300,
           },
         },
       }));
@@ -166,11 +166,12 @@ export const useAdminStore = create((set, get) => ({
     return result;
   },
   deleteProduct: async (slug) => {
-    await productService.delete(slug);
+    const result = await productService.delete(slug);
+    const archivedProduct = result.product || result;
     set((state) => ({
       products: {
         ...state.products,
-        items: state.products.items.filter((item) => item.slug !== slug),
+        items: state.products.items.map((item) => (item.slug === slug ? { ...item, ...archivedProduct, status: archivedProduct.status || "Archived" } : item)),
         status: "success",
         error: null,
       },

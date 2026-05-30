@@ -20,7 +20,15 @@ export function csrfProtection(req, res, next) {
   if (!unsafeMethods.has(req.method)) return next();
   const cookieToken = req.cookies?.infibolt_csrf;
   const headerToken = req.get("x-csrf-token");
-  if (cookieToken && headerToken && cookieToken === headerToken) return next();
+  if (tokensMatch(cookieToken, headerToken)) return next();
   if (!env.isProduction && headerToken) return next();
   return res.status(403).json({ message: "CSRF validation failed." });
+}
+
+function tokensMatch(cookieToken, headerToken) {
+  if (!cookieToken || !headerToken) return false;
+  const cookieBuffer = Buffer.from(String(cookieToken));
+  const headerBuffer = Buffer.from(String(headerToken));
+  if (cookieBuffer.length !== headerBuffer.length) return false;
+  return crypto.timingSafeEqual(cookieBuffer, headerBuffer);
 }

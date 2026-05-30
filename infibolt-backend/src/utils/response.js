@@ -5,6 +5,10 @@ export const sanitizeUser = (user) => ({
   name: user.name,
   email: user.email,
   phone: user.phone,
+  address: user.address || "",
+  city: user.city || "",
+  state: user.state || "",
+  postalCode: user.postalCode || "",
   role: user.role,
   status: user.status,
   emailVerifiedAt: user.emailVerifiedAt,
@@ -23,6 +27,8 @@ export const sanitizeAdminUser = (user) => ({
 
 export const productDetails = (product) => ({
   ...product,
+  originalPrice: product.originalPrice || product.comparePrice,
+  comparePrice: product.comparePrice || product.originalPrice,
   summary: product.summary || product.shortDescription,
   subtitle: product.subtitle || product.shortDescription || product.summary,
   shortDescription: product.shortDescription || product.summary,

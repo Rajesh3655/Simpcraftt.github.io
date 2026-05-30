@@ -8,4 +8,5 @@ export const warrantyService = {
     customer: payload.customer || payload.name,
   }),
   createRma: (payload) => request.post("/warranty-claims/rma", payload),
+  submitShipment: (id, payload) => request.post(`/warranty-claims/rma/${id}/shipment`, payload),
 };

@@ -5,7 +5,7 @@ import { RMARequest } from "../models/RMARequest.js";
 import { createHttpError } from "../utils/httpError.js";
 
 const INDIA_TIME_ZONE = "Asia/Kolkata";
-export const WARRANTY_REGISTRATION_WINDOW_DAYS = 7;
+export const WARRANTY_REGISTRATION_WINDOW_YEARS = 1;
 
 export function normalizeSerial(serial) {
   return String(serial || "").trim().toUpperCase();
@@ -71,9 +71,42 @@ export function assertWarrantyRegistrationWindow(purchaseDate, comparison = new 
       fields: { purchaseDate: "Purchase date cannot be in the future." },
     });
   }
-  if (daysSincePurchase > WARRANTY_REGISTRATION_WINDOW_DAYS) {
-    throw createHttpError(422, "Warranty registration is available only within 7 days of purchase.", {
-      fields: { purchaseDate: "Register within 7 days of purchase. This purchase date is outside the allowed window." },
+  const registrationDeadline = new Date(purchaseDate);
+  registrationDeadline.setFullYear(registrationDeadline.getFullYear() + WARRANTY_REGISTRATION_WINDOW_YEARS);
+  const deadlineDay = dayIndex(indiaDateKey(registrationDeadline));
+  if (deadlineDay !== null && todayDay > deadlineDay) {
+    throw createHttpError(422, "Warranty registration is available only within one year of purchase.", {
+      fields: { purchaseDate: "Register within one year of purchase. This purchase date is outside the allowed window." },
+    });
+  }
+}
+
+export function isWarrantyExpired(ownership, comparison = new Date()) {
+  const warrantyUntil = ownership?.warrantyUntil || warrantyEndFromPurchase(ownership?.purchaseDate || ownership?.warrantyStart || ownership?.createdAt).end;
+  const expiryDay = dayIndex(indiaDateKey(warrantyUntil));
+  const todayDay = dayIndex(indiaDateKey(comparison));
+  return expiryDay !== null && todayDay !== null && todayDay > expiryDay;
+}
+
+export async function expireOwnershipIfNeeded(ownership, actorEmail = "system") {
+  if (!ownership || !isWarrantyExpired(ownership)) return false;
+  if (["Expired", "Rejected", "Transferred"].includes(ownership.status) || ownership.warrantyStatus === "Expired") return true;
+  ownership.status = "Expired";
+  ownership.warrantyStatus = "Expired";
+  ownership.timeline.push({
+    status: "Expired",
+    note: "Warranty expired one year after the purchase date.",
+    actorEmail,
+  });
+  await ownership.save();
+  return true;
+}
+
+export async function assertWarrantyClaimAvailable(ownership, actorEmail) {
+  const expired = await expireOwnershipIfNeeded(ownership, actorEmail);
+  if (expired) {
+    throw createHttpError(422, "Warranty expired. Claims are available only within one year from the purchase date.", {
+      fields: { ownershipId: "Expired" },
     });
   }
 }
@@ -133,7 +166,7 @@ export async function syncUnitOwner({ serial, ownership, status = "Registered" }
       soldAt: ownership.purchaseDate || ownership.registeredAt,
       soldChannel: ownership.source,
     },
-    { new: true }
+    { returnDocument: "after" }
   );
 }
 

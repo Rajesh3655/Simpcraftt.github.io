@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { env } from "../config/env.js";
 import { AuditLog } from "../models/AuditLog.js";
 import { OTPRecord } from "../models/OTPRecord.js";
-import { sendAdminOtpEmail } from "./emailService.js";
+import { sendOtpEmail } from "./emailService.js";
 import { hashPassword, verifyPassword } from "../utils/crypto.js";
 import { createHttpError } from "../utils/httpError.js";
 
@@ -25,17 +25,10 @@ function logTerminalOtp({ email, otp, purpose }) {
   console.info("");
 }
 
-async function deliverOtp({ email, otp, purpose }) {
+async function deliverOtp({ email, otp, purpose, req }) {
   await new Promise((resolve) => setTimeout(resolve, env.nodeEnv === "test" ? 0 : 350));
-  if (!env.isProduction || env.allowLocalOtp) {
+  if (env.otpProvider === "local" || env.allowLocalOtp) {
     logTerminalOtp({ email, otp, purpose });
-  }
-  if (purpose === "admin-login" && env.otpProvider === "ses") {
-    try {
-      return await sendAdminOtpEmail({ email, otp, minutes: 5 });
-    } catch (error) {
-      return { status: "failed", provider: "ses", reason: error.message };
-    }
   }
   if (env.otpProvider === "local") {
     if (env.isProduction && !env.allowLocalOtp) {
@@ -44,7 +37,16 @@ async function deliverOtp({ email, otp, purpose }) {
     return { status: "sent", provider: "local" };
   }
   if (["resend", "sendgrid", "ses", "smtp", "nodemailer"].includes(env.otpProvider)) {
-    return { status: "failed", provider: env.otpProvider, reason: `${env.otpProvider} email provider is not configured yet.` };
+    const delivery = await sendOtpEmail({ email, otp, purpose, minutes: env.otpTtlMinutes, req });
+    if (delivery.status !== "sent") {
+      console.warn("[otp-email] delivery failed", {
+        provider: delivery.provider,
+        purpose,
+        email,
+        reason: delivery.reason,
+      });
+    }
+    return delivery;
   }
   return { status: "failed", provider: env.otpProvider, reason: "Unsupported OTP provider." };
 }
@@ -96,7 +98,7 @@ export async function issueOtp({ email, target, purpose, metadata = {}, ttlMinut
 
   const otp = generateOtp();
   const otpHash = await hashPassword(otp);
-  const delivery = await deliverOtp({ email: normalizedEmail, otp, purpose });
+  const delivery = await deliverOtp({ email: normalizedEmail, otp, purpose, req });
   if (delivery.status !== "sent") throw createHttpError(503, "OTP delivery is temporarily unavailable.");
 
   const record = await OTPRecord.create({
@@ -158,5 +160,6 @@ export async function verifyOtpCode({ email, target, purpose, otp, verificationI
   record.verified = true;
   await record.save();
   await logOtpEvent(req, "otp.verify.success", { target: normalizedEmail, email: normalizedEmail, purpose });
+  await OTPRecord.deleteOne({ _id: record._id }).catch(() => {});
   return record;
 }

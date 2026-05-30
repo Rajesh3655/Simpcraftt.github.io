@@ -43,8 +43,8 @@ export default function SettingsPage() {
       }
       safeProfileFields.phone = normalizePhone(phone);
     }
-    if (!String(form.address || "").trim() || !String(form.city || "").trim() || !String(form.state || "").trim()) {
-      toast.error("Address details required", { description: "Add full address, city, and state to complete your profile." });
+    if (!String(form.address || "").trim() || !String(form.city || "").trim() || !String(form.state || "").trim() || !/^[1-9]\d{5}$/.test(String(form.postalCode || "").trim())) {
+      toast.error("Address details required", { description: "Add full address, city, state, and 6 digit PIN code to complete your profile." });
       return;
     }
     await updateProfile(safeProfileFields);
@@ -72,7 +72,7 @@ export default function SettingsPage() {
     setEmailVerification((current) => ({ ...current, status: "loading", error: "" }));
     try {
       const result = await requestProfileContactUpdate({ email: emailVerification.email });
-      setEmailVerification((current) => ({ ...current, verificationId: result.verificationId || current.verificationId, otp: "", cooldown: result.resendAfterSeconds || 60, status: "pending" }));
+      setEmailVerification((current) => ({ ...current, verificationId: result.verificationId || current.verificationId, otp: "", cooldown: result.resendAfterSeconds || 300, status: "pending" }));
       toast.success("Code resent", { description: "Use the newest email code to continue." });
     } catch (error) {
       setEmailVerification((current) => ({ ...current, status: "pending", error: error.message || "Could not resend the code." }));
@@ -87,18 +87,19 @@ export default function SettingsPage() {
             <form onSubmit={save} className="mx-auto grid max-w-4xl gap-5">
               <Panel icon={UserRound} eyebrow="Identity" title="Profile details">
                 <div className="grid gap-4 md:grid-cols-2">
-                  {["name", "email", "phone", "address", "city", "state"].map((key) => (
+                  {["name", "email", "phone", "address", "city", "state", "postalCode"].map((key) => (
                     <PremiumField
                       key={key}
-                      label={key}
+                      label={key === "postalCode" ? "PIN code" : key}
                       value={form[key] || ""}
                       onChange={(value) => {
                         if (key === "email" || (key === "phone" && profile.phone)) return;
-                        setForm((current) => ({ ...current, [key]: value }));
+                        setForm((current) => ({ ...current, [key]: key === "postalCode" ? value.replace(/\D/g, "").slice(0, 6) : value }));
                       }}
                       type={key === "email" ? "email" : "text"}
+                      inputMode={key === "postalCode" ? "numeric" : undefined}
                       disabled={key === "email" || (key === "phone" && Boolean(profile.phone))}
-                      helper={key === "email" ? "Account email is fixed after signup." : key === "phone" ? (profile.phone ? "Phone is fixed after signup and can be used for login." : "Required to complete your Google account profile.") : key === "address" ? "Required for warranty pickup, delivery, and support." : undefined}
+                      helper={key === "email" ? "Account email is fixed after signup." : key === "phone" ? (profile.phone ? "Phone is fixed after signup and can be used for login." : "Required to complete your Google account profile.") : key === "address" ? "Required for warranty pickup, delivery, and support." : key === "postalCode" ? "Required for pickup and delivery." : undefined}
                     />
                   ))}
                 </div>

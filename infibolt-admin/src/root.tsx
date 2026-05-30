@@ -7,6 +7,8 @@ import globalStylesHref from './styles/global.css?url';
 
 initializeMonitoring();
 
+const frontendOrigin = import.meta.env.VITE_FRONTEND_ORIGIN || 'https://infibolt.com';
+
 export const meta = () => [
   { title: 'INFIBOLT Control Center' },
   { name: 'description', content: 'Protected INFIBOLT workspace for products, care, warranty, media, and analytics.' },
@@ -86,7 +88,7 @@ function SessionExpiredOverlay() {
 
   const exitAdmin = () => {
     clearLocalSession();
-    window.location.assign('http://localhost:3000/');
+    window.location.assign(frontendOrigin);
   };
 
   return (

@@ -5,6 +5,7 @@ import { Customer } from "../models/Customer.js";
 import { CustomerChangeLog } from "../models/CustomerChangeLog.js";
 import { HomepageSection } from "../models/HomepageSection.js";
 import { LaunchLead } from "../models/LaunchLead.js";
+import { Manual } from "../models/Manual.js";
 import { NewsletterSubscriber } from "../models/NewsletterSubscriber.js";
 import { Product } from "../models/Product.js";
 import { ProductOwnership } from "../models/ProductOwnership.js";
@@ -23,12 +24,15 @@ import { createSession, revokeUserSessions, rotateRefreshSession } from "../serv
 import { issueOtp, verifyOtpCode } from "../services/otpService.js";
 import { verifyGoogleCredential } from "../services/googleAuthService.js";
 import { moveLocalUpload } from "../services/uploadService.js";
+import { sendPasswordResetConfirmation, sendSecurityNotification, sendWelcomeEmail } from "../services/emailService.js";
 import {
   assertSerialAvailable,
+  assertWarrantyClaimAvailable,
   assertWarrantyRegistrationWindow,
   assertValidSerial,
   createRmaId,
   ensureProductUnit,
+  expireOwnershipIfNeeded,
   resolveProductForOwnership,
   syncUnitOwner,
   warrantyEndFromPurchase,
@@ -91,6 +95,17 @@ function resolveAccountIdentifier(data) {
   throw createHttpError(422, "Enter a valid email address or phone number.");
 }
 
+async function customerProfilePayload(user) {
+  const authState = await Customer.findById(user._id).select("+passwordHash +googleSub").lean();
+  const hasPassword = Boolean(authState?.passwordHash);
+  const googleLinked = Boolean(authState?.googleSub);
+  return {
+    ...sanitizeUser(user),
+    hasPassword,
+    authProvider: googleLinked && !hasPassword ? "google" : googleLinked ? "password_google" : "password",
+  };
+}
+
 async function getSignupConflictFields(email, phone) {
   const existingCustomers = await Customer.find({ $or: [{ email }, { phone }] }).select("email phone").lean();
   return existingCustomers.reduce((fields, customer) => {
@@ -134,13 +149,26 @@ export async function login(req, res) {
   if (!user.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
     await recordFailedLogin(user);
     await writeAuditLog(req, "customer.login.failed", { identifier: identifier.audit });
+    if ((user.failedLoginCount || 0) >= 3) {
+      await sendSecurityNotification({
+        email: user.email,
+        title: "Failed sign-in attempts detected",
+        message: "We noticed repeated failed sign-in attempts on your INFIBOLT account.",
+        details: [
+          { label: "IP address", value: req.ip },
+          { label: "Device", value: req.get("user-agent") },
+        ],
+        url: `${env.frontendOrigin}/profile`,
+        req,
+      });
+    }
     throw createHttpError(401, "Invalid email or password.");
   }
   user.failedLoginCount = 0;
   user.lockUntil = undefined;
   await createSession(req, res, user);
   await writeAuditLog(req, "customer.login.success", { identifier: identifier.audit });
-  return ok(res, { user: sanitizeUser(user) });
+  return ok(res, { user: await customerProfilePayload(user) });
 }
 
 export async function signup(req, res) {
@@ -175,21 +203,26 @@ export async function verifyOtp(req, res) {
       role: "customer",
       emailVerifiedAt: new Date(),
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
   ).select("+refreshTokenHash");
   await createSession(req, res, user);
   await writeAuditLog(req, "customer.email.verified", { email: data.email });
-  return ok(res, { user: sanitizeUser(user) }, 201);
+  await sendWelcomeEmail({ email: user.email, name: user.name, req });
+  return ok(res, { user: await customerProfilePayload(user) }, 201);
 }
 
 export async function googleLogin(req, res) {
-  const { credential } = matchedData(req);
+  const { credential, flow = "login" } = matchedData(req);
   const googleProfile = await verifyGoogleCredential(credential);
   let user = await Customer.findOne({
     $or: [{ googleSub: googleProfile.sub }, { email: googleProfile.email }],
   }).select("+refreshTokenHash +googleSub");
 
   if (user?.status === "Locked") throw createHttpError(423, "Account is blocked. Contact INFIBOLT support.");
+  if (!user && flow !== "signup") {
+    await writeAuditLog(req, "customer.google_login.failed", { email: googleProfile.email, reason: "account_not_found" });
+    throw createHttpError(404, "No INFIBOLT account is linked to this Google email. Create an account first.");
+  }
 
   if (!user) {
     user = await Customer.create({
@@ -203,6 +236,7 @@ export async function googleLogin(req, res) {
     });
     user = await Customer.findById(user._id).select("+refreshTokenHash +googleSub");
     await writeAuditLog(req, "customer.google_signup.success", { email: googleProfile.email });
+    await sendWelcomeEmail({ email: user.email, name: user.name, req });
   } else {
     let changed = false;
     if (!user.googleSub) {
@@ -222,7 +256,7 @@ export async function googleLogin(req, res) {
   }
 
   await createSession(req, res, user);
-  return ok(res, { user: sanitizeUser(user) });
+  return ok(res, { user: await customerProfilePayload(user) });
 }
 
 export async function forgotPassword(req, res) {
@@ -235,7 +269,7 @@ export async function forgotPassword(req, res) {
     user.resetTokenHash = hashToken(token);
     user.resetTokenExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
     await user.save();
-    const otp = await issueOtp({ email: user.email, purpose: "password-reset", metadata: { resetTokenHint: token.slice(0, 8) }, ttlMinutes: 15, req });
+    const otp = await issueOtp({ email: user.email, purpose: "password-reset", metadata: { resetTokenHint: token.slice(0, 8) }, ttlMinutes: env.otpTtlMinutes, req });
     resendAfterSeconds = otp.resendAfterSeconds;
     await writeAuditLog(req, "customer.password_reset.requested", { identifier, email: user.email });
   }
@@ -256,6 +290,7 @@ export async function resetPassword(req, res) {
   await user.save();
   await revokeUserSessions(user);
   await writeAuditLog(req, "customer.password_reset.completed", { identifier, email: user.email });
+  await sendPasswordResetConfirmation({ email: user.email, req });
   return ok(res, { reset: true });
 }
 
@@ -270,6 +305,19 @@ export async function requestLoginOtp(req, res) {
   if (!user.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
     await recordFailedLogin(user);
     await writeAuditLog(req, "customer.login_otp.failed", { identifier: identifier.audit });
+    if ((user.failedLoginCount || 0) >= 3) {
+      await sendSecurityNotification({
+        email: user.email,
+        title: "Failed sign-in attempts detected",
+        message: "Someone attempted to request login verification for your INFIBOLT account with an invalid password.",
+        details: [
+          { label: "IP address", value: req.ip },
+          { label: "Device", value: req.get("user-agent") },
+        ],
+        url: `${env.frontendOrigin}/profile`,
+        req,
+      });
+    }
     throw createHttpError(401, "Invalid email or password.");
   }
   const otp = await issueOtp({ email: user.email, purpose: "login", metadata: { userId: String(user._id), identifier: identifier.audit }, req });
@@ -292,7 +340,7 @@ export async function verifyLoginOtp(req, res) {
   await verifyOtpCode({ email: user.email, purpose: "login", otp, req });
   await createSession(req, res, user);
   await writeAuditLog(req, "customer.login_otp.verified", { identifier: identifier.audit });
-  return ok(res, { user: sanitizeUser(user) });
+  return ok(res, { user: await customerProfilePayload(user) });
 }
 
 export async function refresh(req, res) {
@@ -303,7 +351,7 @@ export async function refresh(req, res) {
   const user = await Customer.findById(payload.sub).select("+refreshTokenHash");
   if (!user || user.refreshTokenHash !== hashToken(refreshToken)) throw createHttpError(401, "Refresh token has been invalidated.");
   await rotateRefreshSession(req, res, user, refreshToken);
-  return ok(res, { user: sanitizeUser(user) });
+  return ok(res, { user: await customerProfilePayload(user) });
 }
 
 export async function logout(req, res) {
@@ -317,7 +365,7 @@ export async function logout(req, res) {
 }
 
 export async function me(req, res) {
-  return ok(res, { user: sanitizeUser(req.user) });
+  return ok(res, { user: await customerProfilePayload(req.user) });
 }
 
 export async function listProducts(_req, res) {
@@ -412,14 +460,54 @@ export async function getPublicSiteSettings(_req, res) {
   return ok(res, { contactSettings: await getContactSettings() });
 }
 
+function manualFilterFromQuery(query = {}) {
+  const filter = { isVisible: true };
+  if (query.category) filter.category = String(query.category).trim();
+  if (query.featured === "true") filter.featured = true;
+  if (query.search) {
+    const search = String(query.search).trim();
+    filter.$or = [
+      { productName: { $regex: search, $options: "i" } },
+      { category: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } },
+    ];
+  }
+  return filter;
+}
+
+function manualSortFromQuery(query = {}) {
+  if (query.sort === "oldest") return { createdAt: 1 };
+  if (query.sort === "name") return { productName: 1, createdAt: -1 };
+  return { featured: -1, createdAt: -1 };
+}
+
+export async function listManuals(req, res) {
+  const page = Math.max(Number(req.query.page || 1), 1);
+  const limit = Math.min(Math.max(Number(req.query.limit || 24), 1), 80);
+  const filter = manualFilterFromQuery(req.query);
+  const [items, total, categories] = await Promise.all([
+    Manual.find(filter).sort(manualSortFromQuery(req.query)).skip((page - 1) * limit).limit(limit).lean(),
+    Manual.countDocuments(filter),
+    Manual.distinct("category", { isVisible: true }),
+  ]);
+  return ok(res, { items, total, page, pages: Math.ceil(total / limit) || 1, categories: categories.filter(Boolean).sort() });
+}
+
+export async function getManual(req, res) {
+  const manual = await Manual.findOne({ _id: req.params.id, isVisible: true }).lean();
+  if (!manual) throw createHttpError(404, "Manual not found.");
+  return ok(res, manual);
+}
+
 export async function getProfile(req, res) {
-  return ok(res, { ...sanitizeUser(req.user), address: req.user.address || "", city: req.user.city || "", state: req.user.state || "" });
+  return ok(res, { ...(await customerProfilePayload(req.user)), address: req.user.address || "", city: req.user.city || "", state: req.user.state || "", postalCode: req.user.postalCode || "" });
 }
 
 export async function updateProfile(req, res) {
   const data = matchedData(req, { locations: ["body"] });
-  const allowed = ["name", "address", "city", "state"];
+  const allowed = ["name", "address", "city", "state", "postalCode"];
   const update = {};
+  const passwordChangeRequested = Boolean(data.currentPassword || data.newPassword);
   if (data.phone !== undefined) {
     if (req.user.phone && data.phone !== req.user.phone) {
       throw createHttpError(403, "Phone number cannot be changed after it is set.");
@@ -435,16 +523,39 @@ export async function updateProfile(req, res) {
       update[field] = data[field];
     }
   }
+  if (passwordChangeRequested) {
+    const customerWithPassword = await Customer.findById(req.user._id).select("+passwordHash +googleSub");
+    if (customerWithPassword?.googleSub) {
+      throw createHttpError(403, "Password changes are available only for email/password accounts. Please continue using Google sign in.");
+    }
+    if (!customerWithPassword?.passwordHash) {
+      throw createHttpError(403, "Password changes are available only for email/password accounts.");
+    }
+    if (!data.currentPassword) {
+      throw createHttpError(422, "Enter your current password.");
+    }
+    if (!(await verifyPassword(data.currentPassword, customerWithPassword.passwordHash))) {
+      await writeAuditLog(req, "customer.password_change.failed", { reason: "invalid_current_password" });
+      throw createHttpError(401, "Current password is incorrect.");
+    }
+    if (await verifyPassword(data.newPassword, customerWithPassword.passwordHash)) {
+      throw createHttpError(422, "New password must be different from your current password.");
+    }
+    update.passwordHash = await hashPassword(data.newPassword);
+    update.failedLoginCount = 0;
+    update.lockUntil = undefined;
+  }
   if (!Object.keys(update).length) {
-    return ok(res, { ...sanitizeUser(req.user), address: req.user.address || "", city: req.user.city || "", state: req.user.state || "" });
+    return ok(res, { ...(await customerProfilePayload(req.user)), address: req.user.address || "", city: req.user.city || "", state: req.user.state || "", postalCode: req.user.postalCode || "" });
   }
   const customer = await Customer.findOneAndUpdate(
     { _id: req.user._id, ...(update.phone ? { $or: [{ phone: { $exists: false } }, { phone: "" }, { phone: null }] } : {}) },
     update,
-    { new: true, runValidators: true }
+    { returnDocument: "after", runValidators: true }
   );
   if (!customer) throw createHttpError(409, "Phone number is already set for this account.");
-  await Promise.all(Object.keys(update).map((field) => CustomerChangeLog.create({
+  const profileChangeFields = Object.keys(update).filter((field) => !["passwordHash", "failedLoginCount", "lockUntil"].includes(field));
+  await Promise.all(profileChangeFields.map((field) => CustomerChangeLog.create({
     customerId: req.user._id,
     field,
     previousValue: req.user[field],
@@ -454,8 +565,24 @@ export async function updateProfile(req, res) {
     ip: req.ip,
     userAgent: req.get("user-agent"),
   })));
-  await writeAuditLog(req, "customer.profile.updated", { fields: Object.keys(update) });
-  return ok(res, { ...sanitizeUser(customer), address: customer.address || "", city: customer.city || "", state: customer.state || "" });
+  if (passwordChangeRequested) {
+    await writeAuditLog(req, "customer.password.changed");
+    await sendSecurityNotification({
+      email: customer.email,
+      title: "Your INFIBOLT password was changed",
+      message: "Your account password was changed from profile settings.",
+      details: [
+        { label: "IP address", value: req.ip },
+        { label: "Device", value: req.get("user-agent") },
+      ],
+      url: `${env.frontendOrigin}/profile`,
+      req,
+    });
+  }
+  if (profileChangeFields.length) {
+    await writeAuditLog(req, "customer.profile.updated", { fields: profileChangeFields });
+  }
+  return ok(res, { ...(await customerProfilePayload(customer)), address: customer.address || "", city: customer.city || "", state: customer.state || "", postalCode: customer.postalCode || "" });
 }
 
 export async function requestProfileContactUpdate(req, res) {
@@ -489,7 +616,7 @@ export async function requestLaunchNotification(req, res) {
       source: data.source || "Product page",
       status: "Subscribed",
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
   );
   await writeAuditLog(req, "launch_notification.requested", { productSlug: data.productSlug, email });
   return ok(res, { id: lead.id, status: lead.status, message: "Launch updates enabled." }, 202);
@@ -507,7 +634,7 @@ export async function subscribeNewsletter(req, res) {
       unsubscribedAt: undefined,
       userAgent: req.get("user-agent"),
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
   );
   await writeAuditLog(req, "newsletter.subscribed", { email: data.email });
   return ok(res, { id: String(subscriber._id), status: subscriber.status, email: subscriber.email }, 202);
@@ -540,10 +667,12 @@ export async function listWarrantyClaims(req, res) {
     ...(req.user?._id ? { customerId: req.user._id } : { email: req.user?.email }),
     otpVerifiedAt: { $exists: true },
   };
-  const [items, rmas] = await Promise.all([
-    ProductOwnership.find(filter).sort({ updatedAt: -1 }).lean(),
+  const [ownershipDocs, rmas] = await Promise.all([
+    ProductOwnership.find(filter).sort({ updatedAt: -1 }),
     RMARequest.find(req.user?._id ? { customerId: req.user._id } : { email: req.user?.email }).sort({ updatedAt: -1 }).lean(),
   ]);
+  await Promise.all(ownershipDocs.map((ownership) => expireOwnershipIfNeeded(ownership, req.user?.email)));
+  const items = ownershipDocs.map((ownership) => ownership.toObject());
   return ok(res, { items, rmas });
 }
 
@@ -557,13 +686,45 @@ export async function createWarrantyClaim(req, res) {
   const serial = assertValidSerial(data.serial);
   const source = data.source || "Marketplace";
   const productInfo = await resolveProductForOwnership({ product: data.product, productSlug: data.productSlug });
-  await assertSerialAvailable(serial, req.user?._id, productInfo.productSlug);
+  const existingRejectedOwnership = await ProductOwnership.findOne({
+    serial,
+    productSlug: productInfo.productSlug,
+    ...(req.user?._id ? { customerId: req.user._id } : { email: data.email || req.user?.email }),
+    status: "Rejected",
+    warrantyStatus: "Rejected",
+  });
+  await assertSerialAvailable(serial, req.user?._id, productInfo.productSlug, existingRejectedOwnership?._id);
   assertWarrantyRegistrationWindow(data.purchaseDate);
   const { start, end } = warrantyEndFromPurchase(data.purchaseDate);
   await ensureProductUnit({ serial, ...productInfo, customer: req.user, source });
   const invoiceUrl = data.invoiceUrl?.startsWith("/uploads/temp/")
     ? await moveLocalUpload(data.invoiceUrl, "warranty")
     : data.invoiceUrl;
+  if (existingRejectedOwnership) {
+    existingRejectedOwnership.customerName = data.customer || req.user?.name;
+    existingRejectedOwnership.email = data.email || req.user?.email;
+    existingRejectedOwnership.phone = req.user?.phone;
+    existingRejectedOwnership.product = productInfo.product;
+    existingRejectedOwnership.productSlug = productInfo.productSlug;
+    existingRejectedOwnership.source = source;
+    existingRejectedOwnership.sourceDetail = data.sourceDetail || data.storeName;
+    existingRejectedOwnership.invoiceNumber = data.invoiceNumber;
+    existingRejectedOwnership.invoiceUrl = invoiceUrl;
+    existingRejectedOwnership.purchaseDate = data.purchaseDate || start;
+    existingRejectedOwnership.registeredAt = new Date();
+    existingRejectedOwnership.otpVerifiedAt = new Date();
+    existingRejectedOwnership.verifiedAt = undefined;
+    existingRejectedOwnership.rejectedAt = undefined;
+    existingRejectedOwnership.warrantyStart = start;
+    existingRejectedOwnership.warrantyUntil = end;
+    existingRejectedOwnership.status = "Pending Verification";
+    existingRejectedOwnership.warrantyStatus = "Pending Verification";
+    existingRejectedOwnership.reviewNote = undefined;
+    existingRejectedOwnership.timeline.push({ status: "Pending Verification", note: "Warranty registration re-submitted. Waiting for admin invoice review.", actorEmail: data.email || req.user?.email });
+    await existingRejectedOwnership.save();
+    await writeAuditLog(req, "ownership.registration.resubmitted", { ownershipId: existingRejectedOwnership.id, serial, source });
+    return ok(res, existingRejectedOwnership, 202);
+  }
   const ownership = await ProductOwnership.create({
     id: issueId("OWN"),
     customerId: req.user?._id,
@@ -619,6 +780,7 @@ export async function createWarrantyRma(req, res) {
   }
   const ownership = await ProductOwnership.findOne({ id: data.ownershipId, customerId: req.user._id });
   if (!ownership) throw createHttpError(404, "Registered product not found.");
+  await assertWarrantyClaimAvailable(ownership, req.user.email);
   if (!["Active", "Claim Under Review", "Replacement Approved", "Repaired", "Replaced"].includes(ownership.warrantyStatus)) {
     throw createHttpError(422, "Warranty must be active before a claim can be opened.");
   }
@@ -642,6 +804,7 @@ export async function createWarrantyRma(req, res) {
     customerAddress: data.customerAddress,
     attachments: data.attachments || [],
     policyDecision,
+    claimStatus: "Under Review",
     timeline: [{ status: "Requested", note: policyDecision, actorEmail: req.user.email }],
   });
   ownership.warrantyStatus = "Claim Under Review";
@@ -649,6 +812,30 @@ export async function createWarrantyRma(req, res) {
   await ownership.save();
   await writeAuditLog(req, "warranty.rma.created", { rmaId: rma.id, ownershipId: ownership.id });
   return ok(res, rma, 202);
+}
+
+export async function submitWarrantyShipment(req, res) {
+  const data = matchedData(req, { locations: ["body"] });
+  const rma = await RMARequest.findOne({ id: req.params.id, customerId: req.user._id });
+  if (!rma) throw createHttpError(404, "Warranty claim not found.");
+  if (rma.status !== "Waiting for Customer Shipment" && rma.status !== "Approved") {
+    throw createHttpError(422, "Shipment details can be submitted after the claim is approved.");
+  }
+  if (rma.returnShipment?.trackingId) {
+    throw createHttpError(409, "Shipment details have already been submitted.");
+  }
+  rma.returnShipment = {
+    courierName: data.courierName,
+    trackingId: data.trackingId,
+    notes: data.notes,
+    shippedAt: new Date(),
+  };
+  rma.status = "Tracking Submitted";
+  rma.claimStatus = "Shipment Sent";
+  rma.timeline.push({ status: "Tracking Submitted", note: `${data.courierName} AWB ${data.trackingId}`, actorEmail: req.user.email });
+  await rma.save();
+  await writeAuditLog(req, "warranty.rma.shipment_submitted", { rmaId: rma.id });
+  return ok(res, rma);
 }
 
 export async function getSupportTicket(req, res) {

@@ -34,6 +34,24 @@ export default defineConfig({
   logLevel: 'info',
   build: {
     target: 'esnext',
+    cssCodeSplit: true,
+    modulePreload: {
+      polyfill: false,
+    },
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom)[\\/]/.test(id)) return 'vendor-react';
+          if (/[\\/]node_modules[\\/](framer-motion|motion)[\\/]/.test(id)) return 'vendor-motion';
+          if (/[\\/]node_modules[\\/](lucide-react)[\\/]/.test(id)) return 'vendor-icons';
+          if (/[\\/]node_modules[\\/](@tanstack|recharts|d3-)[\\/]/.test(id)) return 'vendor-analytics';
+          if (/[\\/]node_modules[\\/](pdfjs-dist)[\\/]/.test(id)) return 'vendor-pdf';
+          if (/[\\/]node_modules[\\/](axios|sonner|zustand|date-fns|yup)[\\/]/.test(id)) return 'vendor-app';
+          return undefined;
+        },
+      },
+    },
   },
   plugins: [
     nextPublicProcessEnv(),
@@ -48,6 +66,7 @@ export default defineConfig({
       babelConfig: {
         babelrc: false, // don’t merge other Babel files
         configFile: false,
+        presets: [['@babel/preset-typescript', { isTSX: true, allExtensions: true }]],
         plugins: ['styled-jsx/babel'],
       },
     }),

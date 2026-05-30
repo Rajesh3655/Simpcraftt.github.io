@@ -7,6 +7,7 @@ const cookieBase = {
   sameSite: env.cookieSameSite,
   signed: true,
   path: "/",
+  priority: "high",
   ...(env.cookieDomain ? { domain: env.cookieDomain } : {}),
 };
 

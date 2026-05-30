@@ -10,18 +10,22 @@ import {
   analytics,
   createCategory,
   createCollection,
+  createManual,
   createProduct,
   createWebsitePurchaseOwnership,
   deleteCategory,
   deleteCollection,
   deleteHomepageSection,
+  deleteManual,
   deleteProduct,
   getWarrantyPolicyAdmin,
+  getAdminManual,
   exportUsers,
   listAuditLogs,
   listHomepageSectionsAdmin,
   listLaunchLeads,
   listAdminProducts,
+  listAdminManuals,
   listCategoriesAdmin,
   listCollectionsAdmin,
   listNewsletterSubscribers,
@@ -39,6 +43,7 @@ import {
   updateCustomerSecurityStatus,
   updateCategory,
   updateCollection,
+  updateManual,
   upsertHomepageSection,
   updateProduct,
   updateWarrantyPolicy,
@@ -84,8 +89,11 @@ const productValidation = (partial = false) => {
     body("sku").optional(optional).trim().isLength({ max: 80 }),
     body("serialPrefix").optional(optional).trim().isLength({ max: 30 }),
     field("price").isFloat({ min: 0 }).withMessage("Enter a valid price.").toFloat(),
+    body("originalPrice").optional(optional).isFloat({ min: 0 }).toFloat(),
     body("comparePrice").optional(optional).isFloat({ min: 0 }).toFloat(),
     body("stock").optional(optional).isInt({ min: 0 }).toInt(),
+    body("limitedOffer").optional(optional).isBoolean().toBoolean(),
+    body("offerEnds").optional({ nullable: true, checkFalsy: true }).isISO8601().toDate(),
     body("rating").optional(optional).isFloat({ min: 0, max: 5 }).toFloat(),
     body("reviewCount").optional(optional).isInt({ min: 0 }).toInt(),
     body("badge").optional(optional).trim().isLength({ max: 40 }),
@@ -231,6 +239,25 @@ const homepageSectionValidation = (partial = false) => {
   ];
 };
 
+const manualPdfPath = (value) => {
+  if (/^\/uploads\/manuals\/[a-z0-9-]+\.pdf$/i.test(value)) return true;
+  throw new Error("Manual must be an uploaded PDF file.");
+};
+
+const manualValidation = (partial = false) => {
+  const optional = partial ? { nullable: true, checkFalsy: true } : false;
+  const field = (name) => (partial ? body(name).optional(optional) : body(name));
+  return [
+    field("productName").trim().isLength({ min: 2, max: 160 }),
+    field("category").trim().isLength({ min: 2, max: 80 }),
+    body("description").optional({ nullable: true }).trim().isLength({ max: 1200 }),
+    field("pdfUrl").trim().custom(manualPdfPath),
+    body("thumbnail").optional({ nullable: true, checkFalsy: true }).custom(uploadedOrUrl),
+    body("featured").optional({ nullable: true }).isBoolean().toBoolean(),
+    body("isVisible").optional({ nullable: true }).isBoolean().toBoolean(),
+  ];
+};
+
 adminRoutes.post("/auth/google", authLimiter, [body("credential").trim().isLength({ min: 100, max: 4096 })], validate, asyncHandler(adminGoogleLogin));
 adminRoutes.post("/auth/otp/verify", authLimiter, [body("email").trim().isEmail().bail().customSanitizer((value) => String(value).toLowerCase()), body("verificationId").isMongoId(), body("otp").trim().matches(/^\d{6}$/)], validate, asyncHandler(adminVerifyOtp));
 adminRoutes.post("/auth/otp/resend", authLimiter, [body("email").trim().isEmail().bail().customSanitizer((value) => String(value).toLowerCase()), body("verificationId").isMongoId()], validate, asyncHandler(adminResendOtp));
@@ -274,6 +301,12 @@ adminRoutes.get("/collections", asyncHandler(listCollectionsAdmin));
 adminRoutes.post("/collections", collectionValidation(), validate, asyncHandler(createCollection));
 adminRoutes.patch("/collections/:slug", [param("slug").trim().matches(/^[a-z0-9-]+$/), ...collectionValidation(true)], validate, asyncHandler(updateCollection));
 adminRoutes.delete("/collections/:slug", [param("slug").trim().matches(/^[a-z0-9-]+$/)], validate, asyncHandler(deleteCollection));
+adminRoutes.get("/manuals", asyncHandler(listAdminManuals));
+adminRoutes.get("/manuals/:id", [param("id").isMongoId()], validate, asyncHandler(getAdminManual));
+adminRoutes.post("/manuals", manualValidation(), validate, asyncHandler(createManual));
+adminRoutes.put("/manuals/:id", [param("id").isMongoId(), ...manualValidation(true)], validate, asyncHandler(updateManual));
+adminRoutes.patch("/manuals/:id", [param("id").isMongoId(), ...manualValidation(true)], validate, asyncHandler(updateManual));
+adminRoutes.delete("/manuals/:id", [param("id").isMongoId()], validate, asyncHandler(deleteManual));
 adminRoutes.get("/products", asyncHandler(listAdminProducts));
 adminRoutes.post("/products", productValidation(), validate, asyncHandler(createProduct));
 adminRoutes.post("/products/reorder", [body("items").isArray({ min: 1, max: 500 }), body("items.*.slug").trim().matches(/^[a-z0-9-]+$/), body("items.*.sortOrder").optional().isInt().toInt()], validate, asyncHandler(reorderProducts));
@@ -290,12 +323,20 @@ adminRoutes.put(
   "/warranty-policy",
   [
     body("title").optional().trim().isLength({ max: 120 }),
-    body("url").trim().custom((value) => {
+    body("url").optional({ nullable: true, checkFalsy: true }).trim().custom((value) => {
       if (/^\/uploads\/policies\/[a-z0-9-]+\.pdf$/i.test(value)) return true;
       throw new Error("Warranty policy must be an uploaded PDF file.");
     }),
     body("filename").optional().trim().isLength({ max: 240 }),
     body("originalName").optional().trim().isLength({ max: 240 }),
+    body("returnAddress").optional({ nullable: true }).isObject(),
+    body("returnAddress.name").optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 120 }),
+    body("returnAddress.line1").optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 180 }),
+    body("returnAddress.line2").optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 180 }),
+    body("returnAddress.city").optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 80 }),
+    body("returnAddress.state").optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 80 }),
+    body("returnAddress.postalCode").optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 20 }),
+    body("returnAddress.phone").optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 30 }),
   ],
   validate,
   asyncHandler(updateWarrantyPolicy)
@@ -304,6 +345,17 @@ adminRoutes.patch("/warranty-claims/:id", [
   param("id").trim().isLength({ min: 3, max: 80 }),
   body("status").optional().isIn([...WARRANTY_STATUS, ...RMA_STATUS]),
   body("notes").optional().trim().isLength({ max: 2000 }),
+  body("rejectionReason").optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 1000 }),
+  body("adminNotes").optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 2000 }),
+  body("inspectionStatus").optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 120 }),
+  body("replacementCourierName").optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 120 }),
+  body("replacementTrackingId").optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 120 }),
+  body("replacementDispatchedAt").optional({ nullable: true, checkFalsy: true }).isISO8601().toDate(),
+  body("replacementEstimatedDelivery").optional({ nullable: true, checkFalsy: true }).isISO8601().toDate(),
+  body("returnCourierName").optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 120 }),
+  body("returnTrackingId").optional({ nullable: true, checkFalsy: true }).trim().isLength({ max: 120 }),
+  body("returnDispatchedAt").optional({ nullable: true, checkFalsy: true }).isISO8601().toDate(),
+  body("returnEstimatedDelivery").optional({ nullable: true, checkFalsy: true }).isISO8601().toDate(),
   body("deliveryStatus").optional().isIn(DELIVERY_STATUS),
   body("deliveryNotes").optional().trim().isLength({ max: 1000 }),
 ], validate, asyncHandler(updateWarrantyStatus));

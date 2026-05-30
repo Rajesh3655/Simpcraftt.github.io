@@ -4,8 +4,10 @@ import { apiConfig } from "../config/api";
 import { mockRequest } from "./mockApi";
 
 let csrfToken = null;
+let csrfTokenPromise = null;
 let refreshPromise = null;
 const unsafeMethods = new Set(["post", "put", "patch", "delete"]);
+const retryDelayMs = 500;
 const toastIds = {
   sessionExpired: "admin-session-expired",
   csrfFailed: "admin-csrf-failed",
@@ -33,8 +35,7 @@ api.interceptors.request.use(async (config) => {
   const method = (config.method || "get").toLowerCase();
   if (unsafeMethods.has(method)) {
     if (!csrfToken) {
-      const response = await axios.get(`${apiConfig.baseURL}/csrf-token`, { withCredentials: true });
-      csrfToken = response.data.csrfToken;
+      csrfToken = await fetchCsrfToken();
     }
     config.headers["X-CSRF-Token"] = csrfToken;
   }
@@ -45,6 +46,10 @@ api.interceptors.response.use(
   (response) => response.data,
   async (error) => {
     if (error.__mockResponse) return Promise.resolve(error.response.data);
+    if (shouldRetryRequest(error)) {
+      await delay(retryDelayMs);
+      return api({ ...error.config, __networkRetry: true });
+    }
     const status = error.response?.status;
     const message = error.response?.data?.message || error.message || "Something went wrong.";
     const details = error.response?.data?.details || [];
@@ -126,4 +131,39 @@ function notifySessionExpired() {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(sessionExpiredEvent));
   }
+}
+
+async function fetchCsrfToken() {
+  if (!csrfTokenPromise) {
+    csrfTokenPromise = requestWithNetworkRetry(() => axios.get(`${apiConfig.baseURL}/csrf-token`, { withCredentials: true }))
+      .then((response) => response.data.csrfToken)
+      .finally(() => {
+        csrfTokenPromise = null;
+      });
+  }
+  return csrfTokenPromise;
+}
+
+async function requestWithNetworkRetry(requestFactory) {
+  try {
+    return await requestFactory();
+  } catch (error) {
+    if (!isTransientNetworkError(error)) throw error;
+    await delay(retryDelayMs);
+    return requestFactory();
+  }
+}
+
+function shouldRetryRequest(error) {
+  if (error.config?.__networkRetry || !isTransientNetworkError(error)) return false;
+  const method = (error.config?.method || "get").toLowerCase();
+  return method === "get" || method === "head" || method === "options";
+}
+
+function isTransientNetworkError(error) {
+  return !error.response && (error.code === "ERR_NETWORK" || error.code === "ECONNABORTED" || error.message === "Network Error");
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

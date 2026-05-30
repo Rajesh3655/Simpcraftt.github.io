@@ -25,7 +25,7 @@ import {
   UserRound,
   Youtube,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router";
 import { toast } from "sonner";
 import {
@@ -40,10 +40,23 @@ import { productService } from "../../services/productService";
 import { uploadUrl } from "../../config/api";
 import { request } from "../../services/api";
 import { defaultContactSettings, siteService } from "../../services/siteService";
+import { ProductPrice } from "./pricing/ProductPrice";
+import { getStockState } from "../../utils/priceUtils";
+import {
+  DEFAULT_OG_IMAGE,
+  DEFAULT_OG_IMAGE_ALT,
+  PRIVATE_ROUTE_PATTERN,
+  SITE_NAME,
+  absoluteUrl,
+  breadcrumbSchema,
+  canonicalUrl,
+  safeJsonLd,
+} from "../../utils/seo";
 
 const navItems = [
   { label: "Home", href: "/" },
   { label: "Products", href: "/products" },
+  { label: "Experience", href: "/#experience" },
   { label: "Warranty", href: "/warranty" },
   { label: "Support", href: "/support" },
 ];
@@ -88,6 +101,28 @@ const sectionReveal = {
     transition: { duration: 0.72, delay: index * 0.04, ease: [0.22, 1, 0.36, 1] },
   }),
 };
+
+const currentYear = new Date().getFullYear();
+const sortByMenuOrder = (a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || String(a.name).localeCompare(String(b.name));
+const shimmerTransition = { duration: 0.45, ease: [0.16, 1, 0.3, 1] };
+const imageTransition = { duration: 0.45, ease: [0.22, 1, 0.36, 1] };
+
+function buildResponsiveSrcSet(src) {
+  if (!src || !/^https?:\/\//i.test(src)) return undefined;
+  try {
+    const url = new URL(src);
+    if (!url.hostname.includes("images.unsplash.com")) return undefined;
+    return [480, 768, 1080, 1400].map((width) => {
+      const variant = new URL(url);
+      variant.searchParams.set("w", String(width));
+      variant.searchParams.set("q", "78");
+      variant.searchParams.set("auto", variant.searchParams.get("auto") || "format");
+      return `${variant.toString()} ${width}w`;
+    }).join(", ");
+  } catch {
+    return undefined;
+  }
+}
 
 export function MotionSection({ className = "", children }) {
   const shouldReduceMotion = useReducedMotion();
@@ -154,9 +189,17 @@ export function MotionStaggerItem({ children }) {
   );
 }
 
-export function CinematicImage({ src, alt, className = "", loading = "lazy", sizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" }) {
+export function CinematicImage({
+  src,
+  alt,
+  className = "",
+  loading = "lazy",
+  sizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw",
+  fetchPriority,
+}) {
   const [isLoaded, setIsLoaded] = useState(false);
   const resolvedSrc = uploadUrl(src);
+  const srcSet = useMemo(() => buildResponsiveSrcSet(resolvedSrc), [resolvedSrc]);
 
   if (!resolvedSrc) {
     return (
@@ -171,22 +214,24 @@ export function CinematicImage({ src, alt, className = "", loading = "lazy", siz
       <motion.div
         initial={{ opacity: 1 }}
         animate={{ opacity: isLoaded ? 0 : 1 }}
-        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+        transition={shimmerTransition}
         className="absolute inset-0 z-10 bg-slate-200/60 dark:bg-slate-700/35"
       >
         <div className="h-full w-full animate-pulse bg-gradient-to-r from-transparent via-white/35 to-transparent dark:via-white/10" />
       </motion.div>
       <motion.img
         src={resolvedSrc}
+        srcSet={srcSet}
         alt={alt}
         loading={loading}
+        fetchPriority={fetchPriority}
         decoding="async"
         sizes={sizes}
         onLoad={() => setIsLoaded(true)}
         onError={() => setIsLoaded(true)}
         initial={{ opacity: 0.001, scale: 1.01 }}
         animate={{ opacity: isLoaded ? 1 : 0.001, scale: isLoaded ? 1 : 1.01 }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        transition={imageTransition}
         className={`${className} block`}
       />
     </div>
@@ -209,26 +254,34 @@ function applyOrCreateMeta(selector, attributes) {
 function SEOHead({ title, description, pathname }) {
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const baseTitle = "INFIBOLT";
-    const fullTitle = title ? `${baseTitle} | ${title}` : `${baseTitle} | Official Website`;
+    const fullTitle = title ? `${SITE_NAME} | ${title}` : `${SITE_NAME} | Official Website`;
     const fallbackDescription =
       "INFIBOLT builds premium electronics with cinematic design, refined performance, and modern ownership support.";
     const metaDescription = description || fallbackDescription;
-    const canonical = `${window.location.origin}${pathname || "/"}`;
-    const privatePath = /^\/(profile|settings|orders|warranty|support|auth|login|register|signup|checkout|cart)(\/|$)/.test(pathname || "");
+    const canonical = canonicalUrl(pathname || "/");
+    const privatePath = PRIVATE_ROUTE_PATTERN.test(pathname || "");
+    const ogImage = absoluteUrl(DEFAULT_OG_IMAGE);
 
     document.title = fullTitle;
     applyOrCreateMeta('meta[name="description"]', { name: "description", content: metaDescription });
-    applyOrCreateMeta('meta[name="robots"]', { name: "robots", content: privatePath ? "noindex,nofollow" : "index,follow" });
+    applyOrCreateMeta('meta[name="robots"]', { name: "robots", content: privatePath ? "noindex,nofollow" : "index,follow,max-image-preview:large" });
+    applyOrCreateMeta('meta[property="og:site_name"]', { property: "og:site_name", content: SITE_NAME });
     applyOrCreateMeta('meta[property="og:title"]', { property: "og:title", content: fullTitle });
     applyOrCreateMeta('meta[property="og:description"]', { property: "og:description", content: metaDescription });
     applyOrCreateMeta('meta[property="og:type"]', { property: "og:type", content: "website" });
     applyOrCreateMeta('meta[property="og:url"]', { property: "og:url", content: canonical });
-    applyOrCreateMeta('meta[property="og:image"]', { property: "og:image", content: `${window.location.origin}/images/Litemood-hero.png` });
+    applyOrCreateMeta('meta[property="og:image"]', { property: "og:image", content: ogImage });
+    applyOrCreateMeta('meta[property="og:image:width"]', { property: "og:image:width", content: "1200" });
+    applyOrCreateMeta('meta[property="og:image:height"]', { property: "og:image:height", content: "630" });
+    applyOrCreateMeta('meta[property="og:image:alt"]', { property: "og:image:alt", content: DEFAULT_OG_IMAGE_ALT });
+    applyOrCreateMeta('meta[property="og:locale"]', { property: "og:locale", content: "en_IN" });
     applyOrCreateMeta('meta[name="twitter:card"]', { name: "twitter:card", content: "summary_large_image" });
+    applyOrCreateMeta('meta[name="twitter:site"]', { name: "twitter:site", content: "@infibolt" });
+    applyOrCreateMeta('meta[name="twitter:creator"]', { name: "twitter:creator", content: "@infibolt" });
     applyOrCreateMeta('meta[name="twitter:title"]', { name: "twitter:title", content: fullTitle });
     applyOrCreateMeta('meta[name="twitter:description"]', { name: "twitter:description", content: metaDescription });
-    applyOrCreateMeta('meta[name="twitter:image"]', { name: "twitter:image", content: `${window.location.origin}/images/Litemood-hero.png` });
+    applyOrCreateMeta('meta[name="twitter:image"]', { name: "twitter:image", content: ogImage });
+    applyOrCreateMeta('meta[name="twitter:image:alt"]', { name: "twitter:image:alt", content: DEFAULT_OG_IMAGE_ALT });
 
     let canonicalNode = document.head.querySelector('link[rel="canonical"]');
     if (!canonicalNode) {
@@ -259,43 +312,52 @@ export function CommerceShell({
   const [showMobileBottomNav, setShowMobileBottomNav] = useState(true);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeMega, setActiveMega] = useState(null);
+  const closeMega = useCallback(() => setActiveMega(null), []);
+  const handleNavEnter = useCallback((href) => {
+    setActiveMega(href === "/products" ? href : null);
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.remove("dark");
     document.documentElement.style.colorScheme = "light";
-    localStorage.setItem("theme", "light");
+    if (typeof window !== "undefined" && window.localStorage.getItem("theme") !== "light") {
+      window.localStorage.setItem("theme", "light");
+    }
   }, []);
 
   useEffect(() => {
     setShowMobileBottomNav(true);
 
     if (typeof window === "undefined") return undefined;
-    if (window.innerWidth >= 1024 || hideMobileBottomNav) return undefined;
 
     let previousY = window.scrollY;
+    let ticking = false;
     const onScroll = () => {
-      const currentY = window.scrollY;
-      if (currentY <= 10) {
-        setShowMobileBottomNav(true);
-      } else if (currentY > previousY + 6) {
-        setShowMobileBottomNav(false);
-      } else if (currentY < previousY - 6) {
-        setShowMobileBottomNav(true);
-      }
-      previousY = currentY;
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        const currentY = window.scrollY;
+        const nextScrolled = currentY > 18;
+        setIsScrolled((value) => (value === nextScrolled ? value : nextScrolled));
+
+        if (window.innerWidth < 1024 && !hideMobileBottomNav) {
+          if (currentY <= 10) {
+            setShowMobileBottomNav((value) => (value ? value : true));
+          } else if (currentY > previousY + 6) {
+            setShowMobileBottomNav((value) => (value ? false : value));
+          } else if (currentY < previousY - 6) {
+            setShowMobileBottomNav((value) => (value ? value : true));
+          }
+        }
+        previousY = currentY;
+        ticking = false;
+      });
     };
 
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [pathname, hideMobileBottomNav]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    const onScroll = () => setIsScrolled(window.scrollY > 18);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [pathname, hideMobileBottomNav]);
 
   useEffect(() => {
     setActiveMega(null);
@@ -322,7 +384,7 @@ export function CommerceShell({
       </div>
 
       <header
-        onMouseLeave={() => setActiveMega(null)}
+        onMouseLeave={closeMega}
         className={`fixed left-0 right-0 top-0 z-50 border-b backdrop-blur-2xl transition-all duration-200 ease-out ${
           isScrolled || activeMega
             ? "border-slate-900/10 bg-white/94 shadow-[0_18px_55px_rgba(15,23,42,0.08)] lg:dark:border-white/[0.08] lg:dark:bg-[#08090b]/84"
@@ -349,7 +411,7 @@ export function CommerceShell({
                 key={item.href}
                 to={item.href}
                 prefetch="intent"
-                onMouseEnter={() => setActiveMega(item.href === "/products" ? item.href : null)}
+                onMouseEnter={() => handleNavEnter(item.href)}
               className={`relative rounded-full px-1.5 py-1 text-sm font-semibold tracking-normal transition-colors duration-150 ease-out ${
                   pathname === item.href
                     ? "text-slate-950 lg:dark:text-white"
@@ -366,6 +428,9 @@ export function CommerceShell({
           </nav>
 
           <div className="hidden items-center gap-2.5 lg:flex">
+            <IconLink href="/products" label="Search products" active={false}>
+              <Search className="h-4.5 w-4.5" strokeWidth={2} />
+            </IconLink>
             <IconLink href="/profile" label="Profile" active={pathname.startsWith("/profile") || pathname.startsWith("/login") || pathname.startsWith("/register")}>
               <ProfileAvatar initial={profileInitial} signedIn={Boolean(authUser)} desktop />
             </IconLink>
@@ -400,7 +465,7 @@ export function CommerceShell({
   );
 }
 
-function MobileBottomNav({ pathname, visible = true }) {
+const MobileBottomNav = memo(function MobileBottomNav({ pathname, visible = true }) {
   return (
     <nav
       aria-label="Primary mobile navigation"
@@ -442,9 +507,9 @@ function MobileBottomNav({ pathname, visible = true }) {
       </div>
     </nav>
   );
-}
+});
 
-function ProfileAvatar({ initial, signedIn, desktop = false }) {
+const ProfileAvatar = memo(function ProfileAvatar({ initial, signedIn, desktop = false }) {
   if (!signedIn) {
     return <UserRound className={desktop ? "h-4.5 w-4.5" : "h-5 w-5 sm:h-5.5 sm:w-5.5"} strokeWidth={2} />;
   }
@@ -454,7 +519,7 @@ function ProfileAvatar({ initial, signedIn, desktop = false }) {
       {initial}
     </span>
   );
-}
+});
 
 function getProfileInitial(user) {
   const source = user?.name || user?.fullName || user?.email || user?.phone || "I";
@@ -479,17 +544,18 @@ function IconLink({ href, label, children, active = false }) {
   );
 }
 
-function MegaMenu({ active }) {
+const MegaMenu = memo(function MegaMenu({ active }) {
   const isOpen = active === "/products";
   const [menuData, setMenuData] = useState({ products, categories });
-  const visibleCategories = [...menuData.categories]
+  const [hasLoadedMenuData, setHasLoadedMenuData] = useState(false);
+  const visibleCategories = useMemo(() => [...menuData.categories]
     .filter((category) => category.desktopMenuVisible === true)
-    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || String(a.name).localeCompare(String(b.name)))
-    .slice(0, 4);
-  const featured = [...menuData.products]
+    .sort(sortByMenuOrder)
+    .slice(0, 4), [menuData.categories]);
+  const featured = useMemo(() => [...menuData.products]
     .filter((product) => product.desktopMenuFeatured === true)
-    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || String(a.name).localeCompare(String(b.name)))
-    .slice(0, 4);
+    .sort(sortByMenuOrder)
+    .slice(0, 4), [menuData.products]);
   const featuredGridClass = featured.length <= 1
     ? "max-w-[300px] grid-cols-1 justify-self-start"
     : featured.length === 2
@@ -499,6 +565,7 @@ function MegaMenu({ active }) {
         : "max-w-[820px] grid-cols-4 justify-self-start";
 
   useEffect(() => {
+    if (!isOpen || hasLoadedMenuData) return undefined;
     let alive = true;
     Promise.all([productService.list(), productService.categories()]).then(([productResult, categoryResult]) => {
       if (!alive) return;
@@ -506,14 +573,16 @@ function MegaMenu({ active }) {
         products: productResult.items || [],
         categories: categoryResult.items || [],
       });
+      setHasLoadedMenuData(true);
     }).catch(() => {
       if (!alive) return;
       setMenuData({ products: [], categories: [] });
+      setHasLoadedMenuData(true);
     });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [hasLoadedMenuData, isOpen]);
 
   return (
     <div
@@ -561,6 +630,10 @@ function MegaMenu({ active }) {
                 <p className="truncate text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400 xl:text-[10px] xl:tracking-[0.18em]">{product.badge}</p>
                 <h3 className="mt-1.5 line-clamp-2 text-xs font-semibold leading-tight text-slate-950 dark:text-white xl:mt-2 xl:text-sm">{product.name}</h3>
                 <p className="mt-1.5 text-[11px] leading-5 text-slate-500 dark:text-slate-400 xl:mt-2 xl:text-xs">{formatPrice(product.price)}</p>
+                <span className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 transition group-hover:text-slate-950 dark:group-hover:text-white">
+                  Explore
+                  <ArrowRight className="h-3 w-3 transition group-hover:translate-x-0.5" />
+                </span>
               </div>
             </Link>
           ))}
@@ -568,7 +641,7 @@ function MegaMenu({ active }) {
       </div>
     </div>
   );
-}
+});
 
 export function PageHero({ eyebrow, title, description, action, breadcrumbItems }) {
   const { pathname } = useLocation();
@@ -660,7 +733,7 @@ function SubmitButton({ children }) {
   );
 }
 
-export function ProductGrid({ items = [], columns = "default" }) {
+export const ProductGrid = memo(function ProductGrid({ items = [], columns = "default" }) {
   const columnClass = columns === "featured" ? "lg:grid-cols-2 xl:grid-cols-3" : "lg:grid-cols-3 xl:grid-cols-4";
 
   if (!items.length) {
@@ -689,7 +762,7 @@ export function ProductGrid({ items = [], columns = "default" }) {
       ))}
     </motion.div>
   );
-}
+});
 
 export function ProductGridSkeleton({ count = 6, columns = "default" }) {
   const columnClass = columns === "featured" ? "lg:grid-cols-2 xl:grid-cols-3" : "lg:grid-cols-3 xl:grid-cols-4";
@@ -718,7 +791,7 @@ export function ProductGridSkeleton({ count = 6, columns = "default" }) {
   );
 }
 
-export function ProductCard({ product }) {
+export const ProductCard = memo(function ProductCard({ product }) {
   const category = getCategoryById(product.category);
 
   return (
@@ -746,8 +819,8 @@ export function ProductCard({ product }) {
           </div>
           <h3 className="line-clamp-2 text-[1.02rem] font-semibold leading-tight tracking-normal text-slate-900 transition-colors duration-200 group-hover:text-slate-700 sm:text-[1.16rem] md:text-[1.25rem] dark:text-white dark:group-hover:text-slate-200">{product.name}</h3>
           <p className="mt-1.5 line-clamp-2 min-h-[2.25rem] text-[0.74rem] leading-5 text-slate-600 dark:text-slate-400 sm:mt-2.5 sm:min-h-[3rem] sm:text-[0.88rem] sm:leading-relaxed">{product.summary}</p>
-          <div className="mt-auto flex items-center justify-between pt-3 sm:pt-6">
-            <span className="text-[0.95rem] font-semibold tracking-tight text-slate-900 dark:text-white sm:text-[1.08rem]">{formatPrice(product.price)}</span>
+          <div className="mt-auto flex items-end justify-between gap-3 pt-3 sm:pt-6">
+            <ProductPrice product={product} label="" variant="card" showOffer={false} className="min-w-0" />
             <span className="inline-flex items-center gap-2 text-[0] font-bold uppercase tracking-[0.16em] text-slate-900 transition-colors duration-300 dark:text-white sm:gap-3 sm:text-[11px]">
               <span className="hidden sm:inline">Explore</span>
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/5 transition-all duration-300 group-hover:translate-x-0.5 group-hover:bg-slate-900 group-hover:text-white dark:bg-white/10 dark:group-hover:bg-white dark:group-hover:text-slate-900 sm:h-8 sm:w-8">
@@ -759,16 +832,17 @@ export function ProductCard({ product }) {
       </Link>
     </motion.article>
   );
-}
+});
 
-export function ProductFilters({ selectedCategory, onCategoryChange, query, onQueryChange, sort, onSortChange, categoryItems = categories }) {
+export const ProductFilters = memo(function ProductFilters({ selectedCategory, onCategoryChange, query, onQueryChange, sort, onSortChange, categoryItems = categories }) {
   const [sortOpen, setSortOpen] = useState(false);
-  const sortOptions = [
+  const sortOptions = useMemo(() => [
     ["featured", "Featured"],
     ["price-low", "Price: Low to High"],
     ["price-high", "Price: High to Low"],
-  ];
+  ], []);
   const selectedSortLabel = sortOptions.find(([value]) => value === sort)?.[1] ?? "Featured";
+  const categoryOptions = useMemo(() => [{ id: "all", name: "All Products" }, ...categoryItems], [categoryItems]);
 
   return (
     <div className="premium-surface sticky top-[76px] z-30 mb-8 flex flex-col gap-5 p-4 backdrop-blur-2xl sm:p-5 md:mb-10 lg:gap-6 dark:bg-white/[0.03]">
@@ -826,7 +900,7 @@ export function ProductFilters({ selectedCategory, onCategoryChange, query, onQu
       <div className="relative -mx-4 overflow-hidden sm:mx-0">
         <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-10 bg-gradient-to-l from-white via-white/90 to-transparent dark:from-[#111318] dark:via-[#111318]/90" />
         <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-1.5 pr-14 scroll-px-4 sm:px-0 sm:pr-10 sm:scroll-px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-          {[{ id: "all", name: "All Products" }, ...categoryItems].map((category) => {
+          {categoryOptions.map((category) => {
             const categoryValue = category.id === "all" ? "all" : category.slug || category.id || category.name;
             const isSelected = selectedCategory === categoryValue || selectedCategory === category.id || selectedCategory === category.slug || selectedCategory === category.name;
             return (
@@ -853,7 +927,7 @@ export function ProductFilters({ selectedCategory, onCategoryChange, query, onQu
       </div>
     </div>
   );
-}
+});
 
 export function FutureCommerceNotice({ title = "Direct purchase is opening in phases", description }) {
   return (
@@ -875,6 +949,7 @@ export function BuyPanel({ product }) {
   const [notifyValue, setNotifyValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const marketplace = product.marketplace || {};
+  const stockState = getStockState(product.stock);
   const priority = marketplace.priority || "Amazon";
   const channels = marketplace.visible === false ? [] : [
     ["Amazon", marketplace.amazon || product.amazonLink, "Preferred launch partner"],
@@ -910,8 +985,7 @@ export function BuyPanel({ product }) {
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-300">Launch partner purchase</p>
-          <p className="mt-2 text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">{formatPrice(product.price)}</p>
-          {product.comparePrice > product.price && <p className="mt-1 text-sm text-slate-400 line-through">{formatPrice(product.comparePrice)}</p>}
+          <ProductPrice product={product} label="" variant="detail" className="mt-2" />
         </div>
         <button className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-900/10 bg-transparent text-slate-600 transition-all hover:bg-slate-900/5 dark:border-white/10 dark:text-white dark:hover:bg-white/10" aria-label="Add to wishlist">
           <Heart className="h-5 w-5" />
@@ -923,7 +997,7 @@ export function BuyPanel({ product }) {
       </div>
       <div className="mt-6 grid gap-3">
         {primaryChannels.map(([label, href, description], index) =>
-          href ? (
+          href && !stockState.isOutOfStock ? (
             <a
               key={label}
               href={href}
@@ -938,7 +1012,17 @@ export function BuyPanel({ product }) {
               <span>Buy on {label}</span>
               <span className="hidden text-[10px] font-semibold normal-case tracking-normal opacity-60 sm:inline">{description}</span>
             </a>
-          ) : null
+          ) : (
+            <button
+              key={label}
+              type="button"
+              disabled
+              className="inline-flex min-h-[54px] items-center justify-between gap-3 rounded-full border border-slate-900/12 bg-slate-100/70 px-5 text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400"
+            >
+              <span>{stockState.isOutOfStock ? "Out of Stock" : label}</span>
+              <span className="hidden text-[10px] font-semibold normal-case tracking-normal opacity-70 sm:inline">{description}</span>
+            </button>
+          )
         )}
         <SecondaryButton href="/warranty">Register Product</SecondaryButton>
       </div>
@@ -1310,26 +1394,31 @@ export function FeatureBand() {
 }
 
 function BreadcrumbBar({ items }) {
+  const schema = breadcrumbSchema(items);
+
   return (
-    <nav aria-label="Breadcrumb" className="border-b border-black/[0.06] bg-white/86 px-4 backdrop-blur-xl sm:px-6">
-      <div className="mx-auto flex min-h-[40px] max-w-[1400px] items-center gap-2 overflow-x-auto whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.22em] text-[#111316] sm:min-h-[42px] lg:px-12">
-        {items.map((item, index) => {
-          const isLast = index === items.length - 1;
-          return (
-            <span key={`${item.href}-${item.label}`} className="inline-flex items-center gap-2">
-              {isLast ? (
-                <span>{item.label}</span>
-              ) : (
-                <Link to={item.href} className="transition hover:text-slate-500">
-                  {item.label}
-                </Link>
-              )}
-              {!isLast && <span className="text-slate-400">/</span>}
-            </span>
-          );
-        })}
-      </div>
-    </nav>
+    <>
+      {schema && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(schema) }} />}
+      <nav aria-label="Breadcrumb" className="border-b border-black/[0.06] bg-white/86 px-4 backdrop-blur-xl sm:px-6">
+        <div className="mx-auto flex min-h-[40px] max-w-[1400px] items-center gap-2 overflow-x-auto whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.22em] text-[#111316] sm:min-h-[42px] lg:px-12">
+          {items.map((item, index) => {
+            const isLast = index === items.length - 1;
+            return (
+              <span key={`${item.href}-${item.label}`} className="inline-flex items-center gap-2">
+                {isLast ? (
+                  <span>{item.label}</span>
+                ) : (
+                  <Link to={item.href} className="transition hover:text-slate-500">
+                    {item.label}
+                  </Link>
+                )}
+                {!isLast && <span className="text-slate-400">/</span>}
+              </span>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 }
 
@@ -1468,9 +1557,9 @@ function CommerceFooter() {
           links={[
             ["Warranty", "/warranty"],
             ["Warranty Policy", "/warranty-policy"],
+            ["User Manuals", "/support/manuals"],
             ["Support", "/support"],
             ["FAQ", "/faq"],
-            ["Contact", "/contact"],
           ]}
         />
 
@@ -1486,7 +1575,7 @@ function CommerceFooter() {
       
       <div className="mx-auto mt-8 flex w-full max-w-[1400px] flex-col items-start justify-between gap-2 border-t border-slate-900/5 px-5 pt-5 md:mt-20 md:flex-row md:items-center md:gap-4 md:px-8 md:pt-8 lg:px-12 dark:border-white/5">
         <p className="text-xs text-slate-500 md:text-sm dark:text-slate-400">
-          &copy; {new Date().getFullYear()} INFIBOLT. All rights reserved.
+          &copy; {currentYear} INFIBOLT. All rights reserved.
         </p>
         <p className="text-xs text-slate-500 md:text-sm dark:text-slate-400">
           Developed by <a href="https://www.softsitesolution.in" target="_blank" rel="noopener noreferrer" className="font-medium text-slate-900 hover:underline dark:text-white transition-colors">SoftSiteSolutions</a>

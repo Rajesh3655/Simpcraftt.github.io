@@ -1,4 +1,4 @@
-import { Download, Search, ShieldCheck, TicketCheck } from "lucide-react";
+import { Download, Eye, Search, ShieldCheck, TicketCheck, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState, PageLoader } from "../../components/AppStates";
 import { uploadUrl } from "../../config/api";
@@ -25,6 +25,7 @@ export default function AdminClaimStatusPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("status");
   const [query, setQuery] = useState("");
+  const [selectedRow, setSelectedRow] = useState(null);
 
   useEffect(() => {
     loadWarranty();
@@ -70,6 +71,14 @@ export default function AdminClaimStatusPage() {
       return statusRank(a.statusBucket) - statusRank(b.statusBucket) || a.status.localeCompare(b.status);
     });
   }, [claims, mode, ownershipById, query, rmas, sortBy, statusFilter]);
+
+  const summary = useMemo(() => {
+    const source = mode === "claims" ? rmas || [] : claims || [];
+    return source.reduce((map, item) => {
+      const row = normalizeWarrantyRow(item, mode, ownershipById.get(item.ownershipId));
+      return { ...map, all: (map.all || 0) + 1, [row.statusBucket]: (map[row.statusBucket] || 0) + 1 };
+    }, {});
+  }, [claims, mode, ownershipById, rmas]);
 
   const exportRows = () => {
     const filename = `infibolt-${mode === "claims" ? "claims" : "registered-warranty"}-${statusFilter}.csv`;
@@ -212,27 +221,35 @@ export default function AdminClaimStatusPage() {
               }`}
             >
               {tab.label}
+              <span className="ml-2 rounded-full bg-white/60 px-2 py-0.5 text-[10px] text-current dark:bg-black/10">{summary[tab.key] || 0}</span>
             </button>
           ))}
+        </div>
+
+        <div className="mb-5 grid gap-3 md:grid-cols-3">
+          <StatusSummaryCard label="Pending review" value={summary.pending || 0} tone="pending" />
+          <StatusSummaryCard label="Approved / active" value={summary.approved || 0} tone="approved" />
+          <StatusSummaryCard label="Rejected" value={summary.rejected || 0} tone="rejected" />
         </div>
 
         {status === "loading" && <PageLoader label="Opening warranty records" />}
         {status === "error" && <EmptyState title="Claim status unavailable" description={error} />}
         {status !== "loading" && status !== "error" && (
-          rows.length ? <WarrantyStatusTable rows={rows} /> : <EmptyState title="No records match this view" description="Try another status, search term, or list type." />
+          rows.length ? <WarrantyStatusTable rows={rows} onView={setSelectedRow} /> : <EmptyState title="No records match this view" description="Try another status, search term, or list type." />
         )}
       </section>
+      {selectedRow && <WarrantyDetailsModal row={selectedRow} onClose={() => setSelectedRow(null)} />}
     </AdminShell>
   );
 }
 
-function WarrantyStatusTable({ rows }) {
+function WarrantyStatusTable({ rows, onView }) {
   return (
     <div className="-mx-2 overflow-x-auto px-2">
-      <table className="w-full min-w-[1120px] border-separate border-spacing-y-2 text-left text-sm">
+      <table className="w-full min-w-[980px] border-separate border-spacing-y-2 text-left text-sm">
         <thead>
           <tr>
-            {["ID", "Customer", "Product", "Serial", "Invoice URL", "Date", "Status"].map((column) => (
+            {["Record", "Customer", "Product", "Status", "Updated", "Action"].map((column) => (
               <th key={column} className="px-4 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{column}</th>
             ))}
           </tr>
@@ -250,29 +267,105 @@ function WarrantyStatusTable({ rows }) {
               </td>
               <td className="px-4 py-4 text-slate-700 dark:text-slate-300">
                 <span className="block font-medium">{item.product || "-"}</span>
-                <span className="mt-1 block text-xs font-medium text-slate-500">{item.productSlug || item.issueType || "-"}</span>
+                <span className="mt-1 block text-xs font-medium text-slate-500">Serial: {item.serial || "-"}</span>
               </td>
-              <td className="px-4 py-4 font-medium text-slate-700 dark:text-slate-300">{item.serial || "-"}</td>
-              <td className="max-w-[300px] px-4 py-4 text-slate-700 dark:text-slate-300">
-                {item.invoiceUrl ? (
-                  <a href={item.invoiceUrl} target="_blank" rel="noopener noreferrer" className="block truncate text-xs font-semibold text-slate-600 underline-offset-4 hover:text-slate-950 hover:underline dark:text-slate-300 dark:hover:text-white">
-                    {item.invoiceUrl}
-                  </a>
-                ) : (
-                  <span className="text-xs font-medium text-slate-400">Not available</span>
-                )}
+              <td className="px-4 py-4">
+                <StatusBadge status={item.status} bucket={item.statusBucket} />
               </td>
               <td className="px-4 py-4 text-slate-700 dark:text-slate-300">
-                <span className="block font-medium">{formatDate(item.registeredAt || item.createdAt)}</span>
-                <span className="mt-1 block text-xs font-medium text-slate-500">{formatDate(item.updatedAt)}</span>
+                <span className="block font-medium">{formatDate(item.updatedAt || item.registeredAt || item.createdAt)}</span>
+                <span className="mt-1 block text-xs font-medium text-slate-500">{nextStatusHint(item)}</span>
               </td>
               <td className="rounded-r-xl px-4 py-4">
-                <StatusBadge status={item.status} bucket={item.statusBucket} />
+                <button type="button" onClick={() => onView(item)} className="inline-flex min-h-[36px] items-center justify-center gap-2 rounded-full bg-slate-950 px-4 text-[10px] font-bold uppercase tracking-[0.14em] text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950">
+                  <Eye className="h-3.5 w-3.5" />
+                  View details
+                </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function StatusSummaryCard({ label, value, tone }) {
+  const toneClass = {
+    pending: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200",
+    approved: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200",
+    rejected: "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200",
+  }[tone];
+  return (
+    <div className={`rounded-2xl border px-4 py-3 ${toneClass}`}>
+      <p className="text-[10px] font-bold uppercase tracking-[0.16em]">{label}</p>
+      <p className="mt-2 text-2xl font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function WarrantyDetailsModal({ row, onClose }) {
+  return (
+    <div className="fixed inset-0 z-[80] grid place-items-center bg-slate-950/45 px-4 backdrop-blur-sm">
+      <div className="max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-white/70 bg-white p-5 shadow-[0_28px_80px_rgba(15,23,42,0.24)] dark:border-white/10 dark:bg-slate-950">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">{row.type}</p>
+            <h3 className="mt-1 text-xl font-semibold tracking-tight text-slate-950 dark:text-white">{row.id}</h3>
+            <div className="mt-3"><StatusBadge status={row.status} bucket={row.statusBucket} /></div>
+          </div>
+          <button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-5 rounded-2xl bg-slate-50 p-4 dark:bg-white/[0.04]">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">{nextStatusHint(row)}</p>
+          {row.notes && <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{row.notes}</p>}
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          <DetailItem label="Customer" value={row.customerName || "Customer"} />
+          <DetailItem label="Email / phone" value={[row.email, row.phone].filter(Boolean).join(" / ") || "-"} />
+          <DetailItem label="Product" value={row.product || "-"} />
+          <DetailItem label="Serial" value={row.serial || "-"} />
+          <DetailItem label="Invoice number" value={row.invoiceNumber || "-"} />
+          <DetailItem label="Purchase date" value={formatDateOnly(row.purchaseDate)} />
+          <DetailItem label="Registered at" value={formatDate(row.registeredAt || row.createdAt)} />
+          <DetailItem label="Updated at" value={formatDate(row.updatedAt)} />
+          <DetailItem label="Warranty start" value={formatDateOnly(row.warrantyStart)} />
+          <DetailItem label="Warranty until" value={formatDateOnly(row.warrantyUntil)} />
+          {row.type === "Claim" && <DetailItem label="Issue type" value={row.issueType || "-"} />}
+          {row.type === "Claim" && <DetailItem label="Priority" value={row.priority || "-"} />}
+        </div>
+
+        {row.issueDescription && (
+          <div className="mt-3 rounded-2xl border border-slate-900/8 bg-white p-4 dark:border-white/10 dark:bg-white/[0.03]">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Issue description</p>
+            <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-200">{row.issueDescription}</p>
+          </div>
+        )}
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          {row.invoiceUrl && (
+            <a href={row.invoiceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-[40px] items-center justify-center rounded-full bg-slate-950 px-5 text-[10px] font-bold uppercase tracking-[0.14em] text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950">
+              Open invoice
+            </a>
+          )}
+          <button type="button" onClick={onClose} className="inline-flex min-h-[40px] items-center justify-center rounded-full border border-slate-200 px-5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-700 transition hover:bg-slate-50 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/5">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailItem({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-slate-900/8 bg-white p-4 dark:border-white/10 dark:bg-white/[0.03]">
+      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">{label}</p>
+      <p className="mt-1 break-words text-sm font-semibold text-slate-800 dark:text-slate-100">{value || "-"}</p>
     </div>
   );
 }
@@ -337,6 +430,19 @@ function StatusBadge({ status, bucket }) {
     rejected: "bg-rose-500/10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300",
   }[bucket] || "bg-slate-500/10 text-slate-700 dark:bg-white/10 dark:text-slate-200";
   return <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${tone}`}>{status}</span>;
+}
+
+function nextStatusHint(item = {}) {
+  const status = String(item.status || "").toLowerCase();
+  if (status.includes("pending") || status.includes("under review") || status === "requested") return "Needs admin review";
+  if (status.includes("waiting for customer shipment")) return "Customer must submit courier tracking";
+  if (status.includes("tracking submitted")) return "Confirm product received";
+  if (status.includes("product received") || status.includes("inspection")) return "Inspection decision pending";
+  if (status.includes("replacement approved") || status.includes("final approved")) return "Ready for dispatch";
+  if (status.includes("dispatch")) return "Shipment details shared";
+  if (status.includes("active") || status.includes("approved") || status.includes("repaired") || status.includes("replaced")) return "Approved and active";
+  if (status.includes("reject")) return "Rejected, check reason/details";
+  return "Review latest details";
 }
 
 function toCsv(rows) {

@@ -33,6 +33,10 @@ export async function rotateRefreshSession(req, res, user, refreshToken) {
     await RefreshToken.updateMany({ userId: user._id, role: user.role, revokedAt: { $exists: false } }, { revokedAt: new Date() });
     throw createHttpError(401, "Refresh token has been invalidated.");
   }
+  if (String(current.userId) !== String(user._id) || current.role !== user.role) {
+    await RefreshToken.updateMany({ familyId: current.familyId, revokedAt: { $exists: false } }, { revokedAt: new Date() });
+    throw createHttpError(401, "Refresh token does not match this session.");
+  }
 
   current.revokedAt = new Date();
   await current.save();

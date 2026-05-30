@@ -10,7 +10,6 @@ import {
   LifeBuoy,
   LogOut,
   Mail,
-  MapPin,
   PackageCheck,
   Settings,
   ShieldCheck,
@@ -29,22 +28,23 @@ import { OtpInput } from "../../components/OtpInput";
 import { formatPrice, products } from "../../store/commerce";
 import { useAppStore } from "../../store/appStore";
 
-const accountTabs = [
-  { id: "overview", label: "Overview", icon: Sparkles },
-  { id: "products", label: "My Products", icon: PackageCheck },
-  { id: "warranty", label: "Warranty", icon: ShieldCheck },
-  { id: "support", label: "Support", icon: TicketCheck },
-  { id: "saved", label: "Saved Items", icon: Heart },
-  { id: "addresses", label: "Addresses", icon: MapPin },
-  { id: "settings", label: "Settings", icon: Settings },
-];
-
 const panelMotion = {
   initial: { opacity: 0, y: 12 },
   animate: { opacity: 1, y: 0 },
   exit: { opacity: 0, y: -8 },
   transition: { duration: 0.32, ease: [0.22, 1, 0.36, 1] },
 };
+
+const STRONG_PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=[\]{};':"\\|,.<>/?`~]).{8,}$/;
+const STRONG_PASSWORD_MESSAGE = "Use uppercase, lowercase, number, symbol, and 8+ characters.";
+const emptyPasswordErrors = { currentPassword: "", newPassword: "", confirmPassword: "" };
+const passwordRuleChecks = [
+  { label: "8+ characters", test: (value) => String(value || "").length >= 8 },
+  { label: "Uppercase", test: (value) => /[A-Z]/.test(value || "") },
+  { label: "Lowercase", test: (value) => /[a-z]/.test(value || "") },
+  { label: "Number", test: (value) => /\d/.test(value || "") },
+  { label: "Symbol", test: (value) => /[!@#$%^&*()_\-+=[\]{};':"\\|,.<>/?`~]/.test(value || "") },
+];
 
 const ownershipPreviewDevices = products.slice(0, 3).map((product, index) => ({
   ...product,
@@ -90,16 +90,6 @@ const indianStates = [
   "West Bengal",
 ];
 
-const mobileQuickActions = [
-  { label: "Saved", icon: Heart, tab: "saved" },
-];
-
-const mobileServices = [
-  { label: "Help", icon: LifeBuoy, href: "/support" },
-  { label: "FAQ", icon: HelpCircle, href: "/faq" },
-  { label: "Warranty terms", icon: WalletCards, href: "/warranty-policy" },
-];
-
 function normalizePhone(value) {
   return String(value || "").replace(/\D/g, "");
 }
@@ -108,13 +98,62 @@ function isValidPhone(value) {
   return /^[1-9]\d{7,14}$/.test(normalizePhone(value));
 }
 
+function isValidPostalCode(value) {
+  return /^[1-9]\d{5}$/.test(String(value || "").trim());
+}
+
 function missingProfileFields(profile = {}) {
   const fields = [];
   if (!isValidPhone(profile.phone)) fields.push("mobile number");
   if (!String(profile.address || "").trim()) fields.push("full address");
   if (!String(profile.city || "").trim()) fields.push("city");
   if (!String(profile.state || "").trim()) fields.push("state");
+  if (!isValidPostalCode(profile.postalCode)) fields.push("PIN code");
   return fields;
+}
+
+function profileCompletionDraft(profile = {}) {
+  return {
+    phone: profile.phone || "",
+    address: profile.address || "",
+    city: profile.city || "",
+    state: profile.state || "",
+    postalCode: profile.postalCode || "",
+    status: "idle",
+    errors: {},
+  };
+}
+
+function validateProfileCompletion(form = {}, phoneLocked = false) {
+  const errors = {};
+  if (!phoneLocked && !isValidPhone(form.phone)) errors.phone = "Enter a valid mobile number.";
+  if (!String(form.address || "").trim()) errors.address = "Enter your full address.";
+  if (!String(form.city || "").trim()) errors.city = "Enter your city.";
+  if (!String(form.state || "").trim()) errors.state = "Select your state.";
+  if (!isValidPostalCode(form.postalCode)) errors.postalCode = "Enter a valid 6 digit PIN code.";
+  return errors;
+}
+
+function getPasswordErrors(message) {
+  const normalized = String(message || "").toLowerCase();
+  if (normalized.includes("current password")) return { ...emptyPasswordErrors, currentPassword: message };
+  return { ...emptyPasswordErrors, newPassword: message || "Password was not accepted." };
+}
+
+function passwordChangeValidation(form = {}, { requireCurrentPassword = true } = {}) {
+  const wantsPasswordChange = Boolean(form.currentPassword || form.newPassword || form.confirmPassword);
+  const errors = { ...emptyPasswordErrors };
+  if (!wantsPasswordChange) return { wantsPasswordChange, errors, valid: true };
+  if (requireCurrentPassword && !form.currentPassword) errors.currentPassword = "Enter your current password.";
+  if (!form.newPassword) errors.newPassword = "Enter a new password.";
+  else if (!STRONG_PASSWORD_PATTERN.test(form.newPassword)) errors.newPassword = STRONG_PASSWORD_MESSAGE;
+  if (!form.confirmPassword) errors.confirmPassword = "Confirm your new password.";
+  else if (form.newPassword && form.confirmPassword !== form.newPassword) errors.confirmPassword = "New passwords do not match.";
+  return { wantsPasswordChange, errors, valid: !Object.values(errors).some(Boolean) };
+}
+
+function canChangePassword(profile = {}) {
+  return profile.authProvider === "password" && profile.hasPassword !== false;
 }
 
 export default function ProfilePage() {
@@ -129,11 +168,11 @@ export default function ProfilePage() {
   const requestProfileContactUpdate = useAppStore((state) => state.requestProfileContactUpdate);
   const verifyProfileContactUpdate = useAppStore((state) => state.verifyProfileContactUpdate);
   const logout = useAppStore((state) => state.logout);
-  const [activeTab, setActiveTab] = useState("settings");
+  const [editingDetails, setEditingDetails] = useState(false);
   const [settingsForm, setSettingsForm] = useState(profile);
-  const [settingsPasswordError, setSettingsPasswordError] = useState("");
+  const [settingsPasswordErrors, setSettingsPasswordErrors] = useState(emptyPasswordErrors);
   const [emailVerification, setEmailVerification] = useState({ email: "", verificationId: "", otp: "", cooldown: 0, status: "idle", error: "" });
-  const [phoneCompletion, setPhoneCompletion] = useState({ phone: "", status: "idle", error: "" });
+  const [profileCompletion, setProfileCompletion] = useState(() => profileCompletionDraft(profile));
 
   useEffect(() => {
     if (!auth.user) return;
@@ -142,8 +181,8 @@ export default function ProfilePage() {
   }, [auth.user, loadSupportTickets, loadWarrantyClaims]);
 
   useEffect(() => {
-    setSettingsForm(profile);
-    setPhoneCompletion({ phone: profile.phone || "", status: "idle", error: "" });
+    setSettingsForm({ ...profile, currentPassword: "", newPassword: "", confirmPassword: "" });
+    setProfileCompletion(profileCompletionDraft(profile));
   }, [profile]);
 
   useEffect(() => {
@@ -187,37 +226,39 @@ export default function ProfilePage() {
 
   const saveProfile = async (event) => {
     event.preventDefault();
-    const wantsPasswordChange = settingsForm.currentPassword || settingsForm.newPassword;
-    if (wantsPasswordChange && (!settingsForm.currentPassword || !settingsForm.newPassword)) {
-      setSettingsPasswordError("Enter both current and new password.");
-      toast.error("Password not saved", { id: "account-profile-action", description: "Enter both current and new password." });
-      return;
-    }
-    if (settingsForm.newPassword && settingsForm.newPassword.length < 8) {
-      setSettingsPasswordError("New password must be at least 8 characters.");
-      toast.error("Password not saved", { id: "account-profile-action", description: "New password must be at least 8 characters." });
+    const passwordAllowed = canChangePassword(profile);
+    const passwordValidation = passwordAllowed ? passwordChangeValidation(settingsForm) : { wantsPasswordChange: false, errors: emptyPasswordErrors, valid: true };
+    if (!passwordValidation.valid) {
+      setSettingsPasswordErrors(passwordValidation.errors);
+      toast.error("Password not saved", { id: "account-profile-action", description: Object.values(passwordValidation.errors).find(Boolean) || "Check the password fields." });
       return;
     }
     if (!profile.phone && !isValidPhone(settingsForm.phone)) {
       toast.error("Phone number required", { id: "account-profile-action", description: "Add a valid phone number to complete your profile." });
       return;
     }
-    if (!String(settingsForm.address || "").trim() || !String(settingsForm.city || "").trim() || !String(settingsForm.state || "").trim()) {
-      toast.error("Address details required", { id: "account-profile-action", description: "Add full address, city, and state to complete your profile." });
+    if (!String(settingsForm.address || "").trim() || !String(settingsForm.city || "").trim() || !String(settingsForm.state || "").trim() || !isValidPostalCode(settingsForm.postalCode)) {
+      toast.error("Address details required", { id: "account-profile-action", description: "Add full address, city, state, and 6 digit PIN code to complete your profile." });
       return;
     }
-    const { currentPassword, newPassword, ...profileFields } = settingsForm;
+    const { currentPassword, newPassword, confirmPassword, ...profileFields } = settingsForm;
     try {
       const { email, phone, ...safeProfileFields } = profileFields;
       if (!profile.phone) safeProfileFields.phone = normalizePhone(phone);
+      if (passwordAllowed && passwordValidation.wantsPasswordChange) {
+        safeProfileFields.currentPassword = currentPassword;
+        safeProfileFields.newPassword = newPassword;
+      }
       await updateProfile(safeProfileFields);
-      setSettingsPasswordError("");
-      setSettingsForm({ ...profileFields, currentPassword: "", newPassword: "" });
+      setSettingsPasswordErrors(emptyPasswordErrors);
+      setSettingsForm({ ...profileFields, currentPassword: "", newPassword: "", confirmPassword: "" });
+      setEditingDetails(false);
       toast.success("Profile saved", {
         id: "account-profile-action",
-        description: wantsPasswordChange ? "Profile updated. Password changes remain protected by secure account verification." : "Your account details were updated.",
+        description: passwordValidation.wantsPasswordChange ? "Your password and account details were updated." : "Your account details were updated.",
       });
     } catch (error) {
+      if (passwordValidation.wantsPasswordChange) setSettingsPasswordErrors(getPasswordErrors(error.message));
       toast.error("Profile not saved", { id: "account-profile-action", description: error.message || "Please try again." });
     }
   };
@@ -234,7 +275,7 @@ export default function ProfilePage() {
         verificationId: emailVerification.verificationId,
         otp: emailVerification.otp,
       });
-      setSettingsForm((current) => ({ ...current, ...result, currentPassword: "", newPassword: "" }));
+      setSettingsForm((current) => ({ ...current, ...result, currentPassword: "", newPassword: "", confirmPassword: "" }));
       setEmailVerification({ email: "", verificationId: "", otp: "", cooldown: 0, status: "idle", error: "" });
       toast.success("Email updated", { id: "account-profile-action", description: "Your account, warranty, support, and newsletter records now use the new email." });
     } catch (error) {
@@ -247,7 +288,7 @@ export default function ProfilePage() {
     setEmailVerification((current) => ({ ...current, status: "loading", error: "" }));
     try {
       const result = await requestProfileContactUpdate({ email: emailVerification.email });
-      setEmailVerification((current) => ({ ...current, verificationId: result.verificationId || current.verificationId, cooldown: result.resendAfterSeconds || 60, status: "pending", otp: "" }));
+      setEmailVerification((current) => ({ ...current, verificationId: result.verificationId || current.verificationId, cooldown: result.resendAfterSeconds || 300, status: "pending", otp: "" }));
       toast.success("Code resent", { id: "account-profile-action", description: "Use the newest email code to continue." });
     } catch (error) {
       setEmailVerification((current) => ({ ...current, status: "pending", error: error.message || "Could not resend the code." }));
@@ -259,34 +300,50 @@ export default function ProfilePage() {
     toast.success("Logged out", { id: "account-profile-action", description: "Your secure session has ended." });
   };
 
-  const completePhoneNumber = async (event) => {
+  const completeRequiredProfileDetails = async (event) => {
     event.preventDefault();
-    const phone = normalizePhone(phoneCompletion.phone);
-    if (!isValidPhone(phone)) {
-      setPhoneCompletion((current) => ({ ...current, error: "Enter a valid mobile number." }));
+    const phoneLocked = Boolean(profile.phone);
+    const errors = validateProfileCompletion(profileCompletion, phoneLocked);
+    if (Object.keys(errors).length) {
+      setProfileCompletion((current) => ({ ...current, errors }));
+      toast.error("Complete required details", {
+        id: "account-profile-action",
+        description: Object.values(errors).join(" "),
+      });
       return;
     }
-    setPhoneCompletion((current) => ({ ...current, status: "loading", error: "" }));
+    const payload = {
+      address: String(profileCompletion.address || "").trim(),
+      city: String(profileCompletion.city || "").trim(),
+      state: String(profileCompletion.state || "").trim(),
+      postalCode: String(profileCompletion.postalCode || "").trim(),
+    };
+    if (!phoneLocked) payload.phone = normalizePhone(profileCompletion.phone);
+    setProfileCompletion((current) => ({ ...current, status: "loading", errors: {} }));
     try {
-      await updateProfile({ phone });
-      setSettingsForm((current) => ({ ...current, phone }));
-      setPhoneCompletion({ phone, status: "idle", error: "" });
-      toast.success("Mobile number saved", { id: "account-profile-action", description: "Your account profile is complete." });
+      await updateProfile(payload);
+      setSettingsForm((current) => ({ ...current, ...payload }));
+      setProfileCompletion((current) => ({ ...current, ...payload, status: "idle", errors: {} }));
+      toast.success("Profile details saved", { id: "account-profile-action", description: "Your account profile is complete." });
     } catch (error) {
-      setPhoneCompletion((current) => ({ ...current, status: "idle", error: error.message || "Could not save mobile number." }));
+      setProfileCompletion((current) => ({
+        ...current,
+        status: "idle",
+        errors: { form: error.message || "Could not save profile details." },
+      }));
     }
   };
 
   return (
     <CommerceShell seoTitle="Customer Profile" seoDescription="Premium INFIBOLT customer ownership hub.">
       <AccountAtmosphere>
-        {!profile.phone && (
-          <PhoneCompletionModal
-            value={phoneCompletion.phone}
-            error={phoneCompletion.error}
-            loading={phoneCompletion.status === "loading"}
-            onChange={(phone) => setPhoneCompletion((current) => ({ ...current, phone, error: "" }))}
-            onSubmit={completePhoneNumber}
+        {missingProfileFields(profile).length > 0 && (
+          <ProfileCompletionModal
+            profile={profile}
+            form={profileCompletion}
+            loading={profileCompletion.status === "loading"}
+            onChange={(patch) => setProfileCompletion((current) => ({ ...current, ...patch, errors: { ...current.errors, ...Object.fromEntries(Object.keys(patch).map((key) => [key, ""])) } }))}
+            onSubmit={completeRequiredProfileDetails}
           />
         )}
         <MotionSection className="px-3 pb-32 pt-6 sm:px-6 md:px-8 md:pb-24 lg:pt-10">
@@ -301,13 +358,12 @@ export default function ProfilePage() {
               onVerifyEmail={verifyEmailChange}
               onResendEmail={resendEmailChange}
               onCancelEmail={() => setEmailVerification({ email: "", verificationId: "", otp: "", cooldown: 0, status: "idle", error: "" })}
-              onOpenTab={setActiveTab}
               onLogout={handleLogout}
             />
           </div>
 
           <div className="mx-auto hidden w-full max-w-[1320px] min-w-0 gap-4 sm:gap-5 lg:grid">
-            <AccountHero profile={profile} />
+            <AccountHero profile={profile} onLogout={handleLogout} />
             {missingProfileFields(profile).length > 0 && (
               <AccountCard className="p-5 sm:p-6">
                 <SoftStatus>Complete profile</SoftStatus>
@@ -315,74 +371,41 @@ export default function ProfilePage() {
                 <p className="mt-2 text-sm font-light leading-7 text-slate-600">
                   Please add your {missingProfileFields(profile).join(", ")} so warranty, support, pickup, and delivery updates can continue smoothly.
                 </p>
-                <button type="button" onClick={() => setActiveTab("settings")} className="mt-5 inline-flex min-h-[44px] items-center justify-center rounded-full bg-slate-950 px-5 text-xs font-semibold uppercase tracking-[0.14em] text-white">
-                  Complete details
+                <button type="button" onClick={() => setEditingDetails(true)} className="mt-5 inline-flex min-h-[44px] items-center justify-center rounded-full bg-slate-950 px-5 text-xs font-semibold uppercase tracking-[0.14em] text-white">
+                  Edit details
                 </button>
               </AccountCard>
             )}
 
-            <div className="grid min-w-0 gap-4 sm:gap-5 lg:grid-cols-[282px_1fr]">
-              <AccountNav activeTab={activeTab} onChange={setActiveTab} onLogout={handleLogout} />
-
-              <div className="min-w-0 overflow-hidden">
-                <AnimatePresence mode="wait">
-                  {activeTab === "overview" && (
-                    <TabPanel key="overview">
-                      <OverviewPanel />
-                    </TabPanel>
-                  )}
-                  {activeTab === "products" && (
-                    <TabPanel key="products">
-                      <ProductsPanel devices={ownershipPreviewDevices} />
-                    </TabPanel>
-                  )}
-                  {activeTab === "warranty" && (
-                    <TabPanel key="warranty">
-                      <WarrantyPanel items={warrantyItems} status={warranty.status} error={warranty.error} />
-                    </TabPanel>
-                  )}
-                  {activeTab === "support" && (
-                    <TabPanel key="support">
-                      <SupportPanel items={supportItems} status={support.status} error={support.error} />
-                    </TabPanel>
-                  )}
-                  {activeTab === "saved" && (
-                    <TabPanel key="saved">
-                      <SavedPanel items={savedItems} usingSamples={!wishlist.length} />
-                    </TabPanel>
-                  )}
-                  {activeTab === "addresses" && (
-                    <TabPanel key="addresses">
-                      <AddressesPanel profile={profile} />
-                    </TabPanel>
-                  )}
-                  {activeTab === "alerts" && (
-                    <TabPanel key="alerts">
-                      <AlertsPanel />
-                    </TabPanel>
-                  )}
-                  {activeTab === "settings" && (
-                    <TabPanel key="settings">
-                      <SettingsPanel
-                        form={settingsForm}
-                        phone={profile.phone}
-                        passwordError={settingsPasswordError}
-                        onChange={setSettingsForm}
-                        onCancel={() => {
-                          setSettingsForm({ ...profile, currentPassword: "", newPassword: "" });
-                          setSettingsPasswordError("");
-                        }}
-                        onSubmit={saveProfile}
-                        emailVerification={emailVerification}
-                        onEmailOtpChange={(otp) => setEmailVerification((current) => ({ ...current, otp, error: "" }))}
-                        onVerifyEmail={verifyEmailChange}
-                        onResendEmail={resendEmailChange}
-                        onCancelEmail={() => setEmailVerification({ email: "", verificationId: "", otp: "", cooldown: 0, status: "idle", error: "" })}
-                      />
-                    </TabPanel>
-                  )}
-                </AnimatePresence>
-              </div>
+            <div className="min-w-0 overflow-hidden">
+              <AnimatePresence mode="wait">
+                {editingDetails ? (
+                  <TabPanel key="configure-profile">
+                    <SettingsPanel
+                      form={settingsForm}
+                      phone={profile.phone}
+                      allowPasswordChange={canChangePassword(profile)}
+                      passwordErrors={settingsPasswordErrors}
+                      onChange={setSettingsForm}
+                      onCancel={() => {
+                        setSettingsForm({ ...profile, currentPassword: "", newPassword: "", confirmPassword: "" });
+                        setSettingsPasswordErrors(emptyPasswordErrors);
+                        setEditingDetails(false);
+                      }}
+                      onSubmit={saveProfile}
+                      emailVerification={emailVerification}
+                      onEmailOtpChange={(otp) => setEmailVerification((current) => ({ ...current, otp, error: "" }))}
+                      onVerifyEmail={verifyEmailChange}
+                      onResendEmail={resendEmailChange}
+                      onCancelEmail={() => setEmailVerification({ email: "", verificationId: "", otp: "", cooldown: 0, status: "idle", error: "" })}
+                    />
+                  </TabPanel>
+                ) : (
+                  <TabPanel key="profile-details">
+                    <ProfileDetailsPanel profile={profile} onEdit={() => setEditingDetails(true)} />
+                  </TabPanel>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </MotionSection>
@@ -391,66 +414,58 @@ export default function ProfilePage() {
   );
 }
 
-function MobileProfileApp({ profile, updateProfile, requestProfileContactUpdate, emailVerification, onEmailOtpChange, onEmailVerificationStart, onVerifyEmail, onResendEmail, onCancelEmail, onOpenTab, onLogout }) {
+function MobileProfileApp({ profile, updateProfile, requestProfileContactUpdate, emailVerification, onEmailOtpChange, onEmailVerificationStart, onVerifyEmail, onResendEmail, onCancelEmail, onLogout }) {
   const [editingProfile, setEditingProfile] = useState(false);
   const [mobileForm, setMobileForm] = useState(profile);
-  const [passwordError, setPasswordError] = useState("");
-  const [settingsSpin, setSettingsSpin] = useState("");
+  const [passwordErrors, setPasswordErrors] = useState(emptyPasswordErrors);
   const missingFields = missingProfileFields(profile);
 
   useEffect(() => {
-    setMobileForm({ ...profile, currentPassword: "", newPassword: "" });
+    setMobileForm({ ...profile, currentPassword: "", newPassword: "", confirmPassword: "" });
   }, [profile]);
 
   const saveMobileProfile = async (event) => {
     event.preventDefault();
-    const wantsPasswordChange = mobileForm.currentPassword || mobileForm.newPassword;
-    if (wantsPasswordChange && (!mobileForm.currentPassword || !mobileForm.newPassword)) {
-      setPasswordError("Enter both current and new password.");
-      toast.error("Password not saved", { id: "account-profile-action", description: "Enter both current and new password." });
-      return;
-    }
-    if (mobileForm.newPassword && mobileForm.newPassword.length < 8) {
-      setPasswordError("New password must be at least 8 characters.");
-      toast.error("Password not saved", { id: "account-profile-action", description: "New password must be at least 8 characters." });
+    const passwordAllowed = canChangePassword(profile);
+    const passwordValidation = passwordAllowed ? passwordChangeValidation(mobileForm) : { wantsPasswordChange: false, errors: emptyPasswordErrors, valid: true };
+    if (!passwordValidation.valid) {
+      setPasswordErrors(passwordValidation.errors);
+      toast.error("Password not saved", { id: "account-profile-action", description: Object.values(passwordValidation.errors).find(Boolean) || "Check the password fields." });
       return;
     }
     if (!profile.phone && !isValidPhone(mobileForm.phone)) {
       toast.error("Phone number required", { id: "account-profile-action", description: "Add a valid phone number to complete your profile." });
       return;
     }
-    if (!String(mobileForm.address || "").trim() || !String(mobileForm.city || "").trim() || !String(mobileForm.state || "").trim()) {
-      toast.error("Address details required", { id: "account-profile-action", description: "Add full address, city, and state to complete your profile." });
+    if (!String(mobileForm.address || "").trim() || !String(mobileForm.city || "").trim() || !String(mobileForm.state || "").trim() || !isValidPostalCode(mobileForm.postalCode)) {
+      toast.error("Address details required", { id: "account-profile-action", description: "Add full address, city, state, and 6 digit PIN code to complete your profile." });
       return;
     }
-    const { currentPassword, newPassword, ...profileFields } = mobileForm;
+    const { currentPassword, newPassword, confirmPassword, ...profileFields } = mobileForm;
     try {
       const { email, phone, ...safeProfileFields } = profileFields;
       if (!profile.phone) safeProfileFields.phone = normalizePhone(phone);
+      if (passwordAllowed && passwordValidation.wantsPasswordChange) {
+        safeProfileFields.currentPassword = currentPassword;
+        safeProfileFields.newPassword = newPassword;
+      }
       await updateProfile(safeProfileFields);
-      setPasswordError("");
-      setMobileForm({ ...profileFields, currentPassword: "", newPassword: "" });
+      setPasswordErrors(emptyPasswordErrors);
+      setMobileForm({ ...profileFields, currentPassword: "", newPassword: "", confirmPassword: "" });
       setEditingProfile(false);
       toast.success("Account saved", {
         id: "account-profile-action",
-        description: wantsPasswordChange ? "Profile updated. Password changes remain protected by secure account verification." : "Your profile details were updated.",
+        description: passwordValidation.wantsPasswordChange ? "Your password and profile details were updated." : "Your profile details were updated.",
       });
     } catch (error) {
+      if (passwordValidation.wantsPasswordChange) setPasswordErrors(getPasswordErrors(error.message));
       toast.error("Profile not saved", { id: "account-profile-action", description: error.message || "Please try again." });
     }
   };
 
-  const toggleMobileSettings = () => {
-    setEditingProfile((isOpen) => {
-      setSettingsSpin(isOpen ? "close" : "open");
-      window.setTimeout(() => setSettingsSpin(""), 460);
-      return !isOpen;
-    });
-  };
-
   return (
     <div className="grid min-w-0 gap-4">
-      <MobileProfileHeader profile={profile} onEdit={toggleMobileSettings} spinning={settingsSpin} />
+      <MobileProfileHeader profile={profile} onLogout={onLogout} />
       {missingFields.length > 0 && !editingProfile && (
         <section className="rounded-[1.35rem] border border-amber-700/12 bg-amber-50/76 p-4 shadow-[0_14px_42px_rgba(15,23,42,0.055)]">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-800">Complete profile</p>
@@ -458,22 +473,23 @@ function MobileProfileApp({ profile, updateProfile, requestProfileContactUpdate,
           <p className="mt-2 text-sm leading-6 text-slate-600">Please add your {missingFields.join(", ")} for warranty pickup, delivery, and support.</p>
           <button
             type="button"
-            onClick={toggleMobileSettings}
+            onClick={() => setEditingProfile(true)}
             className="mt-4 min-h-[44px] rounded-full bg-slate-950 px-5 text-xs font-semibold uppercase tracking-[0.14em] text-white"
           >
-            Complete details
+            Edit details
           </button>
         </section>
       )}
-      {editingProfile && (
-        <MobileProfileEditor
-          form={mobileForm}
-          phone={profile.phone}
+      {editingProfile ? (
+          <MobileProfileEditor
+            form={mobileForm}
+            phone={profile.phone}
+            allowPasswordChange={canChangePassword(profile)}
           onChange={setMobileForm}
-          passwordError={passwordError}
+          passwordErrors={passwordErrors}
           onCancel={() => {
-            setMobileForm({ ...profile, currentPassword: "", newPassword: "" });
-            setPasswordError("");
+            setMobileForm({ ...profile, currentPassword: "", newPassword: "", confirmPassword: "" });
+            setPasswordErrors(emptyPasswordErrors);
             setEditingProfile(false);
           }}
           onSubmit={saveMobileProfile}
@@ -483,51 +499,95 @@ function MobileProfileApp({ profile, updateProfile, requestProfileContactUpdate,
           onResendEmail={onResendEmail}
           onCancelEmail={onCancelEmail}
         />
+      ) : (
+        <MobileProfileDetails profile={profile} onEdit={() => setEditingProfile(true)} />
       )}
-      <MobileServiceSection title="Account options" items={[...mobileQuickActions, ...mobileServices]} onOpenTab={onOpenTab} />
-      <button
-        type="button"
-        onClick={onLogout}
-        className="min-h-[48px] rounded-[1.15rem] border border-rose-900/10 bg-white/72 px-5 text-sm font-semibold text-rose-800 shadow-[0_12px_34px_rgba(15,23,42,0.045)]"
-      >
-        Logout
-      </button>
     </div>
   );
 }
 
-function PhoneCompletionModal({ value, error, loading, onChange, onSubmit }) {
+function ProfileCompletionModal({ profile, form, loading, onChange, onSubmit }) {
+  const phoneLocked = Boolean(profile.phone);
+  const missingFields = missingProfileFields({ ...profile, ...form });
+  const errors = form.errors || {};
   return (
     <div className="fixed inset-0 z-[120] grid place-items-center bg-slate-950/38 px-4 py-6 backdrop-blur-sm">
-      <form onSubmit={onSubmit} className="w-full max-w-[430px] rounded-[1.45rem] border border-white/70 bg-white p-5 shadow-[0_30px_90px_rgba(15,23,42,0.22)] sm:p-6">
+      <form onSubmit={onSubmit} className="max-h-[calc(100svh-2rem)] w-full max-w-[560px] overflow-y-auto rounded-[1.45rem] border border-white/70 bg-white p-5 shadow-[0_30px_90px_rgba(15,23,42,0.22)] sm:p-6">
         <SoftStatus>Complete profile</SoftStatus>
-        <h2 className="mt-4 text-2xl font-semibold tracking-normal text-slate-950">Add mobile number</h2>
+        <h2 className="mt-4 text-2xl font-semibold tracking-normal text-slate-950">Add required account details</h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          Google does not share your mobile number. Add it once for warranty, support, and account recovery.
+          Add the missing details once so warranty, delivery, pickup, and support requests stay connected to your account.
         </p>
         <div className="mt-4 rounded-2xl border border-amber-700/15 bg-amber-50 px-4 py-3 text-xs font-medium leading-5 text-amber-900">
           Please check carefully. Once this mobile number is saved, it cannot be edited from your account.
         </div>
-        <div className="mt-5">
+        {missingFields.length > 0 && (
+          <div className="mt-4 rounded-2xl border border-slate-900/8 bg-slate-50 px-4 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Still needed</p>
+            <p className="mt-1 text-sm font-medium leading-6 text-slate-700">{missingFields.join(", ")}</p>
+          </div>
+        )}
+        {errors.form && (
+          <div className="mt-4 rounded-2xl border border-rose-900/10 bg-rose-50 px-4 py-3 text-xs font-semibold leading-5 text-rose-800">
+            {errors.form}
+          </div>
+        )}
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <PremiumField
             label="Mobile number"
             inputMode="numeric"
-            autoComplete="off"
-            value={value}
-            onChange={onChange}
-            error={error}
+            autoComplete="tel"
+            value={form.phone || ""}
+            onChange={(phone) => onChange({ phone: normalizePhone(phone).slice(0, 15) })}
+            error={errors.phone}
+            disabled={phoneLocked}
+            helper={phoneLocked ? "Mobile number is already locked to this account." : "Required for warranty, support, and account recovery."}
             placeholder="Enter mobile number"
+          />
+          <PremiumField
+            label="PIN code"
+            inputMode="numeric"
+            autoComplete="postal-code"
+            value={form.postalCode || ""}
+            onChange={(postalCode) => onChange({ postalCode: postalCode.replace(/\D/g, "").slice(0, 6) })}
+            error={errors.postalCode}
+            placeholder="560001"
+          />
+          <div className="sm:col-span-2">
+            <PremiumField
+              label="Full address"
+              autoComplete="street-address"
+              value={form.address || ""}
+              onChange={(address) => onChange({ address })}
+              error={errors.address}
+              placeholder="House / flat, street, area"
+            />
+          </div>
+          <PremiumField
+            label="City"
+            autoComplete="address-level2"
+            value={form.city || ""}
+            onChange={(city) => onChange({ city })}
+            error={errors.city}
+            placeholder="Bengaluru"
+          />
+          <PremiumSelect
+            label="State"
+            value={form.state || ""}
+            onChange={(state) => onChange({ state })}
+            options={["", ...indianStates]}
+            error={errors.state}
           />
         </div>
         <PremiumButton loading={loading} type="submit" className="mt-5 w-full">
-          {loading ? "Saving..." : "Save and lock mobile number"}
+          {loading ? "Saving..." : "Save required details"}
         </PremiumButton>
       </form>
     </div>
   );
 }
 
-function MobileProfileHeader({ profile, onEdit, spinning }) {
+function MobileProfileHeader({ profile, onLogout }) {
   const initials = String(profile.name || "IB").trim().slice(0, 1).toUpperCase() || "I";
   return (
     <section className="relative overflow-hidden rounded-[1.45rem] border border-slate-900/8 bg-white/78 p-4 shadow-[0_18px_56px_rgba(15,23,42,0.08)] backdrop-blur-2xl">
@@ -547,24 +607,75 @@ function MobileProfileHeader({ profile, onEdit, spinning }) {
         </div>
         <button
           type="button"
-          onClick={onEdit}
-          aria-label="Edit profile"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/78 text-slate-700 ring-1 ring-slate-900/8 transition active:scale-95"
+          onClick={onLogout}
+          aria-label="Logout"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-800 ring-1 ring-rose-900/10 transition active:scale-95"
         >
-          <Settings className={`h-4.5 w-4.5 ${spinning === "open" ? "settings-gear-spin-open" : ""} ${spinning === "close" ? "settings-gear-spin-close" : ""}`} strokeWidth={1.85} />
+          <LogOut className="h-4 w-4" strokeWidth={1.85} />
         </button>
       </div>
     </section>
   );
 }
 
-function MobileProfileEditor({ form, phone, onChange, passwordError, onCancel, onSubmit, emailVerification, onEmailOtpChange, onVerifyEmail, onResendEmail, onCancelEmail }) {
+function MobileProfileDetails({ profile, onEdit }) {
+  const details = profileDetailItems(profile);
+  return (
+    <section className="rounded-[1.35rem] border border-slate-900/8 bg-white/82 p-4 shadow-[0_14px_42px_rgba(15,23,42,0.055)] backdrop-blur-2xl">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Profile</p>
+          <h2 className="mt-2 text-xl font-semibold tracking-normal text-slate-950">Account details</h2>
+        </div>
+        <span className="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-800">
+          Secure
+        </span>
+      </div>
+      <div className="mt-5 grid gap-3">
+        {details.map((item) => (
+          <div key={item.label} className="rounded-[1rem] border border-slate-900/6 bg-slate-50/72 px-4 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{item.label}</p>
+            <p className="mt-1 break-words text-sm font-medium leading-6 text-slate-800">{item.value}</p>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={onEdit}
+        className="mt-5 min-h-[48px] w-full rounded-full bg-slate-950 px-5 text-xs font-semibold uppercase tracking-[0.14em] text-white"
+      >
+        Edit details
+      </button>
+    </section>
+  );
+}
+
+function PasswordChecklist({ password }) {
+  if (!password) {
+    return <p className="text-xs font-medium leading-5 text-slate-500">To change password, enter current password, a strong new password, and confirm it.</p>;
+  }
+  return (
+    <div className="flex flex-wrap gap-2">
+      {passwordRuleChecks.map((rule) => {
+        const passed = rule.test(password);
+        return (
+          <span key={rule.label} className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${passed ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            {rule.label}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function MobileProfileEditor({ form, phone, allowPasswordChange = true, onChange, passwordErrors = emptyPasswordErrors, onCancel, onSubmit, emailVerification, onEmailOtpChange, onVerifyEmail, onResendEmail, onCancelEmail }) {
   const phoneLocked = Boolean(phone);
   return (
     <form onSubmit={onSubmit} className="grid gap-4 rounded-[1.35rem] border border-slate-900/8 bg-white/82 p-4 shadow-[0_14px_42px_rgba(15,23,42,0.055)] backdrop-blur-2xl">
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Profile details</p>
-        <h2 className="mt-2 text-xl font-semibold tracking-normal text-slate-950">Edit account</h2>
+        <h2 className="mt-2 text-xl font-semibold tracking-normal text-slate-950">Configure profile details</h2>
       </div>
       <PremiumField label="Full name" value={form.name || ""} onChange={(name) => onChange((current) => ({ ...current, name }))} />
       <PremiumField label="Email" type="email" value={form.email || ""} onChange={() => {}} disabled helper="Account email is fixed after signup." />
@@ -582,12 +693,17 @@ function MobileProfileEditor({ form, phone, onChange, passwordError, onCancel, o
       <div className="grid grid-cols-2 gap-3">
         <PremiumField label="City" value={form.city || ""} onChange={(city) => onChange((current) => ({ ...current, city }))} />
         <PremiumSelect label="State" value={form.state || ""} onChange={(state) => onChange((current) => ({ ...current, state }))} options={["", ...indianStates]} />
+        <PremiumField label="PIN code" value={form.postalCode || ""} onChange={(postalCode) => onChange((current) => ({ ...current, postalCode: postalCode.replace(/\D/g, "").slice(0, 6) }))} inputMode="numeric" helper="Required for pickup and delivery." />
       </div>
-      <div className="grid gap-4 border-t border-slate-900/8 pt-4">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Password</p>
-        <PremiumField label="Current password" type="password" value={form.currentPassword || ""} onChange={(currentPassword) => onChange((current) => ({ ...current, currentPassword }))} />
-        <PremiumField label="New password" type="password" value={form.newPassword || ""} onChange={(newPassword) => onChange((current) => ({ ...current, newPassword }))} error={passwordError} />
-      </div>
+      {allowPasswordChange && (
+        <div className="grid gap-4 border-t border-slate-900/8 pt-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Password</p>
+          <PremiumField label="Current password" type="password" value={form.currentPassword || ""} onChange={(currentPassword) => onChange((current) => ({ ...current, currentPassword }))} error={passwordErrors.currentPassword} />
+          <PremiumField label="New password" type="password" value={form.newPassword || ""} onChange={(newPassword) => onChange((current) => ({ ...current, newPassword }))} error={passwordErrors.newPassword} />
+          <PremiumField label="Confirm new password" type="password" value={form.confirmPassword || ""} onChange={(confirmPassword) => onChange((current) => ({ ...current, confirmPassword }))} error={passwordErrors.confirmPassword} />
+          <PasswordChecklist password={form.newPassword} />
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <button
           type="button"
@@ -597,7 +713,7 @@ function MobileProfileEditor({ form, phone, onChange, passwordError, onCancel, o
           Cancel
         </button>
         <PremiumButton type="submit" className="min-h-[48px]">
-          Save
+          Update
         </PremiumButton>
       </div>
     </form>
@@ -656,7 +772,7 @@ function MobileSection({ title, action, onAction, children }) {
   );
 }
 
-function AccountHero({ profile }) {
+function AccountHero({ profile, onLogout }) {
   return (
     <section className="relative overflow-hidden rounded-[1.1rem] border border-slate-900/8 bg-white/72 px-4 py-5 shadow-[0_20px_70px_rgba(15,23,42,0.075)] backdrop-blur-2xl sm:rounded-[1.35rem] sm:px-6 md:px-8 md:py-8">
       <div className="pointer-events-none absolute inset-0">
@@ -664,19 +780,29 @@ function AccountHero({ profile }) {
         <div className="absolute right-[-9rem] top-[-10rem] h-[24rem] w-[24rem] rounded-full bg-[radial-gradient(circle,rgba(14,165,233,0.13),transparent_64%)] blur-2xl" />
         <div className="absolute bottom-[-11rem] left-[22%] h-[22rem] w-[22rem] rounded-full bg-[radial-gradient(circle,rgba(16,185,129,0.1),transparent_66%)] blur-2xl" />
       </div>
-      <div className="relative max-w-3xl min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 sm:tracking-[0.22em]">Infibolt account</p>
-        <h1 className="mt-3 max-w-full text-[1.72rem] font-semibold leading-[1.08] tracking-normal text-slate-950 sm:text-[2.55rem]">
-          Good to see you, {firstName(profile.name)}.
-        </h1>
-        <p className="mt-4 max-w-full text-sm font-light leading-7 text-slate-600 sm:max-w-xl sm:text-[15px]">
-          Manage your profile, saved products, warranty records, and support conversations from one clean account space.
-        </p>
-        <div className="mt-6 grid max-w-full gap-2 text-sm font-medium text-slate-600 sm:flex sm:flex-wrap sm:gap-3">
-          <span className="min-w-0 break-words">{profile.email}</span>
-          <span className="hidden text-slate-300 sm:inline">/</span>
-          <span className="min-w-0 break-words">{profile.phone}</span>
+      <div className="relative flex min-w-0 flex-col gap-5 md:flex-row md:items-end md:justify-between">
+        <div className="max-w-3xl min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 sm:tracking-[0.22em]">Infibolt account</p>
+          <h1 className="mt-3 max-w-full text-[1.72rem] font-semibold leading-[1.08] tracking-normal text-slate-950 sm:text-[2.55rem]">
+            Good to see you, {firstName(profile.name)}.
+          </h1>
+          <p className="mt-4 max-w-full text-sm font-light leading-7 text-slate-600 sm:max-w-xl sm:text-[15px]">
+            Keep your profile details ready for warranty, pickup, delivery, and support.
+          </p>
+          <div className="mt-6 grid max-w-full gap-2 text-sm font-medium text-slate-600 sm:flex sm:flex-wrap sm:gap-3">
+            <span className="min-w-0 break-words">{profile.email}</span>
+            <span className="hidden text-slate-300 sm:inline">/</span>
+            <span className="min-w-0 break-words">{profile.phone}</span>
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={onLogout}
+          className="inline-flex min-h-[46px] shrink-0 items-center justify-center gap-2 rounded-full border border-rose-900/10 bg-rose-50 px-5 text-xs font-semibold uppercase tracking-[0.14em] text-rose-800 transition hover:bg-rose-100"
+        >
+          <LogOut className="h-4 w-4" strokeWidth={1.85} />
+          Logout
+        </button>
       </div>
     </section>
   );
@@ -833,7 +959,7 @@ function AddressesPanel({ profile }) {
             <div>
               <p className="font-semibold text-slate-950">Primary address</p>
               <p className="mt-2 text-sm font-light leading-7 text-slate-600">{profile.address || "Full address not added"}</p>
-              <p className="text-sm font-light leading-7 text-slate-600">{[profile.city, profile.state].filter(Boolean).join(", ") || "City and state not added"}</p>
+              <p className="text-sm font-light leading-7 text-slate-600">{[profile.city, profile.state, profile.postalCode].filter(Boolean).join(", ") || "City, state, and PIN code not added"}</p>
               <p className="text-sm font-light leading-7 text-slate-600">Use marketplace invoice and serial details to activate device care.</p>
             </div>
           </div>
@@ -878,11 +1004,74 @@ function AlertsPanel() {
   );
 }
 
-function SettingsPanel({ form, phone, passwordError, onChange, onCancel, onSubmit, emailVerification, onEmailOtpChange, onVerifyEmail, onResendEmail, onCancelEmail }) {
+function ProfileDetailsPanel({ profile, onEdit }) {
+  const details = profileDetailItems(profile);
+  const missingFields = missingProfileFields(profile);
+  return (
+    <AccountCard className="overflow-hidden p-0">
+      <div className="relative overflow-hidden px-5 py-6 sm:px-7 sm:py-8">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_92%_6%,rgba(16,185,129,0.12),transparent_32%),linear-gradient(135deg,rgba(255,255,255,0.94),rgba(248,250,252,0.74))]" />
+        <div className="relative flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+          <div className="min-w-0">
+            <SectionHeading
+              label="Profile"
+              title="Account details"
+              description="Your customer profile is used for warranty pickup, delivery, support, and ownership communication."
+            />
+            <div className="mt-5 flex flex-wrap gap-2">
+              <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-800">
+                Verified account
+              </span>
+              <span className={`rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${missingFields.length ? "bg-amber-50 text-amber-800" : "bg-slate-950 text-white"}`}>
+                {missingFields.length ? "Details required" : "Profile complete"}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex min-h-[48px] shrink-0 items-center justify-center rounded-full bg-slate-950 px-6 text-xs font-semibold uppercase tracking-[0.14em] text-white shadow-[0_18px_42px_rgba(15,23,42,0.14)] transition hover:-translate-y-0.5 hover:bg-slate-800"
+          >
+            Edit details
+          </button>
+        </div>
+      </div>
+      <div className="grid gap-3 border-t border-slate-900/8 bg-white/62 p-5 sm:grid-cols-2 sm:p-6 xl:grid-cols-3">
+        {details.map((item) => (
+          <ProfileDetailTile key={item.label} label={item.label} value={item.value} important={item.important} />
+        ))}
+      </div>
+    </AccountCard>
+  );
+}
+
+function ProfileDetailTile({ label, value, important }) {
+  return (
+    <div className={`min-w-0 rounded-[1.1rem] border px-4 py-4 ${important ? "border-amber-700/14 bg-amber-50/74" : "border-slate-900/6 bg-slate-50/72"}`}>
+      <p className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${important ? "text-amber-800" : "text-slate-400"}`}>{label}</p>
+      <p className="mt-2 break-words text-sm font-medium leading-6 text-slate-800">{value}</p>
+    </div>
+  );
+}
+
+function profileDetailItems(profile = {}) {
+  const empty = (label) => ({ label, value: "Not added", important: true });
+  return [
+    { label: "Full name", value: profile.name || "Not added", important: !profile.name },
+    { label: "Email", value: profile.email || "Not added", important: !profile.email },
+    isValidPhone(profile.phone) ? { label: "Phone number", value: profile.phone } : empty("Phone number"),
+    String(profile.address || "").trim() ? { label: "Full address", value: profile.address } : empty("Full address"),
+    String(profile.city || "").trim() ? { label: "City", value: profile.city } : empty("City"),
+    String(profile.state || "").trim() ? { label: "State", value: profile.state } : empty("State"),
+    isValidPostalCode(profile.postalCode) ? { label: "PIN code", value: profile.postalCode } : empty("PIN code"),
+  ];
+}
+
+function SettingsPanel({ form, phone, allowPasswordChange = true, passwordErrors = emptyPasswordErrors, onChange, onCancel, onSubmit, emailVerification, onEmailOtpChange, onVerifyEmail, onResendEmail, onCancelEmail }) {
   const phoneLocked = Boolean(phone);
   return (
     <AccountCard className="p-4 sm:p-6">
-      <SectionHeading label="Settings" title="Edit account" description="Keep your profile details current and manage password changes from the same account space." />
+      <SectionHeading label="Profile details" title="Configure profile details" description="Update the information used for warranty pickup, delivery, support, and secure account communication." />
       <form onSubmit={onSubmit} className="mt-6 grid gap-5">
         <div className="grid gap-4 border-b border-slate-900/8 pb-5">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Profile details</p>
@@ -901,16 +1090,21 @@ function SettingsPanel({ form, phone, passwordError, onChange, onCancel, onSubmi
             <PremiumField label="Full address" value={form.address || ""} onChange={(address) => onChange((current) => ({ ...current, address }))} helper="Required for warranty pickup, delivery, and support." />
             <PremiumField label="City" value={form.city || ""} onChange={(city) => onChange((current) => ({ ...current, city }))} />
             <PremiumSelect label="State" value={form.state || ""} onChange={(state) => onChange((current) => ({ ...current, state }))} options={["", ...indianStates]} />
+            <PremiumField label="PIN code" value={form.postalCode || ""} onChange={(postalCode) => onChange((current) => ({ ...current, postalCode: postalCode.replace(/\D/g, "").slice(0, 6) }))} inputMode="numeric" helper="Required for pickup and delivery." />
           </div>
           <EmailVerificationPanel verification={emailVerification} onOtpChange={onEmailOtpChange} onVerify={onVerifyEmail} onResend={onResendEmail} onCancel={onCancelEmail} />
         </div>
-        <div className="grid gap-4 border-b border-slate-900/8 pb-5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Password</p>
-          <div className="grid gap-4 md:grid-cols-2">
-            <PremiumField label="Current password" type="password" value={form.currentPassword || ""} onChange={(currentPassword) => onChange((current) => ({ ...current, currentPassword }))} />
-            <PremiumField label="New password" type="password" value={form.newPassword || ""} onChange={(newPassword) => onChange((current) => ({ ...current, newPassword }))} error={passwordError} />
+        {allowPasswordChange && (
+          <div className="grid gap-4 border-b border-slate-900/8 pb-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Password</p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <PremiumField label="Current password" type="password" value={form.currentPassword || ""} onChange={(currentPassword) => onChange((current) => ({ ...current, currentPassword }))} error={passwordErrors.currentPassword} />
+              <PremiumField label="New password" type="password" value={form.newPassword || ""} onChange={(newPassword) => onChange((current) => ({ ...current, newPassword }))} error={passwordErrors.newPassword} />
+              <PremiumField label="Confirm new password" type="password" value={form.confirmPassword || ""} onChange={(confirmPassword) => onChange((current) => ({ ...current, confirmPassword }))} error={passwordErrors.confirmPassword} />
+            </div>
+            <PasswordChecklist password={form.newPassword} />
           </div>
-        </div>
+        )}
         <div className="grid gap-3 sm:grid-cols-[0.35fr_1fr]">
           <button
             type="button"
@@ -919,7 +1113,7 @@ function SettingsPanel({ form, phone, passwordError, onChange, onCancel, onSubmi
           >
             Cancel
           </button>
-          <PremiumButton type="submit">Save profile</PremiumButton>
+          <PremiumButton type="submit">Update details</PremiumButton>
         </div>
       </form>
     </AccountCard>

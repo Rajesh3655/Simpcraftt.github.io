@@ -62,7 +62,7 @@ export default function AdminLoginPage() {
   useEffect(() => {
     if (!auth.mfa) return undefined;
     setOtp(["", "", "", "", "", ""]);
-    setResendLeft(auth.mfa.resendAfterSeconds || 60);
+    setResendLeft(auth.mfa.resendAfterSeconds || 300);
     setExpiresLeft(auth.mfa.expiresInSeconds || 300);
     window.setTimeout(() => otpRefs.current[0]?.focus(), 120);
     const timer = window.setInterval(() => {

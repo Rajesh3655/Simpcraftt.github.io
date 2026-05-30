@@ -1,5 +1,8 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /api/
 Disallow: /profile
 Disallow: /settings
 Disallow: /orders
@@ -11,5 +14,9 @@ Disallow: /register
 Disallow: /signup
 Disallow: /checkout
 Disallow: /cart
+Disallow: /uploads/warranty
+Disallow: /uploads/rma
+Disallow: /uploads/support
+Disallow: /uploads/temp
 
 Sitemap: https://infibolt.com/sitemap.xml

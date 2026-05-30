@@ -29,5 +29,9 @@ export const customerSignupValidator = [
   }),
   strongPasswordField,
 ];
-export const otpValidator = body("otp").trim().isLength({ min: 6, max: 6 });
-export const verificationIdField = body("verificationId").optional().trim().isLength({ min: 12, max: 80 });
+export const termsAcceptedField = body("acceptedTerms")
+  .custom((value) => value === true || value === "true")
+  .withMessage("Accept the Terms and Privacy Policy to continue.");
+export const googleAuthFlowField = body("flow").optional().isIn(["login", "signup"]);
+export const otpValidator = body("otp").trim().matches(/^\d{6}$/).withMessage("OTP must be a 6 digit code.");
+export const requiredVerificationIdField = body("verificationId").trim().isLength({ min: 12, max: 80 }).withMessage("OTP challenge has expired. Request a new code.");

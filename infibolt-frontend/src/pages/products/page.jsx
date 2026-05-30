@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { CommerceShell, MotionSection, ProductFilters, ProductGrid, ProductGridSkeleton } from "../../components/commerce/CommerceLayout";
 import { ErrorState } from "../../components/AppStates";
@@ -12,6 +12,7 @@ export default function ProductsPage() {
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sort, setSort] = useState("featured");
+  const deferredQuery = useDeferredValue(query);
   const selectedCategoryItem = useMemo(() => {
     if (selectedCategory === "all") return null;
     return categories.find((category) => [category.id, category.slug, category.name].filter(Boolean).map((value) => String(value).toLowerCase()).includes(String(selectedCategory).toLowerCase()));
@@ -39,17 +40,17 @@ export default function ProductsPage() {
     setSelectedCategory(category || "all");
   }, [search]);
 
-  const changeCategory = (category) => {
+  const changeCategory = useCallback((category) => {
     setSelectedCategory(category);
     const params = new URLSearchParams(search);
     if (category && category !== "all") params.set("category", category);
     else params.delete("category");
     const nextSearch = params.toString();
     navigate(nextSearch ? `/products?${nextSearch}` : "/products", { replace: false });
-  };
+  }, [navigate, search]);
 
   const filteredProducts = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    const normalizedQuery = deferredQuery.trim().toLowerCase();
     const selectedCategoryValues = selectedCategory === "all"
       ? []
       : [
@@ -75,7 +76,7 @@ export default function ProductsPage() {
       if (sort === "price-high") return b.price - a.price;
       return 0;
     });
-  }, [items, query, selectedCategory, selectedCategoryItem, sort]);
+  }, [deferredQuery, items, selectedCategory, selectedCategoryItem, sort]);
 
   return (
     <CommerceShell

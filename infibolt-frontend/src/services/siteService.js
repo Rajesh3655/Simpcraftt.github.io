@@ -14,7 +14,7 @@ export const defaultContactSettings = {
 
 export const siteService = {
   settings: async () => {
-    const result = await request.get("/site-settings", { skipGlobalErrorToast: true });
+    const result = await request.cachedGet("/site-settings", { skipGlobalErrorToast: true }, 2 * 60 * 1000);
     const contactSettings = {
       ...defaultContactSettings,
       ...(result?.contactSettings || {}),

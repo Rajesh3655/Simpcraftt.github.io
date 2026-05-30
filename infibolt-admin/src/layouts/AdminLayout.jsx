@@ -38,7 +38,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router";
 import { toast } from "sonner";
 import ThemeToggle from "../components/ThemeToggle";
-import { AdminProtectedRoute } from "../components/AppStates";
+import { AdminProtectedRoute, BrandSpinner } from "../components/AppStates";
 import {
   adminStats,
   adminUser,
@@ -64,6 +64,7 @@ const navGroups = [
       { label: "Products", href: "/products", icon: Package, section: "products" },
       { label: "Add Product", href: "/products/add", icon: PackageCheck, section: "addProduct" },
       { label: "Categories", href: "/categories", icon: Grid3X3, section: "categories" },
+      { label: "User Manuals", href: "/manuals", icon: FileText, section: "manuals" },
       { label: "Product Hero", href: "/product-hero", icon: Sparkles, section: "productHero" },
       { label: "Homepage Sections", href: "/homepage-sections", icon: Home, section: "homepageSections" },
     ],
@@ -79,7 +80,7 @@ const navGroups = [
     label: "Warranty",
     items: [
       { label: "Registered Warranty", href: "/warranty", icon: ShieldCheck, section: "registeredWarranty" },
-      { label: "Warranty Policy", href: "/warranty-policy", icon: UploadCloud, section: "warrantyPolicy" },
+      { label: "Policy & Pickup Address", href: "/warranty-policy", icon: UploadCloud, section: "warrantyPolicy" },
       { label: "Warranty Claims", href: "/warranty-claims", icon: TicketCheck, section: "warrantyClaims" },
       { label: "Delivery Management", href: "/delivery-management", icon: Truck, section: "deliveryManagement" },
       { label: "Warranty Details", href: "/claim-status", icon: CheckCircle2, section: "claimStatus" },
@@ -104,13 +105,14 @@ const allNavItems = navGroups.flatMap((group) => group.items);
 const sectionMeta = {
   dashboard: ["Operations Dashboard", "A calm command center for launch health, ownership growth, warranty care, and support workload."],
   products: ["Product Management", "Create and control products through focused cards instead of one overwhelming form."],
+  manuals: ["User Manuals", "Publish support PDFs, visibility, and featured manual placement from one workspace."],
   categories: ["Category Management", "Organize product families, category heroes, and navigation visibility."],
   productHero: ["Product Hero", "Control flagship product placement across homepage and product surfaces."],
   homepageSections: ["Homepage Sections", "Arrange homepage modules visually by purpose and visibility."],
   users: ["Customer Directory", "Search, segment, export, and inspect ownership customers."],
   newsletterSubscribers: ["Newsletter Subscribers", "Manage footer subscribers, consent status, exports, and unsubscribe state."],
   registeredWarranty: ["Registered Warranty", "Verify device ownership and warranty activation records."],
-  warrantyPolicy: ["Warranty Policy", "Publish the warranty policy PDF customers must acknowledge before registration."],
+  warrantyPolicy: ["Policy & Pickup Address", "Publish the warranty PDF and update the service-center pickup address shown to customers."],
   warrantyClaims: ["Warranty Claims", "Review warranty care requests with invoice and serial context."],
   deliveryManagement: ["Delivery Management", "Update pickup, service movement, shipping, and delivery for approved claims."],
   claimStatus: ["Warranty Details", "Review registered warranties and care requests with clean status controls."],
@@ -170,6 +172,15 @@ export function AdminShell({ title, description, section = "dashboard", children
   return (
     <AdminProtectedRoute>
       <div className="min-h-screen bg-[#f6f4ef] text-slate-950 dark:bg-[#08090c] dark:text-white">
+        {auth.user && overviewStatus === "loading" && (
+          <div className="fixed inset-0 z-[80] grid place-items-center bg-[#f6f4ef]/86 px-6 backdrop-blur-2xl dark:bg-[#08090c]/86">
+            <div className="rounded-[1.5rem] border border-slate-900/8 bg-white/78 px-8 py-7 text-center shadow-[0_28px_90px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-white/[0.06]">
+              <BrandSpinner />
+              <p className="mt-6 text-[10px] font-bold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">Opening control center</p>
+              <p className="mt-2 text-sm font-medium text-slate-600 dark:text-slate-300">Confirming secure workspace data</p>
+            </div>
+          </div>
+        )}
         {navOpen && <button type="button" aria-label="Close navigation" onClick={() => setNavOpen(false)} className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-sm xl:hidden" />}
 
         <aside className={`fixed inset-y-0 left-0 z-50 flex w-[min(21rem,calc(100vw-1rem))] flex-col border-r border-slate-900/8 bg-white/92 shadow-[16px_0_60px_rgba(15,23,42,0.08)] backdrop-blur-2xl transition-transform duration-300 xl:translate-x-0 dark:border-white/10 dark:bg-[#0c0d12]/92 ${navOpen ? "translate-x-0" : "-translate-x-full"}`}>

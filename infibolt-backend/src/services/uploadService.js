@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { existsSync } from "fs";
-import { mkdir, readdir, rename, stat, unlink } from "fs/promises";
+import { mkdir, readdir, readFile, rename, stat, unlink } from "fs/promises";
 import multer from "multer";
 import { basename, extname, resolve } from "path";
 import { env } from "../config/env.js";
@@ -8,6 +8,7 @@ import { createHttpError } from "../utils/httpError.js";
 
 export const uploadFolders = {
   products: "products",
+  manuals: "manuals",
   warranty: "warranty",
   policies: "policies",
   rma: "rma",
@@ -22,6 +23,7 @@ const documentExt = new Set([".pdf"]);
 
 export const limits = {
   products: 5 * 1024 * 1024,
+  manuals: 15 * 1024 * 1024,
   warranty: 5 * 1024 * 1024,
   policies: 5 * 1024 * 1024,
   rma: 2 * 1024 * 1024,
@@ -108,7 +110,8 @@ export function parseRelativeUploadPath(path) {
   return { folder: match[1], filename: match[2] };
 }
 
-export function buildUploadResponse(req, folder) {
+export async function buildUploadResponse(req, folder) {
+  await assertStoredUploadAllowed(req.file);
   const relativePath = relativeUploadPath(folder, req.file.filename);
   return {
     provider: "local",
@@ -122,6 +125,39 @@ export function buildUploadResponse(req, folder) {
     size: req.file.size,
     type: req.file.mimetype,
   };
+}
+
+export async function assertStoredUploadAllowed(file) {
+  assertUploadAllowed(file);
+  const ext = extname(file.originalname || file.filename || "").toLowerCase();
+  const bytes = await readFile(file.path).catch(() => null);
+  if (!bytes || bytes.length < 8) {
+    await safeUnlink(file.path);
+    throw createHttpError(422, "Uploaded file is empty or unreadable.");
+  }
+  const kind = detectFileKind(bytes);
+  const declaredImage = imageMime.has(file.mimetype) && imageExt.has(ext);
+  const declaredPdf = documentMime.has(file.mimetype) && documentExt.has(ext);
+  const validImage = declaredImage && kind && imageExt.has(`.${kind}`);
+  const validPdf = declaredPdf && kind === "pdf";
+  if (!validImage && !validPdf) {
+    await safeUnlink(file.path);
+    throw createHttpError(422, "Uploaded file content does not match the allowed file type.");
+  }
+}
+
+function detectFileKind(bytes) {
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "jpg";
+  if (bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "png";
+  if (bytes.subarray(0, 6).toString("ascii") === "GIF87a" || bytes.subarray(0, 6).toString("ascii") === "GIF89a") return "gif";
+  if (bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WEBP") return "webp";
+  if (bytes.subarray(4, 12).toString("ascii").startsWith("ftypavif") || bytes.subarray(4, 12).toString("ascii").startsWith("ftypavis")) return "avif";
+  if (bytes.subarray(0, 5).toString("ascii") === "%PDF-") return "pdf";
+  return "";
+}
+
+async function safeUnlink(path) {
+  await unlink(path).catch(() => {});
 }
 
 export async function deleteLocalUpload(folder, filename) {
@@ -166,6 +202,7 @@ export function uploadReadiness() {
     folders: Object.values(uploadFolders),
     limits: {
       products: "5MB",
+      manuals: "15MB",
       warranty: "5MB",
       policies: "5MB",
       rma: "2MB",

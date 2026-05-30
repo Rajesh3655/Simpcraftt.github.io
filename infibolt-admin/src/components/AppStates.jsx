@@ -5,11 +5,23 @@ import { useAdminStore } from "../store/appStore";
 export function PageLoader({ label = "Loading admin workspace" }) {
   return (
     <div className="premium-surface grid min-h-[260px] place-items-center overflow-hidden p-8 dark:bg-white/[0.03]">
-      <div className="w-full max-w-sm">
-        <div className="premium-shimmer mx-auto h-2 w-28 rounded-full bg-slate-200 dark:bg-white/10" />
-        <div className="premium-shimmer mx-auto mt-5 h-20 w-full rounded-2xl bg-slate-200/80 dark:bg-white/10" />
-        <p className="mt-5 text-center text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
+      <div className="grid justify-items-center">
+        <BrandSpinner />
+        <p className="mt-6 text-center text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500">{label}</p>
       </div>
+    </div>
+  );
+}
+
+export function BrandSpinner({ compact = false }) {
+  const size = compact ? "h-10 w-10" : "h-16 w-16";
+  const mark = compact ? "h-3 w-3" : "h-4 w-4";
+  return (
+    <div className={`relative grid ${size} place-items-center`} role="status" aria-live="polite" aria-label="Loading">
+      <span className="absolute inset-0 rounded-full border border-slate-900/10 bg-white/72 shadow-[0_18px_48px_rgba(15,23,42,0.10)] dark:border-white/10 dark:bg-white/8" />
+      <span className="absolute inset-1 rounded-full border-2 border-slate-200 border-t-slate-950 animate-spin dark:border-white/10 dark:border-t-white" />
+      <span className={`relative rounded-full bg-slate-950 ${mark} shadow-[0_0_0_7px_rgba(15,23,42,0.06)] dark:bg-white dark:shadow-[0_0_0_7px_rgba(255,255,255,0.08)]`} />
+      <span className="sr-only">Loading</span>
     </div>
   );
 }
@@ -56,7 +68,10 @@ export function AdminProtectedRoute({ children }) {
   if (auth.status === "loading") {
     return (
       <div className="grid min-h-screen place-items-center bg-[#F8F7F5] px-6">
-        <PageLoader label="Checking admin session" />
+        <div className="grid justify-items-center">
+          <BrandSpinner />
+          <p className="mt-6 text-center text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500">Checking admin session</p>
+        </div>
       </div>
     );
   }

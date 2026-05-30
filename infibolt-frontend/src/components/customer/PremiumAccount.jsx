@@ -108,15 +108,17 @@ export function PremiumField({
   );
 }
 
-export function PremiumSelect({ label, value, onChange, options }) {
+export function PremiumSelect({ label, value, onChange, options, error, helper }) {
   return (
     <label className="grid gap-2.5">
       <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="premium-control account-input min-h-[52px] px-4 text-[15px] font-medium text-slate-950">
+      <select value={value} onChange={(event) => onChange(event.target.value)} className={`premium-control account-input min-h-[52px] px-4 text-[15px] font-medium text-slate-950 ${error ? "account-input-error" : ""}`}>
         {options.map((option) => (
           <option key={option} value={option}>{option}</option>
         ))}
       </select>
+      {helper && !error && <span className="text-xs font-medium leading-5 text-slate-500">{helper}</span>}
+      {error && <span className="text-xs font-medium leading-5 text-rose-700">{error}</span>}
     </label>
   );
 }
@@ -150,6 +152,13 @@ export function PremiumButton({ children, loading = false, disabled = false, cla
       disabled={disabled || loading}
       className={`premium-button account-button inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-slate-950 px-6 text-[11px] font-semibold uppercase tracking-[0.16em] text-white disabled:pointer-events-none disabled:opacity-60 ${className}`}
     >
+      {loading && (
+        <span className="relative grid h-4 w-4 shrink-0 place-items-center" aria-hidden="true">
+          <span className="absolute inset-0 rounded-full border border-white/25" />
+          <span className="absolute inset-0 rounded-full border-2 border-white/25 border-t-white animate-spin" />
+          <span className="h-1.5 w-1.5 rounded-full bg-white/90" />
+        </span>
+      )}
       {children}
     </button>
   );

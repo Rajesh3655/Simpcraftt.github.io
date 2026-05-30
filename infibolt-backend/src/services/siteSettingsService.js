@@ -36,7 +36,7 @@ export async function saveContactSettings(value) {
   const setting = await SiteSetting.findOneAndUpdate(
     { key: "contactSettings" },
     { key: "contactSettings", value: normalized },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
   );
   return setting.value;
 }

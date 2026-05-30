@@ -13,13 +13,21 @@ import {
   Waves,
   Zap,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import { ErrorState, PageLoader } from "../../../components/AppStates";
 import { CommerceShell, MotionSection, ProductGrid } from "../../../components/commerce/CommerceLayout";
+import { ProductPrice } from "../../../components/commerce/pricing/ProductPrice";
 import { uploadUrl } from "../../../config/api";
 import { productService } from "../../../services/productService";
-import { formatPrice } from "../../../store/commerce";
+import {
+  SITE_URL,
+  absoluteUrl,
+  breadcrumbSchema,
+  canonicalUrl,
+  faqSchema,
+  safeJsonLd,
+} from "../../../utils/seo";
 
 const iconMap = {
   anc: Headphones,
@@ -46,6 +54,23 @@ const marketplacePartners = [
   ["Reliance Digital", "relianceDigital"],
   ["Croma", "croma"],
 ];
+
+function buildResponsiveSrcSet(src) {
+  if (!src || !/^https?:\/\//i.test(src)) return undefined;
+  try {
+    const url = new URL(src);
+    if (!url.hostname.includes("images.unsplash.com")) return undefined;
+    return [480, 768, 1080, 1400].map((width) => {
+      const variant = new URL(url);
+      variant.searchParams.set("w", String(width));
+      variant.searchParams.set("q", "78");
+      variant.searchParams.set("auto", variant.searchParams.get("auto") || "format");
+      return `${variant.toString()} ${width}w`;
+    }).join(", ");
+  } catch {
+    return undefined;
+  }
+}
 
 export default function ProductDetailsPage() {
   const { slug } = useParams();
@@ -101,13 +126,15 @@ export default function ProductDetailsPage() {
   }
 
   const metadata = resolveMetadata(product);
-  const structuredData = buildProductSchema(product, metadata);
+  const breadcrumbItems = buildProductBreadcrumbs(product);
+  const productFaqs = getProductFaqs(product);
+  const structuredData = buildProductStructuredData(product, metadata, breadcrumbItems, productFaqs);
 
   return (
     <CommerceShell seoTitle={metadata.title} seoDescription={metadata.description}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJson(structuredData) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(structuredData) }} />
       <div className="bg-[#f5f5f3] text-[#111316]">
-        <ProductBreadcrumbs product={product} />
+        <ProductBreadcrumbs items={breadcrumbItems} />
         <HeroProductSection product={product} />
         <QuickHighlights product={product} />
         <PremiumStory product={product} />
@@ -116,22 +143,13 @@ export default function ProductDetailsPage() {
         <MarketplaceSection product={product} />
         <WarrantyOwnership product={product} />
         <RelatedProducts product={product} products={relatedProducts} />
-        <FaqSection product={product} />
+        <FaqSection faqs={productFaqs} />
       </div>
     </CommerceShell>
   );
 }
 
-function ProductBreadcrumbs({ product }) {
-  const categorySlug = product.categorySlug || slugify(product.category);
-  const categoryLabel = product.category || "Products";
-  const items = [
-    { label: "Home", href: "/" },
-    { label: "Products", href: "/products" },
-    ...(categorySlug ? [{ label: categoryLabel, href: `/products?category=${categorySlug}` }] : []),
-    { label: product.name },
-  ];
-
+function ProductBreadcrumbs({ items }) {
   return (
     <nav aria-label="Breadcrumb" className="border-b border-black/[0.06] bg-white/86 px-4 backdrop-blur-xl sm:px-6">
       <ol className="mx-auto flex h-10 max-w-[1360px] items-center gap-2 overflow-x-auto whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.16em] text-black/42">
@@ -186,11 +204,7 @@ function HeroProductSection({ product }) {
             </p>
 
             <div className="mt-8 border-y border-black/[0.08] py-6">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/45">Launch price</p>
-              <div className="mt-2 flex flex-wrap items-end gap-3">
-                <p className="text-4xl font-semibold tracking-normal text-[#111316]">{formatPrice(product.price || 0)}</p>
-                {product.comparePrice > product.price && <p className="pb-1 text-sm text-black/35 line-through">{formatPrice(product.comparePrice)}</p>}
-              </div>
+              <ProductPrice product={product} variant="detail" />
             </div>
 
             <div className="mt-6 border-l-2 border-[#111316] py-1 pl-4">
@@ -234,12 +248,13 @@ function HeroProductSection({ product }) {
   );
 }
 
-function ProductMediaGallery({ product }) {
+const ProductMediaGallery = memo(function ProductMediaGallery({ product }) {
   const gallery = useMemo(() => {
     const images = product.gallery?.length ? product.gallery : product.galleryImages?.length ? product.galleryImages : [product.image || product.coverImage];
     return [...new Set(images.filter(Boolean))];
   }, [product]);
   const [active, setActive] = useState(gallery[0] || "");
+  const selectImage = useCallback((image) => setActive(image), []);
 
   useEffect(() => {
     setActive(gallery[0] || "");
@@ -269,7 +284,7 @@ function ProductMediaGallery({ product }) {
             <button
               key={image}
               type="button"
-              onClick={() => setActive(image)}
+              onClick={() => selectImage(image)}
               aria-label={`View ${product.name} image ${index + 1}`}
               className={`aspect-square overflow-hidden rounded-[1rem] border bg-white/70 transition ${active === image ? "border-[#111316] shadow-[0_10px_28px_rgba(17,19,22,0.10)]" : "border-black/[0.07] opacity-70 hover:opacity-100"}`}
             >
@@ -280,7 +295,7 @@ function ProductMediaGallery({ product }) {
       )}
     </div>
   );
-}
+});
 
 function QuickHighlights({ product }) {
   const highlights = getHighlights(product);
@@ -496,9 +511,7 @@ function RelatedProducts({ product, products }) {
   );
 }
 
-function FaqSection({ product }) {
-  const faqs = product.faqs?.length ? product.faqs : defaultFaqs(product);
-
+function FaqSection({ faqs }) {
   return (
     <section className="bg-white px-4 py-14 sm:px-6 lg:py-24">
       <div className="mx-auto max-w-4xl">
@@ -552,9 +565,10 @@ function MarketplaceButton({ channel, product, primary = false, dark = false, co
   );
 }
 
-function ResponsiveImage({ src, alt, className = "", loading = "lazy" }) {
+const ResponsiveImage = memo(function ResponsiveImage({ src, alt, className = "", loading = "lazy" }) {
   const [failed, setFailed] = useState(false);
   const resolved = uploadUrl(src);
+  const srcSet = useMemo(() => buildResponsiveSrcSet(resolved), [resolved]);
 
   if (!resolved || failed) {
     return (
@@ -567,6 +581,7 @@ function ResponsiveImage({ src, alt, className = "", loading = "lazy" }) {
   return (
     <img
       src={resolved}
+      srcSet={srcSet}
       alt={alt}
       loading={loading}
       decoding="async"
@@ -575,7 +590,7 @@ function ResponsiveImage({ src, alt, className = "", loading = "lazy" }) {
       className={className}
     />
   );
-}
+});
 
 function getHighlights(product) {
   const source = product.premiumHighlights?.length
@@ -668,23 +683,75 @@ function defaultFaqs(product) {
   ];
 }
 
-function buildProductSchema(product, metadata) {
-  const channels = getMarketplaceChannels(product);
+function buildProductBreadcrumbs(product) {
+  const categorySlug = product.categorySlug || slugify(product.category);
+  const categoryLabel = product.category || "Products";
+  return [
+    { label: "Home", href: "/" },
+    { label: "Products", href: "/products" },
+    ...(categorySlug ? [{ label: categoryLabel, href: `/products?category=${categorySlug}` }] : []),
+    { label: product.name, href: `/products/${product.slug}` },
+  ];
+}
+
+function getProductFaqs(product) {
+  return product.faqs?.length ? product.faqs : defaultFaqs(product);
+}
+
+function buildProductStructuredData(product, metadata, breadcrumbItems, faqs) {
+  const graph = [
+    buildProductSchema(product, metadata),
+    breadcrumbSchema(breadcrumbItems),
+    faqSchema(faqs),
+  ].filter(Boolean);
+
   return {
     "@context": "https://schema.org",
+    "@graph": graph,
+  };
+}
+
+function buildProductSchema(product, metadata) {
+  const channels = getMarketplaceChannels(product);
+  const canonical = canonicalUrl(`/products/${product.slug}`);
+  const images = product.gallery?.length
+    ? product.gallery.map((image) => absoluteProductImage(image)).filter(Boolean)
+    : [absoluteProductImage(product.image || product.coverImage)].filter(Boolean);
+  const price = Number(product.price || 0);
+  const ratingValue = Number(product.rating || product.averageRating || 0);
+  const reviewCount = Number(product.reviewCount || product.reviewsCount || 0);
+  const aggregateRating = ratingValue > 0 && reviewCount > 0
+    ? {
+      "@type": "AggregateRating",
+      ratingValue: Math.min(5, Math.max(1, ratingValue)),
+      reviewCount,
+    }
+    : undefined;
+
+  return {
     "@type": "Product",
+    "@id": `${canonical}#product`,
     name: product.name,
     description: metadata.description,
-    image: product.gallery?.length ? product.gallery.map((image) => uploadUrl(image)) : [uploadUrl(product.image)].filter(Boolean),
+    image: images,
     sku: product.sku || product.slug,
-    brand: { "@type": "Brand", name: "Infibolt" },
+    mpn: product.mpn || product.sku || product.slug,
+    url: canonical,
+    brand: { "@type": "Brand", name: "INFIBOLT" },
+    manufacturer: { "@type": "Organization", name: "INFIBOLT", url: SITE_URL },
     category: product.category,
+    aggregateRating,
     offers: {
       "@type": "Offer",
-      price: product.price || 0,
+      price,
       priceCurrency: "INR",
       availability: isProductOutOfStock(product) ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
-      url: channels[0]?.href || `https://infibolt.com/products/${product.slug}`,
+      itemCondition: "https://schema.org/NewCondition",
+      url: channels[0]?.href || canonical,
+      seller: {
+        "@type": "Organization",
+        name: channels[0]?.label || "INFIBOLT",
+      },
     },
   };
 }
@@ -696,8 +763,9 @@ function resolveMetadata(product) {
   };
 }
 
-function safeJson(value) {
-  return JSON.stringify(value).replace(/</g, "\\u003c");
+function absoluteProductImage(value) {
+  const resolved = uploadUrl(value);
+  return resolved ? absoluteUrl(resolved) : "";
 }
 
 function slugify(value) {
@@ -705,7 +773,7 @@ function slugify(value) {
 }
 
 function isProductOutOfStock(product) {
-  return String(product?.status || "").toLowerCase() === "out of stock";
+  return Number(product?.stock) === 0 || String(product?.status || "").toLowerCase() === "out of stock";
 }
 
 function isProductComingSoon(product) {
@@ -714,6 +782,7 @@ function isProductComingSoon(product) {
 }
 
 function trackMarketplaceClick(product, marketplace, context) {
+  if (typeof window === "undefined") return;
   window.dataLayer?.push?.({
     event: "marketplace_click",
     product_slug: product.slug,

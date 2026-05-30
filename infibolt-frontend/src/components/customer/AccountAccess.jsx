@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Clock3, KeyRound, Lock, Mail, Phone, UserRound } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { OtpInput } from "../OtpInput";
 import {
@@ -23,7 +23,7 @@ const panelMotion = {
 };
 
 const initialLoginForm = { email: "", password: "", otp: "", remember: true };
-const initialSignupForm = { name: "", email: "", phone: "", password: "", otp: "" };
+const initialSignupForm = { name: "", email: "", phone: "", password: "", otp: "", acceptedTerms: false };
 const initialResetForm = { email: "", otp: "", password: "" };
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 let googleScriptPromise;
@@ -149,6 +149,7 @@ export function AccountAccess({ initialMode = "login", compact = false, redirect
     if (!/^\S+@\S+\.\S+$/.test(signupForm.email)) next.email = "Enter a valid email address.";
     if (!/^[1-9]\d{7,14}$/.test(signupForm.phone.replace(/\D/g, ""))) next.phone = "Enter a valid phone number.";
     if (!STRONG_PASSWORD_PATTERN.test(signupForm.password)) next.password = "Use uppercase, lowercase, number, symbol, and 8+ characters.";
+    if (signupStep === "details" && !signupForm.acceptedTerms) next.acceptedTerms = "Accept the Terms and Privacy Policy to continue.";
     if (signupStep === "otp" && !/^\d{6}$/.test(signupForm.otp)) next.otp = "Enter the 6 digit code.";
     return next;
   }, [signupForm, signupStep]);
@@ -259,13 +260,15 @@ export function AccountAccess({ initialMode = "login", compact = false, redirect
     setServerErrors({});
     setStatus("loading");
     try {
-      await googleLogin({ credential });
+      await googleLogin({ credential, flow: mode === "signup" ? "signup" : "login" });
       finishAuth(mode === "signup" ? "Account created" : "Welcome back");
     } catch (requestError) {
       const message = requestError.message || "Google sign in could not continue.";
       setError(message);
       if (requestError.status === 423) {
         toast.error("Account blocked", { id: "account-blocked", description: message });
+      } else {
+        toast.error("Google sign in paused", { id: "google-auth-error", description: message });
       }
     } finally {
       setStatus("idle");
@@ -287,14 +290,15 @@ export function AccountAccess({ initialMode = "login", compact = false, redirect
       phone: signupForm.phone.replace(/\D/g, ""),
       password: signupForm.password,
       otp: signupForm.otp,
+      acceptedTerms: signupForm.acceptedTerms,
     };
     if (signupStep === "details") {
-      if (["name", "email", "phone", "password"].some((key) => signupErrors[key])) return;
+      if (["name", "email", "phone", "password", "acceptedTerms"].some((key) => signupErrors[key])) return;
       setStatus("loading");
       try {
         const result = await signup(payload);
         setSignupVerificationId(result.verificationId || "");
-        setCooldown(result.resendAfterSeconds || 60);
+        setCooldown(result.resendAfterSeconds || 300);
         setSignupStep("otp");
         setTouched(false);
         toast.success("Email code sent", { description: "Verify once to create your INFIBOLT ID." });
@@ -336,7 +340,7 @@ export function AccountAccess({ initialMode = "login", compact = false, redirect
       setStatus("loading");
       try {
         const result = await authService.forgotPassword({ identifier: loginIdentifierFrom(resetForm.email) });
-        setCooldown(result.resendAfterSeconds || 60);
+        setCooldown(result.resendAfterSeconds || 300);
         setResetStep("verify");
         toast.success("Code sent", { description: "Use it to set a new password." });
       } catch (requestError) {
@@ -369,7 +373,7 @@ export function AccountAccess({ initialMode = "login", compact = false, redirect
     try {
       const result = await signup({ ...signupForm, email: signupForm.email.trim().toLowerCase(), phone: signupForm.phone.replace(/\D/g, "") });
       setSignupVerificationId(result.verificationId || "");
-      setCooldown(result.resendAfterSeconds || 60);
+      setCooldown(result.resendAfterSeconds || 300);
       toast.success("Code resent", { description: "Use the newest code to continue." });
     } catch (requestError) {
       const message = requestError.message || "We could not resend the code.";
@@ -385,7 +389,7 @@ export function AccountAccess({ initialMode = "login", compact = false, redirect
     setStatus("loading");
     try {
       const result = await authService.forgotPassword({ identifier: loginIdentifierFrom(resetForm.email) });
-      setCooldown(result.resendAfterSeconds || 60);
+      setCooldown(result.resendAfterSeconds || 300);
       toast.success("Code resent", { description: "Use the newest code to continue." });
     } finally {
       setStatus("idle");
@@ -470,6 +474,14 @@ export function AccountAccess({ initialMode = "login", compact = false, redirect
                   <PremiumField icon={Mail} label="Email address" type="email" value={signupForm.email} onChange={(email) => { setSignupForm((current) => ({ ...current, email })); clearFieldFeedback("signupEmail"); }} error={(touched ? signupErrors.email : "") || serverErrors.signupEmail} placeholder="you@example.com" />
                   <PremiumField icon={Phone} label="Phone number" inputMode="numeric" value={signupForm.phone} onChange={(phone) => { setSignupForm((current) => ({ ...current, phone })); clearFieldFeedback("signupPhone"); }} error={(touched ? signupErrors.phone : "") || serverErrors.signupPhone} placeholder="9876543210" />
                   <PremiumField icon={KeyRound} label="Password" type="password" value={signupForm.password} onChange={(password) => { setSignupForm((current) => ({ ...current, password })); setError(""); }} error={touched ? signupErrors.password : ""} placeholder="Infibolt@123" helper="Use uppercase, lowercase, number, and symbol." />
+                  <TermsConsent
+                    checked={signupForm.acceptedTerms}
+                    error={touched ? signupErrors.acceptedTerms : ""}
+                    onChange={(acceptedTerms) => {
+                      setSignupForm((current) => ({ ...current, acceptedTerms }));
+                      setError("");
+                    }}
+                  />
                 </>
               ) : (
                 <>
@@ -578,6 +590,38 @@ function GoogleAuthButton({ mode, disabled, onCredential, onError }) {
     <div className={`min-h-[44px] overflow-hidden rounded-full ${disabled ? "pointer-events-none opacity-60" : ""}`}>
       <div ref={buttonRef} className="flex min-h-[44px] justify-center" />
     </div>
+  );
+}
+
+function TermsConsent({ checked, error, onChange }) {
+  return (
+    <label className={`flex cursor-pointer items-start gap-3 rounded-[1.1rem] border p-4 transition ${
+      error
+        ? "border-rose-300 bg-rose-50/70 text-rose-950"
+        : checked
+          ? "border-emerald-500/25 bg-emerald-50/60 text-slate-800"
+          : "border-slate-900/8 bg-white/58 text-slate-600 hover:bg-white"
+    }`}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-slate-950 accent-slate-950"
+        aria-invalid={Boolean(error)}
+      />
+      <span className="text-xs font-medium leading-6">
+        I agree to the{" "}
+        <Link to="/terms-conditions" target="_blank" className="font-semibold text-slate-950 underline-offset-4 hover:underline">
+          Terms & Conditions
+        </Link>
+        {" "}and{" "}
+        <Link to="/privacy-policy" target="_blank" className="font-semibold text-slate-950 underline-offset-4 hover:underline">
+          Privacy Policy
+        </Link>
+        {" "}and consent to account verification for INFIBOLT services.
+        {error && <span className="mt-1 block font-semibold text-rose-600">{error}</span>}
+      </span>
+    </label>
   );
 }
 

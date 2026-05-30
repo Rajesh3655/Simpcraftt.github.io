@@ -42,10 +42,11 @@ export const env = {
   allowProductionSeed: process.env.ALLOW_PRODUCTION_SEED === "true",
   otpProvider: process.env.OTP_PROVIDER || "local",
   allowLocalOtp: process.env.ALLOW_LOCAL_OTP === "true",
-  emailFrom: process.env.EMAIL_FROM || "INFIBOLT <no-reply@infibolt.com>",
+  emailFrom: process.env.SMTP_FROM || process.env.EMAIL_FROM || "INFIBOLT <noreplay@infibolt.com>",
   smtp: {
-    host: process.env.SMTP_HOST || "",
+    host: process.env.SMTP_HOST || "email-smtp.ap-south-1.amazonaws.com",
     port: Number(process.env.SMTP_PORT || 587),
+    secure: process.env.SMTP_SECURE === "true",
     user: process.env.SMTP_USER || "",
     pass: process.env.SMTP_PASS || "",
   },
@@ -55,9 +56,9 @@ export const env = {
   awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
   awsRegion: process.env.AWS_REGION || process.env.AWS_SES_REGION || "",
   awsSesRegion: process.env.AWS_SES_REGION || process.env.AWS_REGION || "",
-  sesFromEmail: process.env.SES_FROM_EMAIL || process.env.EMAIL_FROM || "INFIBOLT <no-reply@infibolt.com>",
-  otpTtlMinutes: Number(process.env.OTP_TTL_MINUTES || 10),
-  otpResendCooldownSeconds: Number(process.env.OTP_RESEND_COOLDOWN_SECONDS || 60),
+  sesFromEmail: process.env.SES_FROM_EMAIL || process.env.SMTP_FROM || process.env.EMAIL_FROM || "INFIBOLT <noreplay@infibolt.com>",
+  otpTtlMinutes: Number(process.env.OTP_TTL_MINUTES || 5),
+  otpResendCooldownSeconds: Number(process.env.OTP_RESEND_COOLDOWN_SECONDS || 300),
   otpMaxRequestsPerHour: Number(process.env.OTP_MAX_REQUESTS_PER_HOUR || 5),
   otpMaxVerifyAttempts: Number(process.env.OTP_MAX_VERIFY_ATTEMPTS || 5),
   sentryDsn: process.env.SENTRY_DSN || "",
@@ -100,6 +101,12 @@ requireProductionValue("COOKIE_SECRET", env.cookieSecret, { secret: true });
 requireProductionValue("GOOGLE_CLIENT_ID", env.googleClientId);
 if (production && env.adminWhitelist.length === 0) {
   throw new Error("Production ADMIN_WHITELIST must include at least one approved admin email.");
+}
+if (production && ["ses", "smtp", "nodemailer"].includes(env.otpProvider)) {
+  requireProductionValue("SMTP_HOST", env.smtp.host);
+  requireProductionValue("SMTP_USER", env.smtp.user);
+  requireProductionValue("SMTP_PASS", env.smtp.pass);
+  requireProductionValue("SMTP_FROM", env.emailFrom);
 }
 if (production && env.allowProductionSeed) {
   requireProductionValue("SEED_ADMIN_PASSWORD", env.adminPassword);

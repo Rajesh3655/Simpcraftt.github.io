@@ -8,8 +8,10 @@ const initialProfile = {
   name: "",
   email: "",
   phone: "",
-  city: "Bengaluru",
-  state: "Karnataka",
+  address: "",
+  city: "",
+  state: "",
+  postalCode: "",
 };
 
 function setCustomerSessionHint(active) {
@@ -127,6 +129,18 @@ export const useAppStore = create((set, get) => ({
       set((state) => ({ auth: { ...state.auth, user: null, status: "idle" } }));
     }
   },
+  expireCustomerSession: () => {
+    setCustomerSessionHint(false);
+    set((state) => ({
+      auth: {
+        ...state.auth,
+        user: null,
+        status: "expired",
+        error: "Your secure session expired. Please sign in again.",
+      },
+      profile: initialProfile,
+    }));
+  },
   loadProducts: async () => {
     if (get().products.status === "loading") return;
     set((state) => ({ products: { ...state.products, status: "loading", error: null } }));
@@ -182,6 +196,17 @@ export const useAppStore = create((set, get) => ({
   createWarrantyRma: async (payload) => {
     const rma = await warrantyService.createRma(payload);
     set((state) => ({ warranty: { ...state.warranty, rmas: [rma, ...state.warranty.rmas], status: "success" } }));
+    return rma;
+  },
+  submitWarrantyShipment: async (id, payload) => {
+    const rma = await warrantyService.submitShipment(id, payload);
+    set((state) => ({
+      warranty: {
+        ...state.warranty,
+        rmas: state.warranty.rmas.map((item) => (item.id === rma.id ? rma : item)),
+        status: "success",
+      },
+    }));
     return rma;
   },
   updateProfile: async (profile) => {

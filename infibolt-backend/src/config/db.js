@@ -23,6 +23,10 @@ export async function connectDatabase() {
   mongoose.set("strictQuery", true);
   await mongoose.connect(mongoConnectionString(), {
     serverSelectionTimeoutMS: 4000,
+    socketTimeoutMS: 45000,
+    maxPoolSize: env.isProduction ? 20 : 10,
+    minPoolSize: env.isProduction ? 2 : 0,
+    maxIdleTimeMS: 30000,
     autoIndex: env.nodeEnv !== "production",
   });
   if (!env.isProduction || env.allowProductionSeed) {

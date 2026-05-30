@@ -23,6 +23,28 @@ const contactSettings = {
   youtube: "",
   linkedin: "",
 };
+const manuals = [
+  {
+    _id: "64b000000000000000000001",
+    productName: "Aura Audio Pro",
+    category: "Audio",
+    description: "Official setup, controls, charging, and care guidance.",
+    pdfUrl: "/uploads/manuals/mock-aura-audio-pro.pdf",
+    featured: true,
+    isVisible: true,
+    createdAt: "2026-05-30T00:00:00.000Z",
+  },
+  {
+    _id: "64b000000000000000000002",
+    productName: "Echo Charge Max",
+    category: "Charging",
+    description: "Wireless charging alignment, safety, and maintenance guide.",
+    pdfUrl: "/uploads/manuals/mock-echo-charge-max.pdf",
+    featured: false,
+    isVisible: true,
+    createdAt: "2026-05-29T00:00:00.000Z",
+  },
+];
 
 export async function mockRequest(config) {
   await wait(config.mockDelay || 640);
@@ -40,17 +62,34 @@ export async function mockRequest(config) {
     return { data: { token: token(), user: { name: "Rajesh Kumar", email: data.email || "customer@infibolt.com", phone: "9876543210", role: "customer" } } };
   }
   if (url === "/auth/signup" && method === "post") {
+    if (!data.acceptedTerms) {
+      const error = new Error("Accept the Terms and Privacy Policy to continue.");
+      error.response = { status: 422, data: { message: "Accept the Terms and Privacy Policy to continue." } };
+      throw error;
+    }
     return { data: { verificationId: `otp_${Date.now().toString(36)}`, channel: "email", message: "Email OTP prepared." } };
   }
   if (url === "/auth/verify-otp" && method === "post") {
+    if (data.otp !== "123456") {
+      const error = new Error("Invalid OTP.");
+      error.response = { status: 422, data: { message: "Invalid OTP.", fields: { otp: "Check this code." } } };
+      throw error;
+    }
     return { data: { token: token(), user: { name: data.name || "INFIBOLT Customer", email: data.email || "customer@infibolt.com", phone: data.phone || "9876543210", role: "customer" } } };
   }
   if (url === "/auth/google" && method === "post") {
+    if (data.flow === "login" && data.credential === "mock_new_google_account") {
+      const error = new Error("No INFIBOLT account is linked to this Google email. Create an account first.");
+      error.response = { status: 404, data: { message: "No INFIBOLT account is linked to this Google email. Create an account first." } };
+      throw error;
+    }
     return { data: { token: token(), user: { name: "Google Customer", email: "customer@infibolt.com", phone: "", role: "customer" } } };
   }
   if (url === "/auth/forgot-password") return { data: { resetId: `reset_${Date.now().toString(36)}`, message: "Reset OTP prepared." } };
 
   if (url === "/products") return { data: { items: products, categories, total: products.length } };
+  if (url === "/manuals") return { data: { items: manuals, total: manuals.length, categories: ["Audio", "Charging"] } };
+  if (url.startsWith("/manuals/")) return { data: manuals.find((item) => item._id === url.split("/").pop()) };
   if (url === "/homepage") return { data: { featuredProducts: products.slice(0, 4), heroProducts: products.slice(0, 1), categories } };
   if (url === "/site-settings") return { data: { contactSettings } };
   if (url === "/categories") return { data: { items: categories } };

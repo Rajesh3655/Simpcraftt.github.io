@@ -53,11 +53,15 @@ app.use(
   cors({
     origin(origin, callback) {
       if (!origin || env.corsOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error("Origin is not allowed by CORS."));
+      const error = new Error("Origin is not allowed by CORS.");
+      error.statusCode = 403;
+      return callback(error);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "X-CSRF-Token", "X-Request-Id"],
+    exposedHeaders: ["X-Request-Id", "RateLimit", "RateLimit-Policy", "Retry-After"],
+    maxAge: env.isProduction ? 86400 : 600,
   })
 );
 app.use(express.json({ limit: "1mb" }));
@@ -68,7 +72,13 @@ app.use(sanitizePayload);
 app.use(apiLimiter);
 
 app.use((req, res, next) => {
-  if (req.path.startsWith("/api/") || req.path.startsWith("/uploads/warranty") || req.path.startsWith("/uploads/rma") || req.path.startsWith("/uploads/support")) {
+  if (
+    req.path.startsWith("/api/") ||
+    req.path.startsWith("/uploads/warranty") ||
+    req.path.startsWith("/uploads/rma") ||
+    req.path.startsWith("/uploads/support") ||
+    req.path.startsWith("/uploads/temp")
+  ) {
     res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
   }
   next();
@@ -101,9 +111,11 @@ function createStaticUploadOptions({ allowPdfFrame = false, publicCache = false 
 const staticUploadOptions = createStaticUploadOptions();
 const warrantyUploadOptions = createStaticUploadOptions({ allowPdfFrame: true });
 const productUploadOptions = createStaticUploadOptions({ publicCache: true });
+const manualUploadOptions = createStaticUploadOptions({ allowPdfFrame: true, publicCache: true });
 const policyUploadOptions = createStaticUploadOptions({ allowPdfFrame: true, publicCache: true });
 
 app.use("/uploads/products", express.static(folderPath("products"), productUploadOptions));
+app.use("/uploads/manuals", express.static(folderPath("manuals"), manualUploadOptions));
 app.use("/uploads/policies", express.static(folderPath("policies"), policyUploadOptions));
 app.use("/uploads/warranty", requireAuth(["customer", "admin"]), express.static(folderPath("warranty"), warrantyUploadOptions));
 app.use("/uploads/rma", requireAuth(["customer", "admin"]), express.static(folderPath("rma"), staticUploadOptions));

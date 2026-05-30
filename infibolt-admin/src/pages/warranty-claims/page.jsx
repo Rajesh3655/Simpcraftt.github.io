@@ -1,4 +1,4 @@
-import { CheckCircle2, Eye, FileText, Image as ImageIcon, Search, ShieldCheck, X } from "lucide-react";
+import { CheckCircle2, Eye, FileText, Image as ImageIcon, Loader2, Search, ShieldCheck, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { EmptyState, PageLoader } from "../../components/AppStates";
@@ -7,7 +7,9 @@ import { AdminShell } from "../../layouts/AdminLayout";
 import { useAdminStore } from "../../store/appStore";
 import { formatIndiaDateTime } from "../../utils/time";
 
-const statusOptions = ["Requested", "In Progress", "Approved", "Rejected"];
+const statusOptions = ["In Progress", "Approved", "Rejected"];
+const claimQueueStatuses = ["Requested", "In Progress"];
+const claimDecisionStatuses = ["Approved", "Rejected"];
 
 export default function AdminWarrantyClaimsPage() {
   const warranty = useAdminStore((state) => state.warranty);
@@ -17,6 +19,8 @@ export default function AdminWarrantyClaimsPage() {
   const [sortBy, setSortBy] = useState("latest");
   const [statusDrafts, setStatusDrafts] = useState({});
   const [notesDrafts, setNotesDrafts] = useState({});
+  const [rejectionDrafts, setRejectionDrafts] = useState({});
+  const [replacementDrafts, setReplacementDrafts] = useState({});
   const [selected, setSelected] = useState(null);
   const [saving, setSaving] = useState("");
 
@@ -31,7 +35,7 @@ export default function AdminWarrantyClaimsPage() {
   const records = useMemo(() => {
     const rows = (warranty.rmas || [])
       .map((item) => ({ ...item, ownership: ownershipById[item.ownershipId] }))
-      .filter((item) => item.ownership?.status === "Active");
+      .filter((item) => item.ownership?.status === "Active" && claimQueueStatuses.includes(currentStatus(item)));
     const needle = query.trim().toLowerCase();
     const filtered = rows.filter((item) => {
       if (!needle) return true;
@@ -51,16 +55,30 @@ export default function AdminWarrantyClaimsPage() {
 
   const save = async (item) => {
     const id = item.id;
+    const draftStatus = statusDrafts[id] || item.status || "In Progress";
+    const nextStatus = statusOptions.includes(draftStatus) ? draftStatus : "In Progress";
+    const note = notesDrafts[id] || "";
+    const rejectionReason = rejectionDrafts[id] || "";
+    if (nextStatus === "Rejected" && !note.trim() && !rejectionReason.trim()) {
+      toast.error("Rejection reason required", { description: "Add the customer-visible rejection reason before rejecting this claim." });
+      return;
+    }
     const payload = {
-      status: statusDrafts[id] || item.status || "Requested",
-      notes: notesDrafts[id] || "",
+      status: nextStatus,
+      notes: note,
+      rejectionReason,
+      ...(replacementDrafts[id] || {}),
     };
     setSaving(id);
     try {
       const updated = await updateWarrantyStatus(id, payload);
-      setSelected((current) => (current?.id === id ? { ...current, ...updated, ownership: current.ownership } : current));
-      toast.success("Claim updated", { description: `${id} moved to ${payload.status}.` });
+      setSelected((current) => {
+        if (current?.id !== id) return current;
+        return claimDecisionStatuses.includes(payload.status) ? null : { ...current, ...updated, ownership: current.ownership };
+      });
+      toast.success("Claim updated", { description: payload.status === "Approved" ? `${id} moved to Delivery Management.` : `${id} moved to ${payload.status}.` });
       setNotesDrafts((current) => ({ ...current, [id]: "" }));
+      setRejectionDrafts((current) => ({ ...current, [id]: "" }));
     } finally {
       setSaving("");
     }
@@ -146,8 +164,10 @@ export default function AdminWarrantyClaimsPage() {
             saving={saving}
             statusDraft={statusDrafts[selected.id] || currentStatus(selected)}
             noteDraft={notesDrafts[selected.id] || ""}
+            rejectionDraft={rejectionDrafts[selected.id] || ""}
             onStatusChange={(value) => setStatusDrafts((current) => ({ ...current, [selected.id]: value }))}
             onNoteChange={(value) => setNotesDrafts((current) => ({ ...current, [selected.id]: value }))}
+            onRejectionChange={(value) => setRejectionDrafts((current) => ({ ...current, [selected.id]: value }))}
             onSaveStatus={() => save(selected)}
             onClose={() => setSelected(null)}
           />
@@ -157,13 +177,14 @@ export default function AdminWarrantyClaimsPage() {
   );
 }
 
-function ClaimDetailsModal({ item, saving, statusDraft, noteDraft, onStatusChange, onNoteChange, onSaveStatus, onClose }) {
+function ClaimDetailsModal({ item, saving, statusDraft, noteDraft, rejectionDraft, onStatusChange, onNoteChange, onRejectionChange, onSaveStatus, onClose }) {
   const ownership = item.ownership || {};
   const claimPhoto = item.attachments?.[0];
   const claimPhotoHref = uploadUrl(claimPhoto?.url);
   const invoiceHref = uploadUrl(ownership.invoiceUrl || ownership.invoice);
   const invoiceIsPdf = /\.pdf(?:$|\?)/i.test(invoiceHref);
   const invoiceIsImage = /\.(png|jpe?g|webp|gif)$/i.test(invoiceHref);
+  const selectedStatus = statusOptions.includes(statusDraft) ? statusDraft : "In Progress";
 
   return (
     <div className="fixed inset-0 z-[999] overflow-y-auto bg-slate-950/42 px-4 py-6 backdrop-blur-sm">
@@ -185,6 +206,7 @@ function ClaimDetailsModal({ item, saving, statusDraft, noteDraft, onStatusChang
               title="Claim details"
               rows={[
                 ["Status", item.status || "Requested"],
+                ["Claim stage", item.claimStatus || "-"],
                 ["Customer", item.customerName || item.email || "Customer"],
                 ["Email", item.email || "-"],
                 ["Product", item.product || "-"],
@@ -193,6 +215,7 @@ function ClaimDetailsModal({ item, saving, statusDraft, noteDraft, onStatusChang
                 ["Submitted", formatDate(item.createdAt || item.updatedAt)],
                 ["Customer note", item.issueDescription || "-"],
                 ["Admin update", item.notes || "-"],
+                ["Rejection reason", item.rejectionReason || "-"],
               ]}
             />
             <DetailGrid
@@ -206,18 +229,26 @@ function ClaimDetailsModal({ item, saving, statusDraft, noteDraft, onStatusChang
             />
             <section className="rounded-[1rem] border border-slate-900/8 bg-slate-950/[0.025] p-4 dark:border-white/10 dark:bg-white/[0.035]">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Claim decision</p>
-              <label className="mt-4 grid gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Move status</span>
-                <select value={statusDraft} onChange={(event) => onStatusChange(event.target.value)} className="premium-control min-h-[44px] px-4 text-sm font-medium dark:bg-black/20">
-                  {statusOptions.map((status) => <option key={status}>{status}</option>)}
-                </select>
-              </label>
-              <label className="mt-3 grid gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Customer-visible update</span>
-                <textarea value={noteDraft} onChange={(event) => onNoteChange(event.target.value)} rows={4} className="premium-control px-4 py-3 text-sm font-medium outline-none dark:bg-black/20" placeholder="Reason for approval, rejection, or in-progress update" />
-              </label>
+              <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                <QuickAction label="In Progress" active={selectedStatus === "In Progress"} onClick={() => onStatusChange("In Progress")} />
+                <QuickAction label="Approve Claim" active={selectedStatus === "Approved"} onClick={() => onStatusChange("Approved")} />
+                <QuickAction label="Reject Claim" active={selectedStatus === "Rejected"} onClick={() => onStatusChange("Rejected")} />
+              </div>
+              {selectedStatus === "Rejected" ? (
+                <label className="mt-4 grid gap-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Customer rejection reason</span>
+                  <textarea value={rejectionDraft} onChange={(event) => onRejectionChange(event.target.value)} rows={4} className="premium-control px-4 py-3 text-sm font-medium outline-none dark:bg-black/20" placeholder="Explain why this claim is rejected. This description is shown to the customer." />
+                </label>
+              ) : (
+                <label className="mt-4 grid gap-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    {selectedStatus === "Approved" ? "Approval note for customer" : "In-progress update for customer"}
+                  </span>
+                  <textarea value={noteDraft} onChange={(event) => onNoteChange(event.target.value)} rows={4} className="premium-control px-4 py-3 text-sm font-medium outline-none dark:bg-black/20" placeholder={selectedStatus === "Approved" ? "Example: Your claim is approved. Please send the product to the service center." : "Example: We are reviewing your claim details and invoice."} />
+                </label>
+              )}
               <button type="button" onClick={onSaveStatus} disabled={saving === item.id} className="mt-4 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full bg-slate-950 px-5 text-xs font-bold uppercase tracking-[0.14em] text-white shadow-[0_14px_34px_rgba(15,23,42,0.16)] disabled:opacity-60 dark:bg-white dark:text-slate-950">
-                <CheckCircle2 className="h-4 w-4" />
+                {saving === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                 {saving === item.id ? "Saving..." : "Update claim"}
               </button>
             </section>
@@ -230,6 +261,14 @@ function ClaimDetailsModal({ item, saving, statusDraft, noteDraft, onStatusChang
         </div>
       </div>
     </div>
+  );
+}
+
+function QuickAction({ label, active = false, onClick }) {
+  return (
+    <button type="button" onClick={onClick} className={`inline-flex min-h-[38px] items-center justify-center rounded-full border px-3 text-[10px] font-bold uppercase tracking-[0.12em] transition ${active ? "border-slate-950 bg-slate-950 text-white shadow-[0_10px_24px_rgba(15,23,42,0.16)] dark:border-white dark:bg-white dark:text-slate-950" : "border-slate-900/10 bg-white text-slate-700 hover:bg-slate-950 hover:text-white dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white dark:hover:text-slate-950"}`}>
+      {label}
+    </button>
   );
 }
 

@@ -9,6 +9,7 @@ const schema = new mongoose.Schema(
     address: { type: String, trim: true, maxlength: 240 },
     city: { type: String, trim: true, maxlength: 80 },
     state: { type: String, trim: true, maxlength: 80 },
+    postalCode: { type: String, trim: true, maxlength: 20 },
     passwordHash: { type: String, select: false },
     role: { type: String, default: "customer", enum: ["customer"] },
     status: { type: String, default: "Verified", enum: ["Pending", "Verified", "Locked"] },

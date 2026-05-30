@@ -12,6 +12,7 @@ import { useAdminStore } from "../store/appStore";
 const specGroups = ["Audio", "Battery", "Connectivity", "Build", "Compatibility"];
 const highlightIcons = ["sparkles", "audio", "anc", "battery", "charge", "spatial", "bluetooth", "warranty"];
 const adminPillClass = "inline-flex min-h-[40px] items-center justify-center gap-2 rounded-full border border-slate-900/10 bg-white/70 px-4 text-xs font-bold uppercase tracking-[0.14em] text-slate-700 transition hover:bg-white disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200";
+const frontendOrigin = import.meta.env.VITE_FRONTEND_ORIGIN || "https://infibolt.com";
 const defaultProductFaqs = [
   {
     question: "Where can I buy this product?",
@@ -61,7 +62,10 @@ const emptyProduct = {
   subtitle: "",
   category: "audio",
   price: "",
+  originalPrice: "",
   stock: "",
+  limitedOffer: false,
+  offerEnds: "",
   badge: "",
   image: "",
   gallery: ["", "", ""],
@@ -217,7 +221,7 @@ export function ProductEditorPage() {
             Products
           </Link>
           {existing && (
-            <a href={`http://localhost:3000/products/${existing.slug}`} target="_blank" rel="noreferrer" className={adminPillClass}>
+            <a href={`${frontendOrigin}/products/${existing.slug}`} target="_blank" rel="noreferrer" className={adminPillClass}>
               <ExternalLink className="h-4 w-4" />
               View
             </a>
@@ -255,7 +259,13 @@ export function ProductEditorPage() {
               ))}
             </SelectField>
             <Field required type="number" min={0} label="Price" value={form.price} error={fieldErrors.price} onChange={(value) => setField("price", value)} helper="Final customer-visible price. Do not add currency symbols." />
+            <Field type="number" min={0} label="Original MRP" value={form.originalPrice} error={fieldErrors.originalPrice} onChange={(value) => setField("originalPrice", value)} helper="Optional MRP for strike-through price and automatic discount badge." />
             <Field type="number" min={0} label="Stock" value={form.stock} error={fieldErrors.stock} onChange={(value) => setField("stock", value)} placeholder="0" helper="Use 0 for unavailable products. Status controls public messaging." />
+            <SelectField label="Limited offer" value={form.limitedOffer ? "true" : "false"} onChange={(value) => setField("limitedOffer", value === "true")} helper="Enables the limited-time offer label and countdown on the storefront.">
+              <option value="false">No</option>
+              <option value="true">Yes</option>
+            </SelectField>
+            <Field type="datetime-local" label="Offer ends" value={form.offerEnds} error={fieldErrors.offerEnds} onChange={(value) => setField("offerEnds", value)} helper="Optional countdown end date for limited launch offers." />
             <Field label="Launch badge" value={form.badge} error={fieldErrors.badge} onChange={(value) => setField("badge", value)} placeholder="New, Flagship, Launch" helper="Optional short badge. Keep it under one or two words." />
           </div>
         </EditorSection>
@@ -366,19 +376,11 @@ export function ProductEditorPage() {
           </div>
         </EditorSection>
 
-        <EditorSection number="10" title="Visibility" guidance={sectionGuidance.Visibility}>
-          <div className="grid items-start gap-4 md:grid-cols-2">
+        <EditorSection number="10" title="Publishing status" guidance={sectionGuidance.Visibility}>
+          <div className="max-w-xl">
             <SelectField label="Status" value={form.status} onChange={(value) => setField("status", value)}>
-              {["Draft", "Published", "Hidden", "Out of Stock", "Upcoming", "Discontinued"].map((status) => <option key={status}>{status}</option>)}
+              {["Draft", "Preview", "Ready", "Published", "Prototype", "Hidden", "Archived", "Out of Stock", "Upcoming", "Discontinued"].map((status) => <option key={status}>{status}</option>)}
             </SelectField>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {["productPageVisible", "featured", "newLaunch", "homepageVisible", "heroVisible"].map((key) => (
-                <label key={key} className="flex min-h-[48px] items-center gap-3 rounded-xl border border-slate-900/10 px-4 text-sm font-semibold text-slate-700 dark:border-white/10 dark:text-slate-200">
-                  <input type="checkbox" checked={Boolean(form[key])} onChange={() => setForm((current) => ({ ...current, [key]: !current[key] }))} />
-                  {labelize(key)}
-                </label>
-              ))}
-            </div>
           </div>
         </EditorSection>
 
@@ -515,12 +517,16 @@ function productToForm(product) {
     faqs: normalizeFaqs(product.faqs || product.faq || product.productFaqs, product.name),
     seo: { title: product.seo?.title || product.metaTitle || "", description: product.seo?.description || product.metaDescription || "", keywordsText: (product.seo?.keywords || product.keywords || []).join(", ") },
     price: String(product.price ?? ""),
+    originalPrice: String(product.originalPrice ?? product.comparePrice ?? ""),
     stock: String(product.stock ?? 0),
+    limitedOffer: Boolean(product.limitedOffer),
+    offerEnds: dateTimeLocalValue(product.offerEnds),
     relatedProductsText: (product.relatedProducts || product.recommendations || []).join(", "),
   };
 }
 
 function formToPayload(form, categories) {
+  const storefrontVisible = ["Preview", "Ready", "Published", "Prototype", "Upcoming", "Out of Stock"].includes(form.status);
   const categoryName = resolveCategoryName(form.category, categories);
   const categorySlug = resolveCategorySlug(form.category, categories);
   const gallery = [form.image, ...form.gallery.filter(Boolean)].filter(Boolean);
@@ -538,7 +544,11 @@ function formToPayload(form, categories) {
     category: categoryName,
     categorySlug,
     price: Number(form.price || 0),
+    originalPrice: form.originalPrice === "" ? undefined : Number(form.originalPrice || 0),
+    comparePrice: form.originalPrice === "" ? undefined : Number(form.originalPrice || 0),
     stock: Number(form.stock || 0),
+    limitedOffer: Boolean(form.limitedOffer),
+    offerEnds: form.offerEnds || undefined,
     status: form.status,
     badge: form.badge.trim(),
     summary: form.subtitle.trim(),
@@ -582,7 +592,8 @@ function formToPayload(form, categories) {
     metaTitle: form.seo.title?.trim() || "",
     metaDescription: form.seo.description?.trim() || "",
     keywords: seoKeywords,
-    productPageVisible: Boolean(form.productPageVisible),
+    productPageVisible: storefrontVisible,
+    visibility: storefrontVisible ? "public" : "private",
     featured: Boolean(form.featured),
     newLaunch: Boolean(form.newLaunch),
     homepageVisible: Boolean(form.homepageVisible),
@@ -597,6 +608,8 @@ function validateProductForm(form) {
   if (!form.subtitle.trim() || form.subtitle.trim().length < 5) errors.subtitle = "Enter a short premium subtitle.";
   if (!form.category) errors.category = "Select a category.";
   if (form.price === "" || Number.isNaN(Number(form.price)) || Number(form.price) < 0) errors.price = "Enter a valid price.";
+  if (form.originalPrice !== "" && (Number.isNaN(Number(form.originalPrice)) || Number(form.originalPrice) < 0)) errors.originalPrice = "Enter a valid MRP.";
+  if (form.originalPrice !== "" && Number(form.originalPrice) <= Number(form.price || 0)) errors.originalPrice = "MRP must be higher than selling price.";
   if (form.stock !== "" && (Number.isNaN(Number(form.stock)) || Number(form.stock) < 0 || !Number.isInteger(Number(form.stock)))) errors.stock = "Enter a valid whole stock quantity.";
   if (!form.image) errors.image = "Upload a primary image.";
   if (!form.premiumHighlights.filter((item) => item.label.trim()).length) errors.premiumHighlights = "Add at least one highlight.";
@@ -624,6 +637,14 @@ function mapValidationPath(path = "") {
   if (path.startsWith("specifications") || path.startsWith("specs")) return "specifications";
   if (path.startsWith("gallery") || path.startsWith("galleryImages")) return "gallery";
   return path;
+}
+
+function dateTimeLocalValue(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 }
 
 function updateArrayItem(setForm, key, index, patch) {

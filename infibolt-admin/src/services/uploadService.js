@@ -21,4 +21,9 @@ export const uploadService = {
     formData.append("file", file);
     return request.post("/uploads/policies", formData, { headers: { "Content-Type": "multipart/form-data" } });
   },
+  uploadManual: (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return request.post("/uploads/manuals", formData, { headers: { "Content-Type": "multipart/form-data" } });
+  },
 };

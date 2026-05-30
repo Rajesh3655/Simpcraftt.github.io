@@ -1,4 +1,4 @@
-import { Eye, FileText, Search, ShieldCheck, X } from "lucide-react";
+import { Eye, FileText, Loader2, Search, ShieldCheck, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { EmptyState, PageLoader } from "../../components/AppStates";
@@ -12,6 +12,8 @@ const warrantyActions = [
   { label: "Pending", status: "Pending Verification", note: "Warranty registration needs additional review.", tone: "orange" },
   { label: "Reject", status: "Rejected", note: "Warranty registration could not be verified.", tone: "red" },
 ];
+const warrantyQueueStatuses = ["Pending Verification", "Verification", "Pending Invoice"];
+const warrantyDecisionStatuses = ["Active", "Rejected"];
 
 export default function AdminWarrantyPage() {
   const { claims, status, error } = useAdminStore((state) => state.warranty);
@@ -20,7 +22,6 @@ export default function AdminWarrantyPage() {
   const [updating, setUpdating] = useState("");
   const [selected, setSelected] = useState(null);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("latest");
 
   useEffect(() => {
@@ -31,8 +32,7 @@ export default function AdminWarrantyPage() {
     const needle = query.trim().toLowerCase();
     const filtered = claims.filter((item) => {
       const itemStatus = getWarrantyStatus(item);
-      const matchesStatus = statusFilter === "all" || itemStatus.toLowerCase().includes(statusFilter);
-      if (!matchesStatus) return false;
+      if (!warrantyQueueStatuses.includes(itemStatus)) return false;
       if (!needle) return true;
       return [
         item.id,
@@ -59,13 +59,21 @@ export default function AdminWarrantyPage() {
       if (sortBy === "product") return String(a.product || "").localeCompare(String(b.product || ""));
       return dateValue(b.registeredAt || b.createdAt) - dateValue(a.registeredAt || a.createdAt);
     });
-  }, [claims, query, sortBy, statusFilter]);
+  }, [claims, query, sortBy]);
 
-  const updateStatus = async (item, action) => {
+  const updateStatus = async (item, action, description) => {
+    const note = String(description || action.note || "").trim();
+    if (action.status === "Rejected" && !note) {
+      toast.error("Rejection description required", { description: "Add a customer-visible reason before rejecting this warranty." });
+      return;
+    }
     setUpdating(`${item.id}-${action.status}`);
     try {
-      const updated = await updateWarrantyStatus(item.id, { status: action.status, notes: action.note });
-      setSelected((current) => (current?.id === item.id ? { ...current, ...updated } : current));
+      const updated = await updateWarrantyStatus(item.id, { status: action.status, notes: note });
+      setSelected((current) => {
+        if (current?.id !== item.id) return current;
+        return warrantyDecisionStatuses.includes(action.status) ? null : { ...current, ...updated };
+      });
       toast.success("Registered warranty updated", { description: `${item.id} is now ${action.label}.` });
     } finally {
       setUpdating("");
@@ -87,7 +95,7 @@ export default function AdminWarrantyPage() {
           </div>
 
           {claims.length > 0 && (
-            <div className="mb-5 grid gap-3 lg:grid-cols-[1fr_200px_220px]">
+            <div className="mb-5 grid gap-3 lg:grid-cols-[1fr_220px]">
               <label className="flex min-h-[46px] items-center gap-3 rounded-full border border-slate-900/10 bg-white px-4 text-sm shadow-sm dark:border-white/10 dark:bg-white/[0.035]">
                 <Search className="h-4 w-4 shrink-0 text-slate-400" />
                 <input
@@ -97,16 +105,6 @@ export default function AdminWarrantyPage() {
                   className="w-full bg-transparent text-slate-900 outline-none placeholder:text-slate-400 dark:text-white"
                 />
               </label>
-              <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-                className="min-h-[46px] rounded-full border border-slate-900/10 bg-white px-4 text-sm font-semibold text-slate-700 outline-none shadow-sm dark:border-white/10 dark:bg-slate-950 dark:text-slate-200"
-              >
-                <option value="all">All status</option>
-                <option value="active">Active</option>
-                <option value="pending">Pending</option>
-                <option value="rejected">Rejected</option>
-              </select>
               <select
                 value={sortBy}
                 onChange={(event) => setSortBy(event.target.value)}
@@ -186,6 +184,18 @@ function WarrantyDetailsModal({ item, updating, onUpdate, onClose }) {
   const invoiceIsImage = /\.(png|jpe?g|webp|gif)$/i.test(invoiceHref);
   const invoiceIsPdf = /\.pdf(?:$|\?)/i.test(invoiceHref);
   const currentStatus = getWarrantyStatus(item);
+  const [description, setDescription] = useState(item.reviewNote || "");
+  const [descriptionError, setDescriptionError] = useState("");
+
+  const handleDecision = (action) => {
+    const note = description.trim() || action.note;
+    if (action.status === "Rejected" && !description.trim()) {
+      setDescriptionError("Add the rejection reason customers should see.");
+      return;
+    }
+    setDescriptionError("");
+    onUpdate(item, action, note);
+  };
 
   return (
     <div className="fixed inset-0 z-[999] overflow-y-auto bg-slate-950/42 px-4 py-6 backdrop-blur-sm">
@@ -202,22 +212,42 @@ function WarrantyDetailsModal({ item, updating, onUpdate, onClose }) {
         </div>
 
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[1rem] border border-slate-900/8 bg-slate-950/[0.025] p-4 dark:border-white/10 dark:bg-white/[0.035]">
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Review decision</p>
             <div className="mt-2">
               <StatusBadge status={currentStatus} />
             </div>
+            <label className="mt-4 grid gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">Customer-visible description</span>
+              <textarea
+                value={description}
+                onChange={(event) => {
+                  setDescription(event.target.value);
+                  setDescriptionError("");
+                }}
+                rows={3}
+                className={`w-full rounded-2xl border bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 dark:bg-slate-950 dark:text-slate-100 ${descriptionError ? "border-rose-300 ring-4 ring-rose-500/10" : "border-slate-900/10 focus:border-slate-400 dark:border-white/10"}`}
+                placeholder="Example: Your warranty claim was rejected due to physical damage not covered under warranty."
+              />
+              {descriptionError && <span className="text-xs font-semibold text-rose-600">{descriptionError}</span>}
+              <span className="text-xs font-medium leading-5 text-slate-500">This note is shown to the customer in their warranty registration status.</span>
+            </label>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 self-start">
             {warrantyActions.map((action) => (
               <button
                 key={action.status}
                 type="button"
-                disabled={updating === `${item.id}-${action.status}`}
-                onClick={() => onUpdate(item, action)}
+                disabled={Boolean(updating)}
+                onClick={() => handleDecision(action)}
                 className={`inline-flex min-h-[38px] items-center justify-center rounded-full px-5 text-[10px] font-bold uppercase tracking-[0.14em] transition disabled:opacity-50 ${actionClass(action.tone, currentStatus === action.status)}`}
               >
-                {updating === `${item.id}-${action.status}` ? "Saving" : action.label}
+                {updating === `${item.id}-${action.status}` ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Saving
+                  </span>
+                ) : action.label}
               </button>
             ))}
           </div>

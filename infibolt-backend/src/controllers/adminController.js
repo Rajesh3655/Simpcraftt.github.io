@@ -9,6 +9,7 @@ import { Customer } from "../models/Customer.js";
 import { FeatureToggle } from "../models/FeatureToggle.js";
 import { HomepageSection } from "../models/HomepageSection.js";
 import { LaunchLead } from "../models/LaunchLead.js";
+import { Manual } from "../models/Manual.js";
 import { NewsletterSubscriber } from "../models/NewsletterSubscriber.js";
 import { Product } from "../models/Product.js";
 import { ProductOwnership } from "../models/ProductOwnership.js";
@@ -27,7 +28,7 @@ import { createSession, revokeUserSessions, rotateRefreshSession } from "../serv
 import { issueOtp, verifyOtpCode } from "../services/otpService.js";
 import { getContactSettings, saveContactSettings } from "../services/siteSettingsService.js";
 import { verifyGoogleCredential } from "../services/googleAuthService.js";
-import { sendStatusEmail } from "../services/emailService.js";
+import { sendSecurityNotification, sendStatusEmail } from "../services/emailService.js";
 import { assertSerialAvailable, assertValidSerial, ensureProductUnit, resolveProductForOwnership, syncUnitOwner, warrantyEndFromPurchase } from "../services/ownershipService.js";
 
 function slugify(value) {
@@ -60,11 +61,54 @@ async function sendCareDecisionEmail({ email, title, status, product, serial, no
       serial,
       note,
       url: `${env.frontendOrigin.replace(/\/$/, "")}/warranty`,
+      req,
     });
   } catch (error) {
     console.warn("[care-email] failed", error.message);
     await writeAuditLog(req, "care.email.failed", { email, status, reason: error.message || "email_failed" });
   }
+}
+
+function queueCareDecisionEmail(payload) {
+  setImmediate(() => {
+    sendCareDecisionEmail(payload).catch((error) => {
+      console.warn("[care-email] queue failed", error.message);
+    });
+  });
+}
+
+function rmaEmailPayloadForStatus(rma, status, data = {}, req) {
+  const allowedStatuses = ["Waiting for Customer Shipment", "Rejected", "Product Received", "Final Approved", "Replacement Approved", "Rejected After Inspection", "Replacement Dispatched", "Return Dispatched"];
+  if (!allowedStatuses.includes(status)) return null;
+  const noteByStatus = {
+    "Waiting for Customer Shipment": data.notes || "Your claim is approved. Return-shipment instructions are available in your warranty workflow.",
+    Rejected: data.rejectionReason || data.notes || rma.rejectionReason || "Your claim was rejected after review.",
+    "Product Received": data.notes || "Product received at INFIBOLT service center.",
+    "Final Approved": data.notes || "Final inspection approved.",
+    "Replacement Approved": data.notes || "Replacement approved after inspection.",
+    "Rejected After Inspection": data.rejectionReason || data.notes || rma.rejectionReason || "Rejected after technical inspection.",
+    "Replacement Dispatched": shipmentEmailNote("Replacement", rma.replacementShipment, data.deliveryNotes || data.notes),
+    "Return Dispatched": shipmentEmailNote("Return", rma.returnToCustomerShipment, data.deliveryNotes || data.notes),
+  };
+  return {
+    email: rma.email,
+    title: emailTitleForRmaStatus(status),
+    status,
+    product: rma.product,
+    serial: rma.serial,
+    note: noteByStatus[status],
+    req,
+  };
+}
+
+function shipmentEmailNote(label, shipment = {}, note = "") {
+  const parts = [
+    shipment?.courierName ? `${label} courier: ${shipment.courierName}` : "",
+    shipment?.trackingId ? `Tracking ID: ${shipment.trackingId}` : "",
+    shipment?.estimatedDelivery ? `Estimated delivery: ${new Date(shipment.estimatedDelivery).toLocaleDateString("en-IN")}` : "",
+    note,
+  ].filter(Boolean);
+  return parts.join(". ");
 }
 
 function isWhitelistedAdmin(email) {
@@ -98,6 +142,18 @@ async function resolveVerifiedGoogleAdmin(req, googleProfile) {
   if (!isWhitelistedAdmin(email)) {
     await writeAdminLoginLog(req, { email, status: "failure", reason: "not_whitelisted" });
     await writeAuditLog(req, "admin.google_login.denied", { email, reason: "not_whitelisted" });
+    await sendSecurityNotification({
+      email: env.adminEmail,
+      title: "Suspicious admin login blocked",
+      message: "A Google account that is not whitelisted attempted to access the INFIBOLT Control Center.",
+      details: [
+        { label: "Attempted email", value: email },
+        { label: "IP address", value: req.ip },
+        { label: "Device", value: req.get("user-agent") },
+      ],
+      url: env.adminOrigin,
+      req,
+    });
     throw createHttpError(403, `This Google account is not authorized for admin access: ${email}`);
   }
 
@@ -206,6 +262,17 @@ export async function adminVerifyOtp(req, res) {
     await createSession(req, res, user);
     await writeAdminLoginLog(req, { email: normalizedEmail, status: "success", reason: "otp_verified" });
     await writeAuditLog(req, "admin.otp_login.success", { email: normalizedEmail });
+    await sendSecurityNotification({
+      email: normalizedEmail,
+      title: "Admin login confirmed",
+      message: "A new INFIBOLT Control Center session was created after MFA verification.",
+      details: [
+        { label: "IP address", value: req.ip },
+        { label: "Device", value: req.get("user-agent") },
+      ],
+      url: env.adminOrigin,
+      req,
+    });
     return ok(res, { user: sanitizeAdminUser(user) });
   } catch (error) {
     await writeAdminLoginLog(req, { email: normalizedEmail, status: "failure", reason: `otp_${error.message || "failed"}` });
@@ -316,6 +383,7 @@ export async function listAdminProducts(_req, res) {
 export async function createProduct(req, res) {
   const data = matchedData(req, { locations: ["body"], includeOptionals: true });
   const slug = data.slug;
+  applyProductPublicationDefaults(data);
   let product;
   try {
     product = await Product.create({ ...data, slug });
@@ -368,8 +436,9 @@ export async function createWebsitePurchaseOwnership(req, res) {
 export async function updateProduct(req, res) {
   const data = matchedData(req, { locations: ["body"], includeOptionals: true });
   if (data.name && !data.slug) data.slug = req.params.slug;
+  applyProductPublicationDefaults(data);
   const product = await Product.findOneAndUpdate({ slug: req.params.slug }, data, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   });
   if (!product) throw createHttpError(404, "Product not found.");
@@ -377,11 +446,25 @@ export async function updateProduct(req, res) {
   return ok(res, product);
 }
 
+function applyProductPublicationDefaults(data) {
+  const storefrontVisibleStatuses = ["Preview", "Ready", "Published", "Prototype", "Upcoming", "Out of Stock"];
+  if (!data.status) return data;
+  if (storefrontVisibleStatuses.includes(data.status)) {
+    data.productPageVisible = true;
+    data.visibility = "public";
+  }
+  if (["Draft", "Hidden", "Archived", "Discontinued"].includes(data.status)) {
+    data.productPageVisible = false;
+    data.visibility = "private";
+  }
+  return data;
+}
+
 export async function deleteProduct(req, res) {
   const product = await Product.findOneAndUpdate(
     { slug: req.params.slug },
     { status: "Archived", visibility: "private", productPageVisible: false, homepageVisible: false, heroVisible: false, featured: false },
-    { new: true, runValidators: true }
+    { returnDocument: "after", runValidators: true }
   );
   if (!product) throw createHttpError(404, "Product not found.");
   await writeAuditLog(req, "admin.product.deleted", { slug: req.params.slug });
@@ -487,7 +570,28 @@ export async function listWarrantyClaimsAdmin(_req, res) {
     RMARequest.find().sort({ updatedAt: -1 }).lean(),
     ProductUnit.find().sort({ updatedAt: -1 }).limit(200).lean(),
   ]);
-  return ok(res, { items, rmas, units });
+  return ok(res, { items, rmas: await enrichRmasWithCustomerContact(rmas), units });
+}
+
+async function enrichRmasWithCustomerContact(rmas = []) {
+  const customerIds = rmas.map((rma) => rma.customerId).filter(Boolean);
+  const ownershipIds = rmas.map((rma) => rma.ownershipId).filter(Boolean);
+  const emails = rmas.map((rma) => rma.email).filter(Boolean);
+  const [customers, ownerships] = await Promise.all([
+    Customer.find({ $or: [{ _id: { $in: customerIds } }, { email: { $in: emails } }] }).select("_id email phone").lean(),
+    ProductOwnership.find({ $or: [{ id: { $in: ownershipIds } }, { email: { $in: emails } }] }).select("id email phone").lean(),
+  ]);
+  const customerById = new Map(customers.map((customer) => [String(customer._id), customer]));
+  const customerByEmail = new Map(customers.map((customer) => [customer.email, customer]));
+  const ownershipById = new Map(ownerships.map((ownership) => [ownership.id, ownership]));
+  const ownershipByEmail = new Map(ownerships.map((ownership) => [ownership.email, ownership]));
+
+  return rmas.map((rma) => {
+    const customer = customerById.get(String(rma.customerId || "")) || customerByEmail.get(rma.email) || {};
+    const ownership = ownershipById.get(rma.ownershipId) || ownershipByEmail.get(rma.email) || {};
+    const customerPhone = rma.customerAddress?.phone || customer.phone || ownership.phone || "";
+    return { ...rma, customerPhone };
+  });
 }
 
 export async function listSupportTicketsAdmin(_req, res) {
@@ -498,7 +602,7 @@ export async function markSupportTicketRead(req, res) {
   const ticket = await SupportTicket.findOneAndUpdate(
     { id: req.params.id },
     { status: "Read" },
-    { new: true, runValidators: true }
+    { returnDocument: "after", runValidators: true }
   ).lean();
   if (!ticket) throw createHttpError(404, "Support ticket not found.");
   await writeAuditLog(req, "admin.support_ticket.read", { ticketId: req.params.id });
@@ -506,6 +610,95 @@ export async function markSupportTicketRead(req, res) {
 }
 
 export const analytics = overview;
+
+function manualFilterFromQuery(query = {}, admin = false) {
+  const filter = {};
+  if (!admin) filter.isVisible = true;
+  if (query.category) filter.category = String(query.category).trim();
+  if (query.featured === "true") filter.featured = true;
+  if (admin && query.visibility === "visible") filter.isVisible = true;
+  if (admin && query.visibility === "hidden") filter.isVisible = false;
+  if (query.search) {
+    const search = String(query.search).trim();
+    filter.$or = [
+      { productName: { $regex: search, $options: "i" } },
+      { category: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } },
+    ];
+  }
+  return filter;
+}
+
+function manualSortFromQuery(query = {}) {
+  if (query.sort === "oldest") return { createdAt: 1 };
+  if (query.sort === "name") return { productName: 1, createdAt: -1 };
+  return { featured: -1, createdAt: -1 };
+}
+
+function manualPayload(data, req, partial = false) {
+  const payload = {};
+  const assign = (key, value) => {
+    if (value !== undefined && value !== null) payload[key] = value;
+  };
+  assign("productName", data.productName?.trim());
+  assign("category", data.category?.trim());
+  assign("description", data.description?.trim() || "");
+  assign("pdfUrl", data.pdfUrl);
+  assign("thumbnail", data.thumbnail || "");
+  assign("featured", data.featured);
+  assign("isVisible", data.isVisible);
+  if (!partial) {
+    payload.featured = Boolean(data.featured);
+    payload.isVisible = data.isVisible !== false;
+    payload.uploadedBy = req.user?.email;
+  }
+  return payload;
+}
+
+export async function listAdminManuals(req, res) {
+  const page = Math.max(Number(req.query.page || 1), 1);
+  const limit = Math.min(Math.max(Number(req.query.limit || 40), 1), 120);
+  const filter = manualFilterFromQuery(req.query, true);
+  const [items, total, categories] = await Promise.all([
+    Manual.find(filter).sort(manualSortFromQuery(req.query)).skip((page - 1) * limit).limit(limit).lean(),
+    Manual.countDocuments(filter),
+    Manual.distinct("category"),
+  ]);
+  return ok(res, { items, total, page, pages: Math.ceil(total / limit) || 1, categories: categories.filter(Boolean).sort() });
+}
+
+export async function getAdminManual(req, res) {
+  const manual = await Manual.findById(req.params.id).lean();
+  if (!manual) throw createHttpError(404, "Manual not found.");
+  return ok(res, manual);
+}
+
+export async function createManual(req, res) {
+  const data = matchedData(req, { locations: ["body"], includeOptionals: true });
+  const existing = await Manual.findOne({ productName: data.productName, pdfUrl: data.pdfUrl }).lean();
+  if (existing) throw createHttpError(409, "This manual PDF is already linked to the product.");
+  const manual = await Manual.create(manualPayload(data, req));
+  await writeAuditLog(req, "admin.manual.created", { manualId: String(manual._id), productName: manual.productName });
+  return ok(res, manual, 201);
+}
+
+export async function updateManual(req, res) {
+  const data = matchedData(req, { locations: ["body"], includeOptionals: true });
+  const manual = await Manual.findByIdAndUpdate(req.params.id, manualPayload(data, req, true), {
+    returnDocument: "after",
+    runValidators: true,
+  });
+  if (!manual) throw createHttpError(404, "Manual not found.");
+  await writeAuditLog(req, "admin.manual.updated", { manualId: req.params.id, productName: manual.productName });
+  return ok(res, manual);
+}
+
+export async function deleteManual(req, res) {
+  const manual = await Manual.findByIdAndDelete(req.params.id);
+  if (!manual) throw createHttpError(404, "Manual not found.");
+  await writeAuditLog(req, "admin.manual.deleted", { manualId: req.params.id, productName: manual.productName });
+  return ok(res, { deleted: true, manual });
+}
 
 export async function settings(_req, res) {
   const [featureToggles, contactSettings] = await Promise.all([
@@ -531,20 +724,27 @@ export async function getWarrantyPolicyAdmin(_req, res) {
 
 export async function updateWarrantyPolicy(req, res) {
   const data = matchedData(req, { locations: ["body"] });
+  const existing = await SiteSetting.findOne({ key: "warrantyPolicy" }).lean();
+  const existingValue = existing?.value || {};
   const value = {
-    title: data.title || "INFIBOLT Warranty Policy",
-    url: data.url,
-    filename: data.filename,
-    originalName: data.originalName,
-    uploadedAt: new Date(),
+    ...existingValue,
+    title: data.title || existingValue.title || "INFIBOLT Warranty Policy",
+    url: data.url || existingValue.url,
+    filename: data.filename || existingValue.filename,
+    originalName: data.originalName || existingValue.originalName,
+    uploadedAt: data.url ? new Date() : existingValue.uploadedAt,
     uploadedBy: req.user.email,
+    returnAddress: {
+      ...(existingValue.returnAddress || {}),
+      ...(data.returnAddress || {}),
+    },
   };
   const setting = await SiteSetting.findOneAndUpdate(
     { key: "warrantyPolicy" },
     { key: "warrantyPolicy", value },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
   );
-  await writeAuditLog(req, "admin.warranty_policy.updated", { url: value.url });
+  await writeAuditLog(req, "admin.warranty_policy.updated", { url: value.url, returnAddressUpdated: Boolean(data.returnAddress) });
   return ok(res, setting.value);
 }
 
@@ -572,7 +772,7 @@ export async function updateCategory(req, res) {
   const category = await Category.findOneAndUpdate(
     { $or: [{ id: req.params.id }, { slug: req.params.id }] },
     categoryPayload(data, nextSlug || undefined, true),
-    { new: true, runValidators: true }
+    { returnDocument: "after", runValidators: true }
   );
   if (!category) throw createHttpError(404, "Category not found.");
   await writeAuditLog(req, "admin.category.updated", { id: category.id });
@@ -645,7 +845,7 @@ export async function createCollection(req, res) {
 
 export async function updateCollection(req, res) {
   const data = matchedData(req, { locations: ["body"], includeOptionals: true });
-  const collection = await Collection.findOneAndUpdate({ slug: req.params.slug }, data, { new: true, runValidators: true });
+  const collection = await Collection.findOneAndUpdate({ slug: req.params.slug }, data, { returnDocument: "after", runValidators: true });
   if (!collection) throw createHttpError(404, "Collection not found.");
   await writeAuditLog(req, "admin.collection.updated", { slug: collection.slug });
   return ok(res, collection);
@@ -668,7 +868,7 @@ export async function upsertHomepageSection(req, res) {
   const section = await HomepageSection.findOneAndUpdate(
     { key },
     { ...data, key },
-    { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: "after", runValidators: true, setDefaultsOnInsert: true }
   );
   await writeAuditLog(req, "admin.homepage_section.upserted", { key });
   return ok(res, section, req.params.key ? 200 : 201);
@@ -704,7 +904,7 @@ export async function updateWarrantyStatus(req, res) {
     if (data.notes) ownership.reviewNote = data.notes;
     await ownership.save();
     if (["Active", "Rejected"].includes(data.status) && previousStatus !== data.status) {
-      await sendCareDecisionEmail({
+      queueCareDecisionEmail({
         email: ownership.email,
         title: data.status === "Active" ? "Your warranty registration is approved" : "Your warranty registration was rejected",
         status: data.status,
@@ -724,18 +924,86 @@ export async function updateWarrantyStatus(req, res) {
     if (data.status) {
       rma.status = data.status;
       rma.timeline.push({ status: data.status, note: data.notes || "Admin RMA update", actorEmail: req.user.email });
+      rma.claimStatus = data.status;
     }
-    if (data.notes) rma.notes = data.notes;
+    if (data.notes) {
+      rma.notes = data.notes;
+      rma.adminNotes = data.notes;
+    }
+    if (data.rejectionReason) {
+      rma.rejectionReason = data.rejectionReason;
+      rma.notes = data.rejectionReason;
+    }
+    if (data.adminNotes) rma.adminNotes = data.adminNotes;
+    if (data.inspectionStatus) rma.inspectionStatus = data.inspectionStatus;
+    if (data.status === "Approved") {
+      rma.status = "Waiting for Customer Shipment";
+      rma.claimStatus = "Claim Approved";
+      rma.timeline.push({ status: "Waiting for Customer Shipment", note: "Return shipping address shared with customer.", actorEmail: req.user.email });
+    }
+    if (data.status === "Rejected") {
+      rma.claimStatus = "Claim Rejected";
+      rma.rejectionReason = data.rejectionReason || data.notes || rma.rejectionReason;
+    }
+    if (data.status === "Product Received") {
+      rma.serviceCenterReceivedAt = rma.serviceCenterReceivedAt || new Date();
+      rma.claimStatus = "Product Received at Service Center";
+      rma.inspectionStatus = rma.inspectionStatus || "Inspection in Progress";
+    }
+    if (data.status === "Inspection in Progress") {
+      rma.inspectionStatus = "Inspection in Progress";
+      rma.claimStatus = "Inspection in Progress";
+    }
+    if (data.status === "Final Approved" || data.status === "Replacement Approved") {
+      rma.claimStatus = "Final Approval";
+      rma.inspectionStatus = "Approved";
+    }
+    if (data.status === "Rejected After Inspection") {
+      rma.claimStatus = "Rejected After Inspection";
+      rma.inspectionStatus = "Rejected";
+      rma.rejectionReason = data.rejectionReason || data.notes || rma.rejectionReason;
+    }
+    if (data.replacementCourierName || data.replacementTrackingId || data.replacementEstimatedDelivery || data.replacementDispatchedAt) {
+      rma.replacementShipment = {
+        ...(rma.replacementShipment?.toObject?.() || rma.replacementShipment || {}),
+        courierName: data.replacementCourierName || rma.replacementShipment?.courierName,
+        trackingId: data.replacementTrackingId || rma.replacementShipment?.trackingId,
+        dispatchedAt: data.replacementDispatchedAt || rma.replacementShipment?.dispatchedAt || new Date(),
+        estimatedDelivery: data.replacementEstimatedDelivery || rma.replacementShipment?.estimatedDelivery,
+      };
+      rma.status = data.status || "Replacement Dispatched";
+      rma.claimStatus = "Replacement Dispatched";
+      rma.deliveryStatus = "Replacement Dispatched";
+      rma.timeline.push({ status: "Replacement Dispatched", note: `Replacement shipped via ${rma.replacementShipment.courierName || "courier"}.`, actorEmail: req.user.email });
+    }
+    if (data.returnCourierName || data.returnTrackingId || data.returnEstimatedDelivery || data.returnDispatchedAt) {
+      rma.returnToCustomerShipment = {
+        ...(rma.returnToCustomerShipment?.toObject?.() || rma.returnToCustomerShipment || {}),
+        courierName: data.returnCourierName || rma.returnToCustomerShipment?.courierName,
+        trackingId: data.returnTrackingId || rma.returnToCustomerShipment?.trackingId,
+        dispatchedAt: data.returnDispatchedAt || rma.returnToCustomerShipment?.dispatchedAt || new Date(),
+        estimatedDelivery: data.returnEstimatedDelivery || rma.returnToCustomerShipment?.estimatedDelivery,
+      };
+      rma.status = "Return Dispatched";
+      rma.claimStatus = "Product Return Dispatched";
+      rma.deliveryStatus = "Return Dispatched";
+      rma.timeline.push({ status: "Return Dispatched", note: `Product return shipped via ${rma.returnToCustomerShipment.courierName || "courier"}.`, actorEmail: req.user.email });
+    }
     if (data.deliveryStatus) {
       rma.deliveryStatus = data.deliveryStatus;
       rma.deliveryNotes = data.deliveryNotes || rma.deliveryNotes;
       rma.deliveryTimeline.push({ status: data.deliveryStatus, note: data.deliveryNotes || "Delivery status updated.", actorEmail: req.user.email });
+      if (["Out for Delivery", "Delivered"].includes(data.deliveryStatus)) {
+        rma.status = data.deliveryStatus;
+        rma.claimStatus = data.deliveryStatus;
+        rma.timeline.push({ status: data.deliveryStatus, note: data.deliveryNotes || (rma.returnToCustomerShipment?.trackingId ? "Product return delivery updated." : "Replacement delivery updated."), actorEmail: req.user.email });
+      }
     }
     await rma.save();
     if (data.status) {
       const ownershipWarrantyStatus = ["Replacement Approved", "Repaired", "Replaced"].includes(data.status)
         ? data.status
-        : ["Rejected", "Closed"].includes(data.status)
+        : ["Rejected", "Rejected After Inspection", "Closed"].includes(data.status)
           ? "Active"
           : "Claim Under Review";
       await ProductOwnership.findOneAndUpdate(
@@ -744,20 +1012,12 @@ export async function updateWarrantyStatus(req, res) {
           warrantyStatus: ownershipWarrantyStatus,
           $push: { timeline: { status: ownershipWarrantyStatus, note: `${rma.id} updated: ${data.status}`, actorEmail: req.user.email } },
         },
-        { new: true }
+        { returnDocument: "after" }
       );
     }
-    if (["Approved", "Rejected"].includes(data.status) && previousStatus !== data.status) {
-      await sendCareDecisionEmail({
-        email: rma.email,
-        title: data.status === "Approved" ? "Your warranty claim is approved" : "Your warranty claim was rejected",
-        status: data.status,
-        product: rma.product,
-        serial: rma.serial,
-        note: data.notes || rma.notes,
-        req,
-      });
-    }
+    const emailStatus = rma.status || data.status;
+    const emailPayload = previousStatus !== emailStatus ? rmaEmailPayloadForStatus(rma, emailStatus, data, req) : null;
+    if (emailPayload) queueCareDecisionEmail(emailPayload);
     await writeAuditLog(req, "admin.rma.updated", { rmaId: req.params.id, status: data.status });
     return ok(res, rma);
   }
@@ -770,11 +1030,24 @@ export async function updateWarrantyStatus(req, res) {
         ? { $push: { statusHistory: { status: data.status, note: data.notes || "Admin status update", actorEmail: req.user.email } } }
         : {}),
     },
-    { new: true, runValidators: true }
+    { returnDocument: "after", runValidators: true }
   );
   if (!claim) throw createHttpError(404, "Claim not found.");
   await writeAuditLog(req, "admin.warranty.updated", { claimId: req.params.id });
   return ok(res, claim);
+}
+
+function emailTitleForRmaStatus(status) {
+  return {
+    "Waiting for Customer Shipment": "Your warranty claim is approved",
+    Rejected: "Your warranty claim was rejected",
+    "Product Received": "Your product reached INFIBOLT service center",
+    "Final Approved": "Your warranty claim passed inspection",
+    "Replacement Approved": "Your warranty replacement is approved",
+    "Rejected After Inspection": "Warranty inspection update",
+    "Replacement Dispatched": "Your replacement has been dispatched",
+    "Return Dispatched": "Your product return has been dispatched",
+  }[status] || "Warranty claim update";
 }
 
 export async function replySupportTicket(req, res) {
@@ -792,7 +1065,7 @@ export async function replySupportTicket(req, res) {
         },
       },
     },
-    { new: true, runValidators: true }
+    { returnDocument: "after", runValidators: true }
   );
   if (!ticket) throw createHttpError(404, "Ticket not found.");
   await writeAuditLog(req, "admin.support.replied", { ticketId: req.params.id });

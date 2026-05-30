@@ -312,7 +312,7 @@ import {
   InputOTPSlot,
 } from "@lshay/ui/components/default/input-otp";
 import { ChevronDownIcon, ChevronUpIcon, ChevronsUpDown } from "lucide-react";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useId, useState } from "react";
 
 function CustomAccordion({ data, type, className }) {
   return (
@@ -448,6 +448,7 @@ function CustomCard({
 }
 
 function CustomCarousel({ items }) {
+  const fallbackId = useId();
   return (
     <Carousel
       opts={{
@@ -456,13 +457,10 @@ function CustomCarousel({ items }) {
       className="mx-20 w-[calc(100%-160px)]"
     >
       <CarouselContent>
-        {items.map((item) => (
+        {items.map((item, index) => (
           <CarouselItem
             className="md:basis-1/2 lg:basis-1/3"
-            key={
-              item.id ||
-              `carousel-item-${Math.random().toString(36).substr(2, 9)}`
-            }
+            key={item.id || `carousel-item-${fallbackId}-${index}`}
           >
             {item.content}
           </CarouselItem>

@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400&display=swap");
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -67,6 +65,7 @@
     text-rendering: geometricPrecision;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-anchor: auto;
   }
 
   body {
@@ -105,7 +104,7 @@
   video {
     max-width: 100%;
     backface-visibility: hidden;
-    transform: translateZ(0);
+    height: auto;
   }
 }
 
@@ -238,6 +237,17 @@
     transform: translateZ(0);
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
+  }
+
+  .content-visibility-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 720px;
+  }
+
+  @media (max-width: 767px) {
+    .content-visibility-auto {
+      contain-intrinsic-size: 1px 620px;
+    }
   }
 
 
@@ -442,6 +452,7 @@
   .premium-button {
     border-radius: 999px;
     transition: transform 260ms var(--lux-ease), box-shadow 260ms var(--lux-ease), background-color 260ms var(--lux-ease), border-color 260ms var(--lux-ease), color 260ms var(--lux-ease);
+    will-change: transform;
   }
 
   .premium-button:hover {
@@ -494,9 +505,19 @@
       transform: none;
     }
 
+    .account-card,
+    .lux-panel {
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
     .premium-surface {
       border-radius: 1.15rem;
       box-shadow: 0 12px 34px rgba(17, 24, 39, 0.06);
+    }
+
+    .backdrop-blur-2xl {
+      --tw-backdrop-blur: blur(18px);
     }
   }
 

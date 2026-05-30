@@ -11,7 +11,10 @@ const server = app.listen(env.port, env.host, () => {
   }
 });
 
+let shuttingDown = false;
 const shutdown = async (signal) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
   if (!env.isProduction) {
     console.info(`[server] ${signal} received. Closing HTTP server.`);
   }
@@ -20,3 +23,13 @@ const shutdown = async (signal) => {
 
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+process.on("unhandledRejection", (reason) => {
+  console.error("[server] unhandledRejection", reason);
+  shutdown("unhandledRejection");
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("[server] uncaughtException", error);
+  shutdown("uncaughtException");
+});
